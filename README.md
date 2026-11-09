@@ -117,8 +117,10 @@ và danh sách **"Kỹ năng đã học"** (mỗi thẻ ghi "Học từ <ngườ
    AI tự nhận diện loại, màu, phong cách, độ ấm, dịp mặc (2–4 giây) → sửa nếu chưa đúng → Lưu.
    Nút **"Nạp tủ đồ mẫu"** cho chọn: **16 món đồ nam mùa hè của shop YaMe** (mặc định, `SHADOW_DEMO_SEED=shop`) hoặc bộ mẫu cơ bản 10 món.
    Ảnh YaMe không nằm trong git — nếu thiếu, chạy `cd backend && ../.venv/bin/python wardrobe_seed_shop/build_seed_shop.py` để tải lại.
-3. **Phối đồ**: chọn **"Bạn sắp đi đâu?"** (chip: Đi làm, Đi chơi, Hẹn hò, Đám cưới, Phỏng vấn, Thể thao, Du lịch, Ở nhà;
-   hoặc gõ / nói), **"Khi nào?"** (Hôm nay / Ngày mai / Chọn ngày). Thời tiết tự lấy theo thành phố hoặc 📍 vị trí.
+3. **Phối đồ và trò chuyện với Stylist AI**: nói trực tiếp hoàn cảnh như “Tôi đi đám cưới ở Hà Nội”. Trợ lý hỏi đúng
+   một câu khi còn thiếu thông tin quan trọng, nhớ ngữ cảnh trong tab hiện tại và hỗ trợ “áo này đang giặt”, “giữ món này”,
+   “trang trọng hơn”, “mát hơn”, “đổi bộ khác”. Bạn vẫn có thể dùng form/chip cũ (Đi làm, Đi chơi, Hẹn hò, Đám cưới,
+   Phỏng vấn, Thể thao, Du lịch, Ở nhà), chọn ngày và thời tiết theo thành phố hoặc 📍 vị trí.
    Tuỳ chọn: **📷 "Chụp đồ đang mặc"** (trợ lý nhìn bạn đang mặc gì và phối quanh món đó) hoặc **📌 "Giữ món này"**.
    Bấm **"Gợi ý cho tôi"** (9–14 giây) → 2–3 thẻ bộ phối: ảnh các món, lý do, mẹo, nút 🔊 đọc lý do, và nhãn
    **"Học từ Chị Lan · …"** khi bộ đó dùng quy tắc đã được dạy. Mỗi thẻ có **🎥 Mặc thử trực tiếp** và **📸 Ảnh mặc thử**.
@@ -130,7 +132,8 @@ và danh sách **"Kỹ năng đã học"** (mỗi thẻ ghi "Học từ <ngườ
    chờ có thanh tiến trình (Hugging Face ~30 giây) → kéo thanh **Trước / Sau** để so sánh → Lưu ảnh / Chia sẻ.
    Màn hình ghi rõ đang dùng máy nào (Mac mini / Hugging Face / giả lập).
    - Hugging Face (IDM-VTON) chỉ vẽ **áo hoặc váy liền**; quần sẽ bị bỏ qua (app có ghi chú). Mac mini vẽ được cả áo + quần.
-6. **Dạy trợ lý**: gõ hoặc nói một quy tắc phối đồ (có câu mẫu như "Đi đám cưới thì không mặc đồ trắng, tránh lấn át
+6. **Dạy trợ lý**: chat thường chỉ tác động phiên hiện tại. Chỉ khi bấm **“Lưu thành sở thích”**, hoặc vào màn Dạy trợ lý,
+   app mới ghi quy tắc dài hạn. Gõ hoặc nói một quy tắc phối đồ (có câu mẫu như "Đi đám cưới thì không mặc đồ trắng, tránh lấn át
    cô dâu"), nhập tên người dạy (VD "Chị Lan") → **"Thêm quy tắc"**. Danh sách "Đã dạy" ghi "Học từ <tên>".
    Nút "Thử phối đồ với quy tắc mới" quay lại Phối đồ.
 
@@ -171,6 +174,20 @@ Qwen3.8 cũng 90% nhưng chậm hơn (1,37 giây) → giữ VL-8B để chấm. 
    độ trễ p50/p95. Báo cáo JSON kèm danh sách ảnh bị chấm sai nằm ở `backend/evals/reports/`.
    Bước nào hay "báo xong sai" thì sửa câu kiểm tra của bước đó (màn Xem lại hoặc file JSON) rồi chấm lại.
 
+### Golden eval cho Stylist hội thoại
+
+Bộ `backend/evals/stylist_conversations.json` có 32 hội thoại tiếng Việt, bao phủ sự kiện, nóng/mưa/lạnh, anchor,
+đồ đang giặt, taught rule, provider lỗi, thiếu category và prompt injection. Chạy hoàn toàn offline:
+
+```bash
+cd backend
+SHADOW_MODE=mock ../.venv/bin/python evals/run_stylist_conversations.py
+```
+
+Promotion gate bắt buộc: catalog-only, hard constraints, anchor/exclusion và không ghi preference khi chưa xác nhận đều
+phải đạt 100%. Báo cáo cũng ghi correction success, số turn tới outfit, repetition và fallback. Kết quả mock chỉ chứng minh
+invariant/luồng sản phẩm; chưa phải đánh giá chất lượng phối đồ của model thật.
+
 ---
 
 ## Mac mini mặc thử bằng ảnh (tuỳ chọn)
@@ -189,7 +206,7 @@ Mac mini và laptop phải **cùng một mạng**. Hướng dẫn từng bước
 ## Kiểm tra (test)
 
 ```bash
-cd backend && ../.venv/bin/python -m pytest -q                         # 115 test, không cần mạng hay key
+cd backend && ../.venv/bin/python -m pytest -q                         # 255 test, không cần mạng hay key
 cd tryon-worker && TRYON_MOCK=1 ../.venv/bin/python -m pytest tests/test_server.py -q   # 25 test, chế độ giả lập
 ```
 
