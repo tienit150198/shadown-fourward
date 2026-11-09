@@ -273,6 +273,24 @@ button.wd-extra { border: 1.5px dashed var(--line-strong); box-shadow: none; }
 .wd-cam-error { position: absolute; left: var(--gutter); right: var(--gutter); top: 40%; transform: translateY(-50%); display: grid; justify-items: center; gap: 14px; padding: 20px; text-align: center; border-radius: var(--radius); background: var(--glass-strong); }
 
 /* ---------- photo try-on ---------- */
+.wd-chat { display: grid; gap: 12px; margin-bottom: 18px; padding: 16px; border-radius: 22px; background: var(--surface); box-shadow: inset 0 0 0 1px var(--line), 0 8px 28px rgba(0,0,0,.08); }
+.wd-chat-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.wd-chat-head .wd-q { margin: 0 0 3px; }
+.wd-chat-head .wd-muted { margin: 0; font-size: 13px; line-height: 1.35; }
+.wd-chat-messages { display: grid; gap: 8px; max-height: 260px; overflow: auto; padding: 2px; }
+.wd-chat-bubble { max-width: 88%; padding: 10px 13px; border-radius: 16px; color: var(--text-2); background: var(--surface-2); white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14px; line-height: 1.4; }
+.wd-chat-bubble.user { justify-self: end; color: var(--accent-ink); background: var(--accent); border-bottom-right-radius: 5px; }
+.wd-chat-bubble.assistant { justify-self: start; border-bottom-left-radius: 5px; }
+.wd-chat-actions { display: flex; gap: 7px; overflow-x: auto; scrollbar-width: none; }
+.wd-chat-actions::-webkit-scrollbar { display: none; }
+.wd-chat-action { flex: none; min-height: 34px; padding: 6px 11px; border: 1px solid var(--line-strong); border-radius: 999px; background: transparent; color: var(--text-2); font: inherit; font-size: 13px; cursor: pointer; }
+.wd-chat-action:active { background: var(--surface-3); }
+.wd-chat-composer { display: flex; align-items: flex-end; gap: 8px; }
+.wd-chat-input { min-height: 42px; max-height: 120px; resize: vertical; line-height: 1.35; }
+.wd-chat-send { flex: none; min-height: 42px; }
+.wd-chat-clarify { padding: 12px 14px; border-radius: 14px; background: var(--surface-2); color: var(--text-2); }
+
+/* ---------- photo try-on ---------- */
 .wd-strip { display: grid; gap: 8px; margin-bottom: 14px; }
 .wd-strip-k { font-size: 13px; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
 .wd-strip-row { display: flex; gap: 10px; overflow-x: auto; scrollbar-width: none; margin: 0 calc(-1 * var(--gutter)); padding: 0 var(--gutter) 2px; }

@@ -179,6 +179,22 @@ def test_suggest_ai_success():
     assert provider.calls[0]["max_tokens"] == 1200
 
 
+def test_suggest_excluded_items_never_return_and_avoid_keys_are_respected():
+    result = run(
+        suggest_outfits(
+            MockProvider(),
+            sample_wardrobe(),
+            weather=weather(20, 26),
+            event="đi chơi",
+            excluded_item_ids={"t1"},
+            avoid_outfit_keys={"b2,s1,t2"},
+        )
+    )
+    assert result["outfits"]
+    assert all("t1" not in outfit["item_ids"] for outfit in result["outfits"])
+    assert all(",".join(sorted(outfit["item_ids"])) != "b2,s1,t2" for outfit in result["outfits"])
+
+
 def test_suggest_tops_up_single_outfit_and_falls_back_on_garbage():
     provider = FakeProvider({"outfits": [{"title": "A", "item_ids": ["t2", "b2"], "reason": "r"}]})
     result = run(suggest_outfits(provider, sample_wardrobe(), weather=weather(20, 26)))

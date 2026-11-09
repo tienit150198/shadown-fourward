@@ -819,6 +819,8 @@ async def suggest_outfits(
     anchor_id: str | None = None,
     wearing: dict[str, Any] | None = None,
     memory: dict[str, Any] | None = None,
+    excluded_item_ids: set[str] | None = None,
+    avoid_outfit_keys: set[str] | None = None,
 ) -> dict[str, Any]:
     """→ {"outfits": [...], "rules_used": [rule objects], "source": "ai"|"ai+fallback"|"fallback"|"mock"}.
 
@@ -830,10 +832,18 @@ async def suggest_outfits(
     worn_categories: set[str] = set()
     if primary and not anchor_id:
         worn_categories = {primary["category"]}
-    by_id = {it["id"]: it for it in items}
-    anchor = by_id.get(anchor_id) if anchor_id else None
     if not items:
         return {"outfits": [], "rules_used": [], "source": "empty"}
+    excluded_item_ids = {str(item_id) for item_id in (excluded_item_ids or set())}
+    avoid_outfit_keys = {str(key) for key in (avoid_outfit_keys or set())}
+    if excluded_item_ids:
+        items = [item for item in items if str(item.get("id")) not in excluded_item_ids]
+        if anchor_id in excluded_item_ids:
+            anchor_id = None
+    if not items:
+        return {"outfits": [], "rules_used": [], "source": "empty"}
+    by_id = {it["id"]: it for it in items}
+    anchor = by_id.get(anchor_id) if anchor_id else None
     # ---- style_memory hook 1/3: "must" rules filter the wardrobe before any picking ----
     style_ctx = style_memory.build_context(items, rules, memory, event=event, weather=weather, anchor_id=anchor_id)
     items, banned_by_rule = style_memory.enforce_must(items, style_ctx)
@@ -849,11 +859,20 @@ async def suggest_outfits(
     score_ctx = outfit_scoring.build_context(event, weather, worn_categories=worn_categories, anchor_id=anchor_id)
     dropped: list[dict[str, Any]] = []
 
+    def remove_avoided(outfit_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        if not avoid_outfit_keys:
+            return outfit_rows
+        return [
+            outfit for outfit in outfit_rows
+            if ",".join(sorted(str(item_id) for item_id in outfit.get("item_ids", []))) not in avoid_outfit_keys
+        ]
+
     if provider.mode == "mock":
         outfits = fallback()
         for outfit in outfits:
             outfit["rules_used"] = []
         # ---- style_memory hook 3/3 (mock): repair + rank + accurate credits ----
+        outfits = remove_avoided(outfits)
         outfits, used = style_memory.finalize(outfits, items, style_ctx)
         outfit_scoring.annotate_outfits(outfits, items, score_ctx)  # ---- outfit_scoring hook 3/3 (mock) ----
         return {"outfits": outfits, "rules_used": [r for r in rules if r["id"] in used], "source": "mock",
@@ -882,6 +901,7 @@ async def suggest_outfits(
         )
         # ---- outfit_scoring hook 2/3: drop hard violations (shorts at a wedding, jacket at 34°C…), re-rank ----
         outfits, dropped = outfit_scoring.review_outfits(outfits, items, score_ctx)
+        outfits = remove_avoided(outfits)
         if dropped:
             logger.info("stylist: dropped %d model outfit(s): %s", len(dropped), [d["reason_vi"] for d in dropped])
         if not outfits:
@@ -896,7 +916,7 @@ async def suggest_outfits(
     elif len(outfits) < (3 if dropped else 2):  # outfit_scoring: refill to 3 when outfits were dropped
         target = 3 if dropped else 2
         have = {frozenset(o["item_ids"]) for o in outfits}
-        for extra in style_memory.rank_candidates(fallback(6), items, style_ctx):  # style_memory: best-first top-up
+        for extra in style_memory.rank_candidates(remove_avoided(fallback(6)), items, style_ctx):  # style_memory: best-first top-up
             if len(outfits) >= target:
                 break
             if frozenset(extra["item_ids"]) not in have:

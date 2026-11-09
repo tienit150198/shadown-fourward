@@ -225,6 +225,8 @@ def rate_rule_for(method: str, path: str) -> str | None:
         return "rule_parse"
     if path == "/api/stylist/suggest":
         return "suggest"
+    if path == "/api/stylist/chat":
+        return "suggest"
     if path == "/api/weather":
         return "weather"
     if path == "/api/tryon/photo":

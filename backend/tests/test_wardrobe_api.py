@@ -94,3 +94,50 @@ def test_media_route_is_path_safe(wclient):
     assert wclient.get("/wardrobe-media/images/%2e%2e/items.json").status_code == 404
     assert wclient.get("/wardrobe-media/images/nope.jpg").status_code == 404
     assert wclient.get("/wardrobe-media/images/demo-quan-au-den.jpg").status_code == 200
+
+
+def test_stylist_chat_clarifies_then_returns_grounded_outfits(wclient):
+    assert wclient.post("/api/stylist/chat", json={"message": "Tôi cần tư vấn"}).status_code == 409
+    wclient.post("/api/wardrobe/seed-demo")
+
+    first = wclient.post("/api/stylist/chat", json={"message": "Tôi đi đám cưới ở Hà Nội"})
+    assert first.status_code == 200, first.text
+    body = first.json()
+    assert body["phase"] == "recommendation"
+    assert body["state"]["event"] == "đám cưới"
+    assert body["state"]["city"] == "Hà Nội"
+    assert body["outfits"] and body["assistant_message"]
+    session_id = body["session_id"]
+    known = {item["id"] for item in wclient.get("/api/wardrobe/items").json()}
+    for outfit in body["outfits"]:
+        assert set(outfit["item_ids"]) <= known
+
+    second = wclient.post(
+        "/api/stylist/chat",
+        json={"session_id": session_id, "message": "Cho tôi bộ khác"},
+    )
+    assert second.status_code == 200, second.text
+    assert second.json()["session_id"] == session_id
+    assert second.json()["state"]["turn_count"] == 2
+
+
+def test_stylist_chat_rejects_blank_message(wclient):
+    wclient.post("/api/wardrobe/seed-demo")
+    response = wclient.post("/api/stylist/chat", json={"message": "  "})
+    assert response.status_code == 422
+
+
+def test_stylist_chat_learning_requires_explicit_action(wclient):
+    wclient.post("/api/wardrobe/seed-demo")
+    response = wclient.post("/api/stylist/chat", json={"message": "Tôi không thích màu trắng"})
+    assert response.status_code == 200
+    assert "Lưu thành sở thích" in response.json()["suggested_actions"]
+    assert wclient.get("/api/wardrobe/rules").json() == []
+
+    saved = wclient.post("/api/stylist/chat", json={
+        "message": "Xác nhận lưu sở thích",
+        "learning_action": "save_preference",
+        "learning_text": "Tôi không thích màu trắng",
+    })
+    assert saved.status_code == 200
+    assert saved.json()["learning"]["text"] == "Tôi không thích màu trắng"

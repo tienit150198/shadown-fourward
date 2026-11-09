@@ -11,6 +11,7 @@ import asyncio
 import json
 import logging
 import os
+import uuid
 from pathlib import Path
 from typing import Any
 
@@ -22,6 +23,8 @@ import style_memory
 from garment_attrs import tag_item_with_attrs
 from shop_import import ShopImportError, import_product
 from stylist import describe_wearing, suggest_outfits
+from stylist_chat import StylistConversationRegistry, parse_stylist_intent
+from stylist_conversation import StylistConversationState, apply_intent, missing_required_slots, outfit_key
 from tryon import TryOnError, TryOnService, create_live_token, live_prompt
 from wardrobe_store import (
     MAX_IMAGE_DATA_URL_CHARS,
@@ -291,6 +294,35 @@ class SuggestRequest(BaseModel):
     notes: str = Field("", max_length=300)
 
 
+class StylistChatRequest(BaseModel):
+    session_id: str | None = Field(None, max_length=80)
+    message: str = Field(..., min_length=1, max_length=500)
+    event: str | None = Field(None, max_length=200)
+    city: str | None = Field(None, max_length=80)
+    date: str | None = Field(None, max_length=10)
+    anchor_item_id: str | None = Field(None, max_length=64)
+    learning_action: str | None = Field(None, pattern="^(save_preference)$")
+    learning_text: str | None = Field(None, max_length=300)
+
+
+def _decorate_stylist_outfits(result: dict[str, Any], items: list[dict[str, Any]]) -> None:
+    by_id = {it["id"]: it for it in items}
+    for outfit in result.get("outfits", []):
+        outfit["items"] = [
+            {k: by_id[i].get(k) for k in ("id", "name", "category", "colors", "image_url", "color_hex", "subtype", "formality")}
+            for i in outfit["item_ids"]
+            if i in by_id
+        ]
+
+
+def _stylist_chat_registry(request: Request) -> StylistConversationRegistry:
+    registry = getattr(request.app.state, "stylist_chat_registry", None)
+    if registry is None:
+        registry = StylistConversationRegistry()
+        request.app.state.stylist_chat_registry = registry
+    return registry
+
+
 @router.post("/api/stylist/suggest")
 async def stylist_suggest(payload: SuggestRequest, request: Request) -> dict[str, Any]:
     store = _store(request)
@@ -333,13 +365,7 @@ async def stylist_suggest(payload: SuggestRequest, request: Request) -> dict[str
         wearing=wearing,
         memory=style_memory.load_memory(store.root),
     )
-    by_id = {it["id"]: it for it in items}
-    for outfit in result["outfits"]:
-        outfit["items"] = [
-            {k: by_id[i].get(k) for k in ("id", "name", "category", "colors", "image_url", "color_hex", "subtype",
-                                          "formality")}
-            for i in outfit["item_ids"]
-        ]
+    _decorate_stylist_outfits(result, items)
     return {
         "weather": weather_info,
         "wearing": (wearing or {}).get("wearing") or None,
@@ -359,6 +385,134 @@ async def stylist_suggest(payload: SuggestRequest, request: Request) -> dict[str
             "date": (weather_info or {}).get("date") or payload.date,
             "weather": {k: (weather_info or {}).get(k) for k in ("t_min", "t_max", "rain_prob", "summary_vi")},
         },
+        "generated_at": now_iso(),
+    }
+
+
+@router.post("/api/stylist/chat")
+async def stylist_chat(payload: StylistChatRequest, request: Request) -> dict[str, Any]:
+    """One conversational turn; the recommendation engine remains source of truth."""
+
+    if not payload.message.strip():
+        raise HTTPException(status_code=422, detail="Tin nhắn không được để trống.")
+    store = _store(request)
+    provider = _provider(request)
+    items = store.list_items()
+    if not items:
+        raise HTTPException(status_code=409, detail="Tủ đồ đang trống — hãy thêm đồ hoặc nạp tủ đồ mẫu.")
+    valid_item_ids = {str(item["id"]) for item in items}
+    registry = _stylist_chat_registry(request)
+
+    learning = None
+    if payload.learning_action == "save_preference":
+        learning_text = (payload.learning_text or "").strip()
+        if not learning_text:
+            raise HTTPException(status_code=422, detail="Thiếu nội dung sở thích cần lưu.")
+        try:
+            learning = await style_memory.teach_rule(
+                store, provider, learning_text, "Bạn", items, taught_via="text"
+            )
+        except WardrobeError as error:
+            raise HTTPException(status_code=422, detail=str(error))
+
+    def new_state() -> StylistConversationState:
+        return StylistConversationState(session_id=str(uuid.uuid4()))
+
+    state = registry.get_or_create(payload.session_id, new_state)
+    explicit_updates = {
+        key: value
+        for key, value in {
+            "event": payload.event,
+            "city": payload.city,
+            "date": payload.date,
+            "anchor_item_id": payload.anchor_item_id,
+        }.items()
+        if value
+    }
+    intent = await parse_stylist_intent(provider, payload.message, state, items)
+    if explicit_updates:
+        intent = type(intent)(
+            action=intent.action,
+            slot_updates={**explicit_updates, **intent.slot_updates},
+            target_item_id=intent.target_item_id,
+            target_outfit_index=intent.target_outfit_index,
+            value=intent.value,
+        )
+    state = apply_intent(state, intent, valid_item_ids)
+    missing = missing_required_slots(state)
+    if missing:
+        state.pending_question = "Bạn sắp đi đâu hoặc mặc bộ này trong dịp nào?"
+        registry.save(state)
+        clarification_actions = ["Đi làm", "Đi chơi", "Đám cưới"]
+        if any(token in payload.message.casefold() for token in ("nhớ", "ghi nhớ", "từ nay", "không thích")):
+            clarification_actions.insert(0, "Lưu thành sở thích")
+        return {
+            "session_id": state.session_id,
+            "phase": "clarification",
+            "assistant_message": state.pending_question,
+            "missing_slots": missing,
+            "outfits": [],
+            "suggested_actions": clarification_actions[:5],
+            "learning": learning,
+            "state": state.public_dict(),
+        }
+
+    notes: list[str] = []
+    if state.style:
+        notes.append(f"Phong cách: {state.style}")
+    if state.formality_delta > 0:
+        notes.append("Trang trọng hơn")
+    elif state.formality_delta < 0:
+        notes.append("Thoải mái hơn")
+    if state.temperature_delta < 0:
+        notes.append("Ưu tiên mát hơn")
+    elif state.temperature_delta > 0:
+        notes.append("Ưu tiên ấm hơn")
+    weather_info = await _weather(request).get(city=state.city, date=state.date)
+    result = await suggest_outfits(
+        provider,
+        items,
+        weather=weather_info,
+        event=state.event,
+        notes="; ".join(notes),
+        rules=store.list_rules(),
+        anchor_id=state.anchor_item_id,
+        memory=style_memory.load_memory(store.root),
+        excluded_item_ids=state.excluded_item_ids,
+        avoid_outfit_keys=state.shown_outfit_keys if intent.action == "show_another" else set(),
+    )
+    _decorate_stylist_outfits(result, items)
+    outfits = result.get("outfits", [])
+    for outfit in outfits:
+        state.shown_outfit_keys.add(outfit_key(outfit.get("item_ids", [])))
+    if outfits:
+        state.current_outfit_ids = list(outfits[0].get("item_ids", []))
+    state.pending_question = None
+    registry.save(state)
+    action_message = {
+        "exclude_item": "Mình đã bỏ món đó khỏi bộ gợi ý.",
+        "keep_item": "Mình sẽ phối quanh món bạn chọn.",
+        "refine_formality": "Mình đã chỉnh độ trang trọng của bộ đồ.",
+        "refine_temperature": "Mình đã chỉnh độ thoáng/ấm theo ý bạn.",
+        "show_another": "Đây là một lựa chọn khác từ tủ đồ của bạn.",
+    }.get(intent.action, "Mình đã chọn một vài bộ phù hợp với bạn.")
+    suggested_actions = ["Trang trọng hơn", "Đổi bộ khác", "Mặc thử bộ 1"]
+    if any(token in payload.message.casefold() for token in ("nhớ", "ghi nhớ", "từ nay", "không thích")):
+        suggested_actions.insert(0, "Lưu thành sở thích")
+        suggested_actions.append("Chỉ áp dụng lần này")
+    return {
+        "session_id": state.session_id,
+        "phase": "recommendation",
+        "assistant_message": action_message,
+        "missing_slots": [],
+        "weather": weather_info,
+        "outfits": outfits,
+        "rules_used": result.get("rules_used", []),
+        "source": result.get("source", "fallback"),
+        "suggested_actions": suggested_actions[:5],
+        "tryon": {"item_ids": state.current_outfit_ids, "ready": bool(state.current_outfit_ids)},
+        "learning": learning,
+        "state": state.public_dict(),
         "generated_at": now_iso(),
     }
 

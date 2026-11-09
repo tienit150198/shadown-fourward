@@ -2,7 +2,7 @@
 import { wardrobeApi } from '../wardrobe-api.js';
 import { h, icon, toast, errorToast, navigate, createScope, openSheet } from '../ui.js';
 import { speak, cancelSpeech, unlockTTS, setMuted, ttsSupported } from '../speech.js';
-import { getSettings, updateSettings } from '../store.js';
+import { getSettings, updateSettings, getStylistSession, setStylistSession, clearStylistSession } from '../store.js';
 import {
   EVENTS, CATEGORIES, categoryLabel, itemThumb, colorDots, micButton, openCameraCapture, outfitHash,
   resolveRule, ruleBadge, localDate, weatherEmoji,
@@ -54,6 +54,9 @@ export function mount(el) {
   let weatherSeq = 0;
   let busy = false;
   let controller = null;
+  let chatController = null;
+  let chatBusy = false;
+  let chatSession = getStylistSession();
 
   const persist = () => writeState({
     event: st.event, text: st.text, dateMode: st.dateMode, customDate: st.customDate, city: st.city,
@@ -239,6 +242,125 @@ export function mount(el) {
   const resultsEl = h('section', { class: 'wd-results', 'aria-live': 'polite' });
   const ctaBtn = h('button', { class: 'btn btn-primary btn-xl wd-cta', type: 'button' }, icon('sparkle', 22), 'Gợi ý cho tôi');
 
+  // ---------- conversational stylist ----------
+  const chatMessages = h('div', { class: 'wd-chat-messages', 'aria-live': 'polite' });
+  const chatQuick = h('div', { class: 'wd-chat-actions' });
+  const chatInput = h('textarea', { class: 'input wd-chat-input', rows: 1, maxlength: '500', placeholder: 'Ví dụ: Tôi đi đám cưới ở Hà Nội…' });
+  const chatSend = h('button', { class: 'btn btn-primary wd-chat-send', type: 'submit' }, icon('send', 18), 'Gửi');
+  const chatForm = h('form', { class: 'wd-chat-composer' }, chatInput, chatSend);
+  const chatReset = h('button', { class: 'btn btn-ghost btn-sm', type: 'button', onClick: () => resetChat() }, icon('refresh', 16), 'Bắt đầu lại');
+  const chatPanel = h('section', { class: 'wd-chat', 'aria-label': 'Trò chuyện với trợ lý phối đồ' },
+    h('div', { class: 'wd-chat-head' }, h('div', null, h('h2', { class: 'wd-q' }, 'Trò chuyện với Stylist AI'), h('p', { class: 'wd-muted' }, 'Bạn nói hoàn cảnh, trợ lý sẽ hỏi thêm và phối từ tủ đồ của bạn.')), chatReset),
+    chatMessages, chatQuick, chatForm);
+
+  function renderChatMessages() {
+    const messages = chatSession?.messages || [];
+    chatMessages.replaceChildren(...messages.map((m) => h('div', { class: `wd-chat-bubble ${m.role === 'user' ? 'user' : 'assistant'}` }, m.text)));
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+  }
+
+  function saveChatMessage(role, text) {
+    const next = chatSession || { sessionId: null, messages: [], response: null };
+    next.messages = [...(next.messages || []), { role, text: String(text).slice(0, 1000) }].slice(-40);
+    next.updatedAt = Date.now();
+    chatSession = setStylistSession(next);
+    renderChatMessages();
+  }
+
+  function renderChatActions(actions = []) {
+    const list = Array.isArray(actions) && actions.length ? actions : ['Đi đám cưới', 'Đi làm', 'Bỏ qua', 'Bắt đầu lại'];
+    chatQuick.replaceChildren(...list.slice(0, 5).map((label) => h('button', {
+      class: 'wd-chat-action', type: 'button', disabled: chatBusy,
+      onClick: () => { if (/bắt đầu lại/i.test(label)) resetChat(); else if (/lưu thành sở thích/i.test(label)) savePreference(); else sendChat(String(label)); },
+    }, label)));
+  }
+
+  async function savePreference() {
+    if (chatBusy) return;
+    const lastUser = [...(chatSession?.messages || [])].reverse().find((m) => m.role === 'user');
+    if (!lastUser?.text) return;
+    chatBusy = true;
+    renderChatActions();
+    try {
+      const body = { message: 'Xác nhận lưu sở thích', learning_action: 'save_preference', learning_text: lastUser.text };
+      if (chatSession?.sessionId) body.session_id = chatSession.sessionId;
+      const res = await wardrobeApi.stylistChat(body);
+      chatSession = setStylistSession({ ...chatSession, response: res, updatedAt: Date.now() });
+      saveChatMessage('assistant', 'Mình đã lưu thành quy tắc riêng cho những lần phối sau.');
+      renderChatActions(res?.suggested_actions);
+    } catch (err) {
+      toast(err.userMessage || 'Chưa lưu được sở thích.');
+    } finally {
+      chatBusy = false;
+      renderChatActions(chatSession?.response?.suggested_actions);
+    }
+  }
+
+  function resetChat() {
+    chatController?.abort();
+    chatController = null;
+    chatBusy = false;
+    clearStylistSession();
+    chatSession = null;
+    renderChatMessages();
+    renderChatActions();
+    resultsEl.replaceChildren();
+    chatInput.focus();
+  }
+
+  async function sendChat(rawText) {
+    const message = String(rawText || '').trim();
+    if (!message || chatBusy) return;
+    chatInput.value = '';
+    saveChatMessage('user', message);
+    chatBusy = true;
+    chatSend.disabled = true;
+    renderChatActions(chatSession?.response?.suggested_actions);
+    chatController = new AbortController();
+    try {
+      const body = { message, date: dateValue(), city: st.coords ? undefined : st.city };
+      if (chatSession?.sessionId) body.session_id = chatSession.sessionId;
+      if (st.anchorId) body.anchor_item_id = st.anchorId;
+      const res = await wardrobeApi.stylistChat(body, { signal: chatController.signal });
+      if (scope.disposed) return;
+      chatSession = setStylistSession({
+        sessionId: res?.session_id || chatSession?.sessionId,
+        messages: [...(chatSession?.messages || []), { role: 'assistant', text: res?.assistant_message || 'Mình đã cập nhật gợi ý.' }],
+        response: res,
+        updatedAt: Date.now(),
+      });
+      renderChatMessages();
+      renderChatActions(res?.suggested_actions);
+      if (res?.weather && !weather) { weather = res.weather; renderWeather('ok'); }
+      if (Array.isArray(res?.outfits) && res.outfits.length) {
+        st.result = res;
+        persist();
+        renderResult(res, { speakFirst: false });
+        resultsEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } else {
+        resultsEl.replaceChildren(h('div', { class: 'wd-chat-clarify' }, res?.assistant_message || 'Bạn cho mình thêm một chút thông tin nhé.'));
+      }
+    } catch (err) {
+      if (scope.disposed) return;
+      if (!chatController?.signal.aborted) {
+        saveChatMessage('assistant', err.userMessage || 'Trợ lý chưa phản hồi được. Bạn thử lại nhé.');
+        toast(err.userMessage || 'Trợ lý chưa phản hồi được.');
+      }
+    } finally {
+      chatBusy = false;
+      chatSend.disabled = false;
+      chatController = null;
+      renderChatActions(chatSession?.response?.suggested_actions);
+    }
+  }
+
+  chatForm.addEventListener('submit', (event) => { event.preventDefault(); sendChat(chatInput.value); });
+  chatInput.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); sendChat(chatInput.value); }
+  });
+  renderChatMessages();
+  renderChatActions(chatSession?.response?.suggested_actions);
+
   function itemById(id) { return items.find((it) => String(it.id) === String(id)); }
 
   function renderLoading({ withPhoto = false, withRules = false } = {}) {
@@ -360,6 +482,7 @@ export function mount(el) {
     }
   });
   scope.add(() => controller?.abort());
+  scope.add(() => chatController?.abort());
 
   // ---------- layout ----------
   el.append(
@@ -368,6 +491,7 @@ export function mount(el) {
       h('div', { class: 'app-bar-title' }, 'Phối đồ'),
       h('a', { class: 'icon-btn', href: '#/rules', 'aria-label': 'Dạy trợ lý' }, h('span', { 'aria-hidden': 'true', style: { fontSize: '22px' } }, '🎓'))),
     h('div', { class: 'wd-scroll' },
+      chatPanel,
       h('div', { class: 'wd-form' },
         h('section', { class: 'wd-block' },
           h('h2', { class: 'wd-q' }, 'Bạn sắp đi đâu?'),

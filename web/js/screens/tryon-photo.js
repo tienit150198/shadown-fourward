@@ -78,6 +78,7 @@ export function mount(el) {
       goBtn,
       config ? h('p', { class: 'wd-muted wd-center' }, `Máy mặc thử: ${providerLabel(config?.photo?.provider)} · ${expectText(config)}`) : null,
       config?.photo?.notice ? h('div', { class: 'wd-note' }, icon('alert', 18), h('div', null, String(config.photo.notice))) : null,
+      h('p', { class: 'wd-muted wd-center' }, 'Ảnh/video do AI tạo; màu, độ rủ và độ vừa có thể không chính xác.'),
       config?.photo && config.photo.renders_bottoms === false && hasBottoms()
         ? h('p', { class: 'wd-muted wd-center' }, 'Máy này chỉ vẽ áo/váy — quần chưa hiện trong ảnh.') : null);
   }
@@ -213,6 +214,7 @@ export function mount(el) {
         h('span', { class: `wd-provider p-${res.provider || 'x'}` }, '⚙️ ', providerLabel(res.provider)),
         Number.isFinite(seconds) ? h('span', { class: 'chip' }, icon('clock', 14), `${Math.round(seconds)} giây`) : null,
         res.provider === 'mock' ? h('span', { class: 'chip' }, 'Ảnh minh hoạ') : null),
+      h('p', { class: 'wd-muted wd-center' }, res.provider === 'mock' ? 'Ảnh minh hoạ — màu, độ rủ và độ vừa có thể không chính xác.' : 'Ảnh/video do AI tạo; màu, độ rủ và độ vừa có thể không chính xác.'),
       fallbackNote,
       notes.length ? h('div', { class: 'wd-note' }, icon('alert', 18), h('div', null, notes.map((n) => h('div', null, String(n))))) : null,
       h('div', { class: 'wd-row2' }, save, shareBtn),

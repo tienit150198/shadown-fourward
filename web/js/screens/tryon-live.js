@@ -186,7 +186,7 @@ export function mount(el) {
       h('button', { class: 'btn btn-ghost btn-sm', type: 'button', onClick: () => openPicker() }, 'Đổi đồ')),
     pfNote,
     h('p', { class: 'tl-ai-note' }, icon('alert', 14),
-      h('span', null, 'Video do AI (Decart) tạo ra và có watermark. Hình camera được gửi tới Decart để xử lý trực tiếp, SHADOW không lưu lại.')),
+      h('span', null, 'Video do AI (Decart) tạo ra và có watermark. Màu, độ rủ và độ vừa có thể không chính xác. Hình camera được gửi tới Decart để xử lý trực tiếp, SHADOW không lưu lại.')),
     startBtn, photoLink);
 
   // message card (blocked / error / ended)

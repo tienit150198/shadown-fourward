@@ -90,6 +90,8 @@ export const wardrobeApi = {
   weather: (params, opts = {}) => request('GET', `/api/weather${query(params)}`, { timeoutMs: 15000, ...opts }),
   /** {event, city?, lat?, lon?, date?, current_image?, anchor_item_id?, notes?} → {weather, wearing, outfits, rules_used} */
   suggest: (body, opts = {}) => request('POST', '/api/stylist/suggest', { body, timeoutMs: 150000, ...opts }),
+  /** {session_id?, message, city?, date?, anchor_item_id?} → conversational stylist turn */
+  stylistChat: (body, opts = {}) => request('POST', '/api/stylist/chat', { body, timeoutMs: 45000, ...opts }),
   tryonConfig: () => request('GET', '/api/tryon/config', { timeoutMs: 8000 }),
   /** {person_image, item_ids} → {image_url, provider, seconds, note?} */
   tryonPhoto: (body, opts = {}) => request('POST', '/api/tryon/photo', { body, timeoutMs: 300000, ...opts }),

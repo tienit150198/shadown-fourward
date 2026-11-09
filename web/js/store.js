@@ -2,6 +2,38 @@
 
 const mem = { draft: null, done: null };
 
+const STYLIST_SESSION_KEY = 'shadow.stylist.chat';
+const STYLIST_MAX_MESSAGES = 40;
+
+function trimStylistSession(value) {
+  if (!value || typeof value !== 'object') return null;
+  const messages = Array.isArray(value.messages) ? value.messages.slice(-STYLIST_MAX_MESSAGES)
+    .filter((m) => m && (m.role === 'user' || m.role === 'assistant') && typeof m.text === 'string')
+    .map((m) => ({ role: m.role, text: m.text.slice(0, 1000) })) : [];
+  return {
+    sessionId: typeof value.sessionId === 'string' ? value.sessionId.slice(0, 120) : null,
+    messages,
+    response: value.response && typeof value.response === 'object' ? value.response : null,
+    updatedAt: Number(value.updatedAt) || Date.now(),
+  };
+}
+
+export function setStylistSession(value) {
+  const next = trimStylistSession(value);
+  mem.stylist = next;
+  writeSession(STYLIST_SESSION_KEY, next);
+  return next;
+}
+export function getStylistSession() {
+  if (mem.stylist !== undefined) return mem.stylist;
+  mem.stylist = trimStylistSession(readSession(STYLIST_SESSION_KEY));
+  return mem.stylist;
+}
+export function clearStylistSession() {
+  mem.stylist = null;
+  writeSession(STYLIST_SESSION_KEY, null);
+}
+
 function readSession(key) {
   try { return JSON.parse(sessionStorage.getItem(key) || 'null'); } catch { return null; }
 }
