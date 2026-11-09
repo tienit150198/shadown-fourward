@@ -1,0 +1,7 @@
+# Minimal set for TRYON_MOCK=1 and the API tests (no torch). Same server pins as requirements.txt.
+fastapi==0.115.12
+pydantic==2.11.4
+uvicorn==0.34.2
+pillow>=10.3,<12
+httpx>=0.27,<0.29
+pytest>=8,<9

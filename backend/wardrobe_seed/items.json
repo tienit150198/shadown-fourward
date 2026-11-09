@@ -1,0 +1,367 @@
+[
+  {
+    "id": "demo-ao-blouse-cam-dao",
+    "name": "Áo blouse cam đào cổ cao",
+    "category": "top",
+    "colors": [
+      "cam đào"
+    ],
+    "style": "công sở",
+    "warmth": 2,
+    "occasions": [
+      "đi làm",
+      "đi chơi",
+      "hẹn hò",
+      "phỏng vấn"
+    ],
+    "seasons": [
+      "xuân",
+      "thu"
+    ],
+    "pattern": "trơn",
+    "material": "voan",
+    "notes": "Phối với quần jeans hoặc chân váy ngắn để tạo vẻ nhẹ nhàng.",
+    "description_en": "Light peach-colored long-sleeve blouse with a high neck and delicate texture.",
+    "subtype": "blouse",
+    "sleeve": "long",
+    "length": null,
+    "fit": "regular",
+    "fabric": "poly",
+    "formality": 3,
+    "breathability": 3,
+    "rain_ok": false,
+    "uv_protect": false,
+    "attrs_v": 1,
+    "color_hex": "#dc9b7b",
+    "color_family": "earth"
+  },
+  {
+    "id": "demo-ao-polo-hong",
+    "name": "Áo polo hồng dài tay",
+    "category": "top",
+    "colors": [
+      "hồng"
+    ],
+    "style": "công sở",
+    "warmth": 3,
+    "occasions": [
+      "đi làm",
+      "đi học",
+      "đi chơi",
+      "hẹn hò"
+    ],
+    "seasons": [
+      "xuân",
+      "thu"
+    ],
+    "pattern": "trơn",
+    "material": "cotton",
+    "notes": "Phối cùng chân váy hoặc quần tây để tạo vẻ chuyên nghiệp.",
+    "description_en": "Dusty pink long-sleeve knit polo shirt with button placket",
+    "subtype": "polo",
+    "sleeve": "long",
+    "length": null,
+    "fit": "regular",
+    "fabric": "cotton",
+    "formality": 3,
+    "breathability": 4,
+    "rain_ok": false,
+    "uv_protect": false,
+    "attrs_v": 1,
+    "color_hex": "#d08b8f",
+    "color_family": "warm"
+  },
+  {
+    "id": "demo-ao-thun-xanh-duong",
+    "name": "Áo thun xanh dương viền ren",
+    "category": "top",
+    "colors": [
+      "xanh dương"
+    ],
+    "style": "thường ngày",
+    "warmth": 2,
+    "occasions": [
+      "đi làm",
+      "đi chơi",
+      "hẹn hò",
+      "ở nhà"
+    ],
+    "seasons": [
+      "xuân",
+      "hạ",
+      "thu"
+    ],
+    "pattern": "trơn",
+    "material": "cotton",
+    "notes": "Phối cùng quần jeans hoặc chân váy ngắn để tạo vẻ thanh lịch.",
+    "description_en": "Blue short-sleeve cotton top with lace detailing on sleeves",
+    "subtype": "tee",
+    "sleeve": "short",
+    "length": null,
+    "fit": "regular",
+    "fabric": "cotton",
+    "formality": 2,
+    "breathability": 4,
+    "rain_ok": false,
+    "uv_protect": false,
+    "attrs_v": 1,
+    "color_hex": "#3c51a7",
+    "color_family": "cool"
+  },
+  {
+    "id": "demo-ao-nhung-xanh",
+    "name": "Áo nhung xanh cổ vạt chéo",
+    "category": "top",
+    "colors": [
+      "xanh cổ vịt"
+    ],
+    "style": "dự tiệc",
+    "warmth": 3,
+    "occasions": [
+      "đi làm",
+      "đi chơi",
+      "hẹn hò",
+      "dự tiệc"
+    ],
+    "seasons": [
+      "xuân",
+      "thu"
+    ],
+    "pattern": "trơn",
+    "material": "nhung",
+    "notes": "Phối cùng quần jeans hoặc chân váy để tạo vẻ thanh lịch.",
+    "description_en": "Blue velvet short-sleeve wrap top with tie detail",
+    "subtype": "tee",
+    "sleeve": "short",
+    "length": null,
+    "fit": "regular",
+    "fabric": "poly",
+    "formality": 3,
+    "breathability": 3,
+    "rain_ok": true,
+    "uv_protect": false,
+    "attrs_v": 1,
+    "color_hex": "#1a4a7a",
+    "color_family": "cool"
+  },
+  {
+    "id": "demo-quan-jean-xanh",
+    "name": "Quần jean xanh đậm",
+    "category": "bottom",
+    "colors": [
+      "xanh dương"
+    ],
+    "style": "thường ngày",
+    "warmth": 3,
+    "occasions": [
+      "đi làm",
+      "đi học",
+      "đi chơi",
+      "đi biển"
+    ],
+    "seasons": [
+      "xuân",
+      "hạ",
+      "thu"
+    ],
+    "pattern": "trơn",
+    "material": "jean",
+    "notes": "Phối với áo sơ mi trắng hoặc áo thun đơn giản để tạo look trẻ trung.",
+    "description_en": "Dark blue denim jeans with gold stitching and belt loops",
+    "subtype": "jeans",
+    "sleeve": null,
+    "length": "long",
+    "fit": "regular",
+    "fabric": "denim",
+    "formality": 2,
+    "breathability": 2,
+    "rain_ok": false,
+    "uv_protect": false,
+    "attrs_v": 1,
+    "color_hex": "#426291",
+    "color_family": "denim"
+  },
+  {
+    "id": "demo-quan-au-den",
+    "name": "Quần tây đen form chuẩn",
+    "category": "bottom",
+    "colors": [
+      "đen"
+    ],
+    "style": "công sở",
+    "warmth": 3,
+    "occasions": [
+      "đi làm",
+      "đi học",
+      "đi chơi",
+      "phỏng vấn"
+    ],
+    "seasons": [
+      "xuân",
+      "thu",
+      "đông"
+    ],
+    "pattern": "trơn",
+    "material": "kaki",
+    "notes": "Phối với áo sơ mi trắng hoặc blazer để tạo set công sở chuẩn mực.",
+    "description_en": "Classic black tailored trousers with belt loops",
+    "subtype": "trousers",
+    "sleeve": null,
+    "length": "long",
+    "fit": "regular",
+    "fabric": "cotton",
+    "formality": 4,
+    "breathability": 4,
+    "rain_ok": false,
+    "uv_protect": false,
+    "attrs_v": 1,
+    "color_hex": "#26252a",
+    "color_family": "neutral"
+  },
+  {
+    "id": "demo-chan-vay-be",
+    "name": "Chân váy xếp ly màu be",
+    "category": "bottom",
+    "colors": [
+      "be"
+    ],
+    "style": "thanh lịch",
+    "warmth": 3,
+    "occasions": [
+      "đi làm",
+      "đi học",
+      "đi chơi",
+      "dự tiệc"
+    ],
+    "seasons": [
+      "xuân",
+      "thu"
+    ],
+    "pattern": "trơn",
+    "material": "cotton",
+    "notes": "Phối với áo sơ mi trắng để tạo vẻ thanh lịch.",
+    "description_en": "Beige pleated A-line midi skirt",
+    "subtype": "skirt",
+    "sleeve": null,
+    "length": "long",
+    "fit": "regular",
+    "fabric": "cotton",
+    "formality": 3,
+    "breathability": 4,
+    "rain_ok": false,
+    "uv_protect": false,
+    "attrs_v": 1,
+    "color_hex": "#d8c4a1",
+    "color_family": "earth"
+  },
+  {
+    "id": "demo-vay-xam-co-trang",
+    "name": "Đầm phối cổ bẻ màu xám",
+    "category": "dress",
+    "colors": [
+      "xám",
+      "trắng"
+    ],
+    "style": "nữ tính",
+    "warmth": 3,
+    "occasions": [
+      "đi làm",
+      "đi học",
+      "đi chơi",
+      "hẹn hò"
+    ],
+    "seasons": [
+      "xuân",
+      "thu"
+    ],
+    "pattern": "trơn",
+    "material": "cotton",
+    "notes": "Phối với giày sneaker trắng để tăng điểm trẻ trung.",
+    "description_en": "Grey sleeveless dress with white collar and pleated skirt",
+    "subtype": "dress",
+    "sleeve": "none",
+    "length": null,
+    "fit": "regular",
+    "fabric": "cotton",
+    "formality": 3,
+    "breathability": 5,
+    "rain_ok": false,
+    "uv_protect": false,
+    "attrs_v": 1,
+    "color_hex": "#5e5356",
+    "color_family": "neutral"
+  },
+  {
+    "id": "demo-ao-khoac-xanh-reu",
+    "name": "Áo khoác da lộn xanh bạc hà",
+    "category": "outerwear",
+    "colors": [
+      "xanh bạc hà"
+    ],
+    "style": "công sở",
+    "warmth": 4,
+    "occasions": [
+      "đi làm",
+      "đi chơi",
+      "hẹn hò",
+      "du lịch"
+    ],
+    "seasons": [
+      "xuân",
+      "thu"
+    ],
+    "pattern": "trơn",
+    "material": "da lộn",
+    "notes": "Phối cùng quần jeans hoặc quần tây để tạo vẻ ngoài thanh lịch.",
+    "description_en": "Green suede jacket with button closure and flap pockets",
+    "subtype": "jacket",
+    "sleeve": "long",
+    "length": null,
+    "fit": "regular",
+    "fabric": "suede",
+    "formality": 3,
+    "breathability": 2,
+    "rain_ok": false,
+    "uv_protect": false,
+    "attrs_v": 1,
+    "color_hex": "#839e90",
+    "color_family": "cool"
+  },
+  {
+    "id": "demo-giay-sneaker-trang",
+    "name": "Giày sneaker trắng",
+    "category": "shoes",
+    "colors": [
+      "trắng"
+    ],
+    "style": "thường ngày",
+    "warmth": 2,
+    "occasions": [
+      "đi làm",
+      "đi học",
+      "đi chơi",
+      "du lịch"
+    ],
+    "seasons": [
+      "xuân",
+      "hạ",
+      "thu"
+    ],
+    "pattern": "trơn",
+    "material": "da",
+    "notes": "Phối cùng quần jean hoặc shorts để look trẻ trung.",
+    "description_en": "white canvas sneakers with gray laces",
+    "subtype": "sneakers",
+    "sleeve": null,
+    "length": null,
+    "fit": null,
+    "fabric": "canvas",
+    "formality": 2,
+    "breathability": 3,
+    "rain_ok": false,
+    "uv_protect": false,
+    "attrs_v": 1,
+    "color_hex": "#fcfcfc",
+    "color_family": "neutral"
+  }
+]

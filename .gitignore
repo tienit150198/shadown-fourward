@@ -1,0 +1,11 @@
+.venv/
+.env
+__pycache__/
+*.pyc
+.pytest_cache/
+backend/skills/_drafts/*
+!backend/skills/_drafts/.gitkeep
+.DS_Store
+evals/
+# Ảnh sản phẩm của bộ tủ đồ mẫu từ shop (bản quyền thuộc shop) — tải lại bằng build_seed_shop.py
+backend/wardrobe_seed_shop/images/

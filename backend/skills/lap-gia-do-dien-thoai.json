@@ -1,0 +1,119 @@
+{
+  "id": "lap-gia-do-dien-thoai",
+  "display_name": "Lắp giá đỡ điện thoại",
+  "start_step_id": "step_1",
+  "language": "vi",
+  "learned_from": "Tuấn",
+  "summary": "Lắp chiếc giá đỡ điện thoại để bàn từ chân đế, thanh đứng, khóa vặn và đầu kẹp theo cách của anh Tuấn.",
+  "created_at": "2026-11-09T09:00:00+00:00",
+  "cover_image": null,
+  "tasks": [
+    { "id": "task_1", "text": "Đặt chân đế" },
+    { "id": "task_2", "text": "Gắn thanh đứng" },
+    { "id": "task_3", "text": "Siết khóa" },
+    { "id": "task_4", "text": "Gắn đầu kẹp" },
+    { "id": "task_5", "text": "Đặt điện thoại" }
+  ],
+  "detectors": {
+    "step_1": {
+      "field": "flag",
+      "prompt": "Return JSON with a single boolean `flag` field. Return true only if the round flat stand base lies flat on the table surface with its wide side down, clearly visible in the frame. If the base is held in the air, tilted, upside down, or not visible, return false. A hand may still touch the base; judge from the visible parts. If you are not sure, return false."
+    },
+    "step_2": {
+      "field": "flag",
+      "prompt": "Return JSON with a single boolean `flag` field. Return true only if a straight rod stands upright (roughly vertical) with its lower end inserted into the hole in the centre of the round base lying on the table. If the rod is lying flat, held above the base without touching it, inserted at the edge of the base, or clearly leaning more than about 20 degrees, return false. A hand may still hold the rod; judge from the visible parts. If you are not sure, return false."
+    },
+    "step_3": {
+      "field": "state",
+      "prompt": "Return JSON with a single string `state` field, one of: \"locked\", \"loose\", \"unknown\". Look at the small knob or lever lock where the rod meets the base. Return \"locked\" if the lock lever is pressed down flat against the base (or the knob is screwed all the way down with no visible gap) and the rod stands straight. Return \"loose\" if the lever is still sticking up / open, there is a visible gap under the knob, or the rod is visibly leaning. If the lock area is hidden or not clearly visible, return \"unknown\"."
+    },
+    "step_4": {
+      "field": "flag",
+      "prompt": "Return JSON with a single boolean `flag` field. Return true only if the clamp head (the part with two gripping arms for the phone) is mounted on the top end of the upright rod, with the gripping arms facing forward toward the camera or user. If the clamp head is lying on the table, held separately in a hand, not touching the rod, or attached upside down, return false. A hand may still touch the clamp; judge from the visible parts. If you are not sure, return false."
+    },
+    "step_5": {
+      "field": "flag",
+      "prompt": "Return JSON with a single boolean `flag` field. Return true only if a smartphone is held by the clamp head on top of the stand: the phone is between the two gripping arms, both arms visibly touch its edges, and the phone stays on the stand (not only resting in a hand). If the phone is lying on the table, only held by a hand next to the stand, or clearly tilted and about to fall, return false. If you are not sure, return false."
+    }
+  },
+  "steps": [
+    {
+      "id": "step_1",
+      "task_id": "task_1",
+      "detector_key": "step_1",
+      "evaluation_mode": "momentary_true_complete",
+      "complete_on": true,
+      "instruction": "Đặt chân đế nằm phẳng giữa bàn",
+      "tip": "Chọn chỗ bàn phẳng và khô, chân đế có miếng cao su nên đặt mặt cao su xuống dưới thì giá mới không trượt.",
+      "warning": null,
+      "reference_image": null,
+      "allow_dynamic_hint": true,
+      "on_enter_speech": "Mình bắt đầu nhé. Bạn đặt chân đế tròn nằm phẳng giữa bàn, mặt cao su úp xuống.",
+      "complete_speech": "Tốt lắm! Giờ bạn cắm thanh đứng vào lỗ ở chính giữa chân đế.",
+      "next_step_id": "step_2"
+    },
+    {
+      "id": "step_2",
+      "task_id": "task_2",
+      "detector_key": "step_2",
+      "evaluation_mode": "momentary_true_complete",
+      "complete_on": true,
+      "instruction": "Cắm thanh đứng vào khe giữa chân đế",
+      "tip": "Xoay nhẹ thanh khi đẩy xuống, đến khi nghe tiếng \"tách\" là thanh đã vào hết khe.",
+      "warning": null,
+      "reference_image": null,
+      "allow_dynamic_hint": true,
+      "on_enter_speech": "Bạn cắm thanh đứng vào lỗ ở chính giữa chân đế, đẩy thẳng xuống nhé.",
+      "complete_speech": "Chuẩn rồi! Bây giờ bạn gạt khóa ở chân thanh xuống để siết chặt lại.",
+      "next_step_id": "step_3"
+    },
+    {
+      "id": "step_3",
+      "task_id": "task_3",
+      "detector_key": "step_3",
+      "evaluation_mode": "match_value",
+      "expected_value": "locked",
+      "ignored_values": ["unknown"],
+      "speak_on_observation_change_only": true,
+      "instruction": "Gạt khóa xuống để siết chặt thanh đứng",
+      "tip": "Một tay giữ thanh cho thẳng, tay kia gạt khóa, như vậy thanh sẽ không bị nghiêng sau khi khóa.",
+      "warning": "Đừng vặn quá lực, khóa nhựa dễ nứt; thấy thanh hết lung lay là đủ.",
+      "reference_image": null,
+      "allow_dynamic_hint": true,
+      "on_enter_speech": "Bạn gạt khóa ở chân thanh xuống để siết chặt thanh đứng nhé.",
+      "mismatch_speech": "Khóa vẫn còn mở, bạn gạt hẳn cần khóa xuống sát chân đế nhé.",
+      "success_speech": "Chắc rồi! Tiếp theo, bạn gắn đầu kẹp lên đỉnh thanh, hai càng kẹp quay ra phía trước.",
+      "next_step_id": "step_4"
+    },
+    {
+      "id": "step_4",
+      "task_id": "task_4",
+      "detector_key": "step_4",
+      "evaluation_mode": "momentary_true_complete",
+      "complete_on": true,
+      "instruction": "Gắn đầu kẹp lên đỉnh thanh, càng kẹp quay ra trước",
+      "tip": null,
+      "warning": null,
+      "reference_image": null,
+      "allow_dynamic_hint": true,
+      "on_enter_speech": "Bạn gắn đầu kẹp lên đỉnh thanh đứng, hai càng kẹp quay về phía mình.",
+      "complete_speech": "Đẹp lắm! Bước cuối, bạn kéo hai càng kẹp ra rồi đặt điện thoại vào giữa.",
+      "next_step_id": "step_5"
+    },
+    {
+      "id": "step_5",
+      "task_id": "task_5",
+      "detector_key": "step_5",
+      "evaluation_mode": "momentary_true_complete",
+      "complete_on": true,
+      "instruction": "Đặt điện thoại vào giữa hai càng kẹp",
+      "tip": "Kéo càng trên lên trước rồi đặt cạnh dưới điện thoại vào càng dưới, buông tay từ từ để kẹp ôm vừa máy.",
+      "warning": "Tránh để càng kẹp đè lên nút nguồn hoặc nút âm lượng ở cạnh máy.",
+      "reference_image": null,
+      "allow_dynamic_hint": true,
+      "on_enter_speech": "Bạn kéo hai càng kẹp ra rồi đặt điện thoại vào giữa, buông tay từ từ nhé.",
+      "complete_speech": "Tuyệt vời! Giá đỡ điện thoại đã lắp xong, bạn làm giống hệt anh Tuấn rồi đấy.",
+      "next_step_id": null
+    }
+  ]
+}
