@@ -1,0 +1,34 @@
+name: shadow
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    init: true
+    env_file:
+      - .env
+    environment:
+      SHADOW_SKILLS_DIR: /data/skills
+      SHADOW_WARDROBE_DIR: /data/wardrobe
+      SHADOW_EVALS_DIR: /data/evals
+      FORWARDED_ALLOW_IPS: "*"
+    ports:
+      - "127.0.0.1:${SHADOW_PORT:-8000}:8000"
+    volumes:
+      - skills:/data/skills
+      - wardrobe:/data/wardrobe
+      - evals:/data/evals
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=5)"]
+      interval: 30s
+      timeout: 6s
+      start_period: 20s
+      retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+volumes:
+  skills:
+  wardrobe:
+  evals:

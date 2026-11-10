@@ -21,6 +21,9 @@ SHADOW là một **trợ lý AI chạy trên điện thoại**, nhìn qua camera
 
 ## Chạy nhanh
 
+Server deployment with Docker Compose: see [docs/DOCKER.md](docs/DOCKER.md)
+for persistent storage, operations, and optional HTTPS.
+
 ### 1. Chạy trên laptop
 
 ```bash
