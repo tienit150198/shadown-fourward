@@ -57,7 +57,8 @@ Mẫu đầy đủ ở [.env.example](.env.example). Máy của trưởng nhóm 
 | `TRYON_WORKER_URL` | Không | Địa chỉ Mac mini chạy mặc thử bằng ảnh, ví dụ `http://192.168.1.50:8188` (cổng mặc định của worker là **8188**). |
 | `TRYON_TOKEN` | Không | Mật khẩu chung với Mac mini — chỉ cần nếu đã đặt `TRYON_TOKEN` bên Mac mini. |
 | `HF_TOKEN` | Không | Token Hugging Face, giúp mặc thử bằng ảnh qua Hugging Face ít bị giới hạn lượt. |
-| `TRYON_PHOTO_PROVIDER` | Không (mặc định `auto`) | Chọn máy mặc thử bằng ảnh: `auto` = Mac mini → Hugging Face → giả lập; hoặc ép `worker` / `hf_space` / `mock`. |
+| `TRYON_PHOTO_PROVIDER` | Không (mặc định `auto`) | Chọn máy mặc thử bằng ảnh: `fashn` = FASHN tryon-v1.6 (pilot thương mại); `auto` = Mac mini → Hugging Face → giả lập; hoặc ép `worker` / `hf_space` / `mock`. |
+| `FASHN_API_KEY` | Khi dùng `fashn` | API key chỉ nằm ở backend; ảnh vào/ra được gửi dạng base64 và output dùng thời gian lưu ngắn. |
 | `STYLIST_MODEL` | Không | Model riêng cho phối đồ; bỏ trống thì dùng `COMPILER_MODEL`. |
 
 Sửa `.env` xong thì **tắt server (Ctrl+C) và chạy lại** `./run.sh`.

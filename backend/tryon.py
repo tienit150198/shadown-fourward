@@ -10,7 +10,8 @@ Live (Decart, WebRTC in the browser):
     The browser passes `apiKey` to `createDecartClient({apiKey})` (or returns it from `apiKeyProvider`)
     and connects to model "lucy-vton-latest". Pattern from DecartAI/tryon-examples (MIT).
 
-Photo (server side), TRYON_PHOTO_PROVIDER = auto (default) | worker | hf_space | mock:
+Photo (server side), TRYON_PHOTO_PROVIDER = auto (default) | fashn | worker | hf_space | mock:
+    fashn    — FASHN tryon-v1.6 commercial API; requires FASHN_API_KEY
     worker   — Mac mini CatVTON worker: POST {TRYON_WORKER_URL}/tryon, GET /health (cached 30 s)
     hf_space — Hugging Face Space (default yisol/IDM-VTON, CC BY-NC-SA 4.0) via gradio_client;
                upper-body only (bottoms are not rendered)
@@ -41,7 +42,10 @@ logger = logging.getLogger("uvicorn.error")
 LIVE_MODEL = "lucy-vton-latest"
 DEFAULT_DECART_BASE_URL = "https://api.decart.ai"
 DEFAULT_HF_SPACE = "yisol/IDM-VTON"
-PHOTO_PROVIDERS = ("worker", "hf_space", "mock")
+PHOTO_PROVIDERS = ("fashn", "worker", "hf_space", "mock")
+DEFAULT_FASHN_BASE_URL = "https://api.fashn.ai"
+FASHN_TIMEOUT_S = 90.0
+FASHN_POLL_INTERVAL_S = 0.75
 HF_TIMEOUT_S = 120.0
 WORKER_TIMEOUT_S = 180.0
 # Decart cost guard, enforced by Decart itself through the client-token constraints (the browser's
@@ -287,14 +291,16 @@ def mock_composite(
 
 
 class TryOnService:
-    """Photo try-on with a provider chain. Inject `worker_transport` / `hf_runner` in tests."""
+    """Photo try-on with a provider chain. HTTP transports and the HF runner are injectable in tests."""
 
     def __init__(
         self,
         *,
+        fashn_transport: httpx.AsyncBaseTransport | None = None,
         worker_transport: httpx.AsyncBaseTransport | None = None,
         hf_runner: Any = None,
     ) -> None:
+        self._fashn_transport = fashn_transport
         self._worker_transport = worker_transport
         self._hf_runner = hf_runner  # callable(person_path, garment_path, garment_des) -> output path
         self._health: tuple[float, bool] | None = None
@@ -368,6 +374,7 @@ class TryOnService:
     async def config(self) -> dict[str, Any]:
         chain = await self.provider_chain()
         provider = chain[0]
+        fashn_missing_key = provider == "fashn" and not _env("FASHN_API_KEY")
         return {
             "live": {
                 "available": live_available(),
@@ -378,9 +385,13 @@ class TryOnService:
                 "provider": provider,
                 "configured": self.configured_provider(),
                 "chain": chain,
-                "renders_bottoms": provider in ("worker", "mock"),
-                "expected_seconds": {"worker": 40, "hf_space": 30, "mock": 1}.get(provider),
-                "notice": self.hf_blocked() or None,
+                "available": not fashn_missing_key,
+                "renders_bottoms": provider in ("fashn", "worker", "mock"),
+                "expected_seconds": {"fashn": 10, "worker": 40, "hf_space": 30, "mock": 1}.get(provider),
+                "notice": (
+                    "Chưa cấu hình FASHN_API_KEY nên chưa mặc thử ảnh thật được."
+                    if fashn_missing_key else self.hf_blocked() or None
+                ),
             },
         }
 
@@ -434,6 +445,8 @@ class TryOnService:
         passes: list[tuple[dict[str, Any], str]],
         garment_jpegs: dict[str, bytes],
     ) -> dict[str, Any]:
+        if provider == "fashn":
+            return await self._run_fashn(person_jpeg, passes, garment_jpegs)
         if provider == "worker":
             return await self._run_worker(person_jpeg, passes, garment_jpegs)
         if provider == "hf_space":
@@ -450,6 +463,80 @@ class TryOnService:
             "skipped_item_ids": [],
             "note": "Ảnh giả lập (chế độ demo) — chưa dùng AI mặc thử.",
         }
+
+    async def _run_fashn(self, person_jpeg, passes, garment_jpegs) -> dict[str, Any]:
+        api_key = _env("FASHN_API_KEY")
+        if not api_key:
+            raise TryOnError("Chưa cấu hình FASHN_API_KEY nên chưa mặc thử ảnh thật được.", status=503)
+        base_url = _env("FASHN_BASE_URL", DEFAULT_FASHN_BASE_URL).rstrip("/")
+        headers = {"Authorization": f"Bearer {api_key}", "User-Agent": "shadow-wardrobe/1.0"}
+        category = {"upper": "tops", "lower": "bottoms", "overall": "one-pieces"}
+        current = jpeg_data_url(person_jpeg)
+        rendered: list[str] = []
+        async with httpx.AsyncClient(
+            timeout=30.0, transport=self._fashn_transport, headers=headers
+        ) as client:
+            for item, kind in passes:
+                try:
+                    response = await client.post(
+                        f"{base_url}/v1/run",
+                        json={
+                            "model_name": "tryon-v1.6",
+                            "inputs": {
+                                "model_image": current,
+                                "garment_image": jpeg_data_url(garment_jpegs[item["id"]]),
+                                "category": category[kind],
+                                "mode": "balanced",
+                                "num_samples": 1,
+                                "output_format": "jpeg",
+                                "return_base64": True,
+                            },
+                        },
+                    )
+                except httpx.HTTPError as error:
+                    logger.warning("FASHN submit failed: %r", error)
+                    raise TryOnError("Không kết nối được FASHN.") from None
+                if not response.is_success:
+                    logger.warning("FASHN submit HTTP %s: %s", response.status_code, response.text[:200])
+                    raise TryOnError(f"FASHN từ chối yêu cầu (HTTP {response.status_code}).")
+                try:
+                    prediction_id = response.json()["id"]
+                except (ValueError, KeyError, TypeError):
+                    raise TryOnError("FASHN trả về mã dự đoán không hợp lệ.") from None
+
+                deadline = time.monotonic() + FASHN_TIMEOUT_S
+                while True:
+                    try:
+                        status_response = await client.get(f"{base_url}/v1/status/{prediction_id}")
+                    except httpx.HTTPError as error:
+                        logger.warning("FASHN status failed: %r", error)
+                        raise TryOnError("Không lấy được kết quả từ FASHN.") from None
+                    if not status_response.is_success:
+                        raise TryOnError(f"FASHN báo lỗi trạng thái HTTP {status_response.status_code}.")
+                    try:
+                        status = status_response.json()
+                    except ValueError:
+                        raise TryOnError("FASHN trả về trạng thái không hợp lệ.") from None
+                    if status.get("status") == "completed":
+                        output = status.get("output")
+                        if not isinstance(output, list) or not output:
+                            raise TryOnError("FASHN hoàn tất nhưng không trả ảnh.")
+                        try:
+                            raw = decode_image_data_url(output[0])
+                        except (TypeError, WardrobeError):
+                            raise TryOnError("FASHN trả về ảnh không hợp lệ.") from None
+                        current = jpeg_data_url(to_jpeg(raw, max_side=1024, quality=90))
+                        rendered.append(item["id"])
+                        break
+                    if status.get("status") == "failed":
+                        logger.warning("FASHN prediction %s failed: %s", prediction_id, status.get("error"))
+                        raise TryOnError("FASHN không thể tạo ảnh mặc thử từ ảnh đã gửi.", status=422)
+                    if time.monotonic() >= deadline:
+                        raise TryOnError(f"FASHN quá {FASHN_TIMEOUT_S:.0f}s chưa trả kết quả.")
+                    await asyncio.sleep(FASHN_POLL_INTERVAL_S)
+
+        final = base64.b64decode(current.split(",", 1)[1])
+        return {"jpeg": final, "rendered_item_ids": rendered, "skipped_item_ids": [], "note": ""}
 
     async def _run_worker(self, person_jpeg, passes, garment_jpegs) -> dict[str, Any]:
         url = self.worker_url()

@@ -132,6 +132,49 @@ def test_hf_space_failure_is_502_when_explicit(monkeypatch):
     assert info.value.status == 502 and "Hugging Face" in str(info.value)
 
 
+def test_fashn_renders_top_and_bottom_with_private_base64_io(monkeypatch):
+    monkeypatch.setenv("TRYON_PHOTO_PROVIDER", "fashn")
+    monkeypatch.setenv("FASHN_API_KEY", "fashn-test-secret")
+    submitted: list[dict] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.headers["authorization"] == "Bearer fashn-test-secret"
+        if request.url.path == "/v1/run":
+            body = json_body(request)
+            submitted.append(body)
+            return httpx.Response(200, json={"id": f"prediction-{len(submitted)}", "error": None})
+        prediction = request.url.path.rsplit("/", 1)[-1]
+        color = (10, 200, 10) if prediction == "prediction-1" else (20, 30, 220)
+        return httpx.Response(200, json={
+            "id": prediction,
+            "status": "completed",
+            "output": [data_url(make_jpeg(color=color))],
+            "error": None,
+        })
+
+    service = TryOnService(fashn_transport=httpx.MockTransport(handler))
+    result = run(service.run(person(), [TOP, BOTTOM], garments(TOP, BOTTOM)))
+
+    assert result["provider"] == "fashn"
+    assert result["rendered_item_ids"] == ["t", "b"] and result["skipped_item_ids"] == []
+    assert [call["inputs"]["category"] for call in submitted] == ["tops", "bottoms"]
+    assert all(call["model_name"] == "tryon-v1.6" for call in submitted)
+    assert all(call["inputs"]["return_base64"] is True for call in submitted)
+    assert all(call["inputs"]["output_format"] == "jpeg" for call in submitted)
+    assert submitted[1]["inputs"]["model_image"] != submitted[0]["inputs"]["model_image"]
+    assert "fashn-test-secret" not in str(result)
+
+
+def test_fashn_config_reports_missing_key_instead_of_ready(monkeypatch):
+    monkeypatch.setenv("TRYON_PHOTO_PROVIDER", "fashn")
+    monkeypatch.delenv("FASHN_API_KEY", raising=False)
+
+    photo = run(TryOnService().config())["photo"]
+
+    assert photo["provider"] == "fashn" and photo["available"] is False
+    assert "FASHN_API_KEY" in photo["notice"]
+
+
 def worker_transport(log, *, healthy=True, fail_tryon=False):
     def handler(request: httpx.Request) -> httpx.Response:
         if request.url.path == "/health":

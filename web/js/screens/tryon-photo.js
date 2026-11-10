@@ -15,7 +15,7 @@ const STEPS = [
   [40, 'Sắp xong rồi, chờ chút nhé…'],
   [70, 'Máy chủ hơi bận, vẫn đang làm…'],
 ];
-const EXPECT = { worker: 'khoảng 20–40 giây', hf_space: 'khoảng 25–60 giây', mock: 'vài giây' };
+const EXPECT = { fashn: 'khoảng 8–17 giây mỗi món', worker: 'khoảng 20–40 giây', hf_space: 'khoảng 25–60 giây', mock: 'vài giây' };
 function expectText(config) {
   const p = config?.photo?.provider;
   const sec = Number(config?.photo?.expected_seconds);

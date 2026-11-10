@@ -142,7 +142,7 @@ export function outfitHash(route, ids) {
   return `#/${route}?outfit=${encodeURIComponent(JSON.stringify(ids || []))}`;
 }
 
-export const PROVIDER_LABELS = { worker: 'Mac mini', hf_space: 'Hugging Face', huggingface: 'Hugging Face', hf: 'Hugging Face', mock: 'Demo' };
+export const PROVIDER_LABELS = { fashn: 'FASHN AI', worker: 'Mac mini', hf_space: 'Hugging Face', huggingface: 'Hugging Face', hf: 'Hugging Face', mock: 'Demo' };
 export function providerLabel(p) { return PROVIDER_LABELS[p] || p || 'Không rõ'; }
 
 /** Normalises a rules_used entry (id / text / {text, taught_by}) against the known rules. */

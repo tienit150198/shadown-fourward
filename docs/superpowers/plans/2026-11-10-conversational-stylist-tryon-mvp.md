@@ -433,4 +433,4 @@ Các việc dưới đây không nằm trên critical path của MVP và chỉ b
 1. **M1 — Offline conversational MVP:** Tasks 1–5, backend chat chạy mock, tests xanh.
 2. **M2 — Web experience:** Tasks 6–8, trò chuyện → chọn outfit → live AI mirror mock hoàn chỉnh, photo là fallback.
 3. **M3 — Quality gate:** Task 9, golden scenarios và tài liệu contract.
-4. **M4 — Real-provider pilot:** chọn đúng một photo provider và Decart live sau khi có key/hardware/legal review.
+4. **M4 — Real-provider pilot (đang chờ external gates):** đã chọn và tích hợp duy nhất FASHN `tryon-v1.6` cho photo; Decart live giữ client-token flow. Contract tests đã xanh, nhưng chỉ đóng milestone sau khi có key/credit, ảnh consented, HTTPS + điện thoại thật và legal/privacy review. Runbook/evidence gate: [`docs/M4_REAL_PROVIDER_PILOT.md`](../../M4_REAL_PROVIDER_PILOT.md).
