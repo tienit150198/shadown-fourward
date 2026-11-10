@@ -1,0 +1,19 @@
+{
+  "feature_id": "001-kmm-api-contract",
+  "name": "Hợp đồng API SHADOW v1 cho KMM",
+  "status": "draft-clarified-with-deferred-decisions",
+  "repository": "shadown-fourward",
+  "bounded_contexts": ["Guide Runtime", "Wardrobe & Stylist", "Platform/API"],
+  "accepted_round_1": {
+    "Q1": true,
+    "Q2": true,
+    "Q3": "provisional",
+    "Q4": true,
+    "Q5": true,
+    "Q6": "provisional",
+    "Q7": "provisional"
+  },
+  "canonical_spec": "specs/001-kmm-api-contract/spec.md",
+  "canonical_plan": "specs/001-kmm-api-contract/plan.md",
+  "canonical_tasks": "specs/001-kmm-api-contract/tasks.md"
+}

@@ -13,3 +13,4 @@ backend/evals/*
 !backend/evals/stylist_conversations.json
 # Ảnh sản phẩm của bộ tủ đồ mẫu từ shop (bản quyền thuộc shop) — tải lại bằng build_seed_shop.py
 backend/wardrobe_seed_shop/images/
+backend/pytest-of-*/

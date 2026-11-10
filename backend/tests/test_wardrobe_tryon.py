@@ -30,6 +30,22 @@ def person():
     return data_url(make_jpeg(color=(230, 220, 210), size=(96, 128)))
 
 
+def result_jpeg(color=(10, 200, 10), *, fmt="JPEG"):
+    """Provider-like result with real spatial detail so the output quality gate can inspect it."""
+    from PIL import Image, ImageDraw
+    import io
+
+    image = Image.new("RGB", (96, 128), (220, 210, 200))
+    draw = ImageDraw.Draw(image)
+    draw.ellipse((28, 8, 68, 48), fill=(190, 150, 125))
+    draw.rectangle((24, 42, 72, 92), fill=color)
+    draw.rectangle((28, 92, 45, 124), fill=(45, 50, 60))
+    draw.rectangle((51, 92, 68, 124), fill=(45, 50, 60))
+    out = io.BytesIO()
+    image.save(out, format=fmt)
+    return out.getvalue()
+
+
 def test_plan_garments():
     assert [(i["id"], k) for i, k in plan_garments([BOTTOM, TOP])] == [("t", "upper"), ("b", "lower")]
     assert [(i["id"], k) for i, k in plan_garments([TOP, DRESS, BOTTOM])] == [("d", "overall")]
@@ -46,6 +62,20 @@ def test_live_prompt_formats():
     assert "beige trench coat over white cotton shirt" in live_prompt([TOP, COAT])["prompt"]
     assert live_prompt([item("x", "bottom", colors=["đen"], name="Quần tây")])["prompt"] == \
         "Substitute the current pants with black pants"
+
+
+def test_live_prompt_uses_structured_descriptor_when_present():
+    structured = item("knit", "top", description_en="blue shirt", tryon_descriptor={
+        "category": "top", "color": "navy", "material": "cotton knit", "pattern": "cable-knit",
+        "fit": "relaxed", "length": "hip length", "details": ["crew neck", "ribbed cuffs"],
+        "confidence": 0.91, "needs_confirmation": False,
+        "description": "navy cable-knit cotton knit relaxed-fit sweater, hip length, crew neck, ribbed cuffs",
+    })
+
+    assert live_prompt([structured])["prompt"] == (
+        "Substitute the current top with navy cable-knit cotton knit relaxed-fit sweater, "
+        "hip length, crew neck, ribbed cuffs"
+    )
 
 
 # ---- Decart client token --------------------------------------------------------------------
@@ -101,7 +131,7 @@ def hf_runner(calls):
         calls.append(garment_des)
         out = person_path + ".out.png"
         with open(out, "wb") as handle:
-            handle.write(make_jpeg(color=(10, 200, 10), fmt="PNG"))
+            handle.write(result_jpeg(color=(10, 200, 10), fmt="PNG"))
         return out
 
     return runner
@@ -148,7 +178,7 @@ def test_fashn_renders_top_and_bottom_with_private_base64_io(monkeypatch):
         return httpx.Response(200, json={
             "id": prediction,
             "status": "completed",
-            "output": [data_url(make_jpeg(color=color))],
+            "output": [data_url(result_jpeg(color=color))],
             "error": None,
         })
 
@@ -185,7 +215,7 @@ def worker_transport(log, *, healthy=True, fail_tryon=False):
         assert body["garment_image"].startswith("data:image/jpeg;base64,")
         if fail_tryon:
             return httpx.Response(500, text="boom")
-        return httpx.Response(200, json={"image": data_url(make_jpeg(color=(1, 2, 3))), "seconds": 1.0})
+        return httpx.Response(200, json={"image": data_url(result_jpeg(color=(35, 45, 60))), "seconds": 1.0})
 
     return httpx.MockTransport(handler)
 
@@ -232,6 +262,22 @@ def test_mock_provider_composites(monkeypatch):
     assert result["provider"] == "mock" and result["rendered_item_ids"] == ["t", "b"]
     with pytest.raises(TryOnError):
         run(TryOnService().run(person(), [item("s", "shoes")], garments(item("s", "shoes"))))
+
+
+def test_provider_success_with_invalid_image_is_rejected(monkeypatch):
+    monkeypatch.setenv("TRYON_PHOTO_PROVIDER", "mock")
+    service = TryOnService()
+
+    async def invalid_provider(*_args):
+        return {
+            "jpeg": make_jpeg(color=(0, 0, 0), size=(16, 16)),
+            "rendered_item_ids": ["t"], "skipped_item_ids": [], "note": "",
+        }
+
+    service._run_provider = invalid_provider
+    with pytest.raises(TryOnError) as info:
+        run(service.run(person(), [TOP], garments(TOP)))
+    assert "không đạt kiểm tra kỹ thuật" in str(info.value)
 
 
 # ---- API ------------------------------------------------------------------------------------------

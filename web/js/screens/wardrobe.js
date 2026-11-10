@@ -117,6 +117,7 @@ export function mount(el) {
       brand ? h('span', { class: 'wd-card-brand' }, brand) : null,
       h('span', { class: 'wd-card-body' },
         h('span', { class: 'wd-card-name' }, it.name || categoryLabel(it.category)),
+        it.needs_confirmation ? h('span', { class: 'wd-ai-tag' }, icon('alert', 14), 'Cần xác nhận') : null,
         h('span', { class: 'wd-card-meta' }, colorDots(it.colors), h('span', { class: 'wd-card-cat' }, itemKindLabel(it)))));
   }
 
@@ -201,6 +202,10 @@ export function mount(el) {
       if (!item || !item.id) throw new Error('Máy chủ không trả về món đồ');
       items = [item, ...(items || []).filter((x) => x.id !== item.id)];
       render();
+      const qualityWarnings = Array.isArray(item.image_quality?.warnings) ? item.image_quality.warnings : [];
+      if (qualityWarnings.length) {
+        toast(qualityWarnings.map((warning) => warning.message).filter(Boolean).join(' '), { kind: 'error', ms: 7000 });
+      }
       setTimeout(() => openEditor(item, { isNew: true }), 300);
     } catch (err) {
       if (cancelled || scope.disposed) return;
@@ -271,7 +276,7 @@ export function mount(el) {
       h('div', { class: 'wd-editor-top' },
         h('div', { class: 'wd-editor-img' }, src ? h('img', { src, alt: '' }) : h('span', { class: 'wd-thumb-emoji' }, '🏷️')),
         h('div', { class: 'wd-editor-head' },
-          isNew ? h('div', { class: 'wd-ai-tag' }, icon('sparkle', 16), 'AI đã nhận diện — sửa nếu chưa đúng') : null,
+          (isNew || it.needs_confirmation) ? h('div', { class: 'wd-ai-tag' }, icon('sparkle', 16), 'AI đã nhận diện — kiểm tra loại và màu rồi bấm Lưu') : null,
           h('label', { class: 'field' }, h('span', { class: 'field-label' }, 'Tên'), nameIn),
           productLine(it))),
       h('div', { class: 'wd-grid2' },

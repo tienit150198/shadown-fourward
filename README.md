@@ -209,6 +209,8 @@ Mac mini và laptop phải **cùng một mạng**. Hướng dẫn từng bước
 ```bash
 cd backend && ../.venv/bin/python -m pytest -q                         # 255 test, không cần mạng hay key
 cd tryon-worker && TRYON_MOCK=1 ../.venv/bin/python -m pytest tests/test_server.py -q   # 25 test, chế độ giả lập
+node --test web/tests/*.test.mjs                                       # quality gate/prompt frontend
+node web/e2e/run.mjs                                                   # browser mock; exit 77 = SKIP nếu thiếu Playwright
 ```
 
 Các test khác của `tryon-worker` (mask, pipeline) cần PyTorch — chạy trên Mac mini: `TRYON_MOCK=1 .venv/bin/python -m pytest tests -q`.

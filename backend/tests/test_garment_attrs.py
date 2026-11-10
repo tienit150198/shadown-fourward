@@ -14,6 +14,8 @@ from garment_attrs import (
     fill_attrs,
     hex_to_rgb,
     normalize_attr_fields,
+    build_tryon_description,
+    tryon_descriptor,
 )
 
 
@@ -106,3 +108,31 @@ def test_create_item_gets_attributes(wclient):
     body = res.json()
     assert res.status_code == 200 and body["subtype"] == "trousers" and body["formality"] == 4
     assert body["length"] == "long" and body["color_hex"].startswith("#")
+
+
+def test_tryon_descriptor_is_structured_and_confidence_tracks_provenance():
+    confirmed = tryon_descriptor({
+        "category": "top", "colors": ["xanh navy"], "fabric": "cotton", "pattern": "kẻ sọc",
+        "fit": "relaxed", "length": None, "sleeve": "long", "subtype": "sweater",
+        "tag_source": "ai", "metadata_confirmed": True,
+    })
+    inferred = tryon_descriptor({"category": "bottom", "name": "Món đồ", "tag_source": "mock"})
+
+    assert confirmed == {
+        "category": "top", "color": "navy", "material": "cotton", "pattern": "striped",
+        "fit": "relaxed", "length": None, "details": ["long sleeves"],
+        "confidence": 0.98, "needs_confirmation": False,
+        "description": "navy striped cotton relaxed-fit sweater with long sleeves",
+    }
+    assert inferred["confidence"] < 0.8 and inferred["needs_confirmation"] is True
+    assert "None" not in build_tryon_description(inferred)
+
+
+def test_tryon_description_omits_unknown_values_and_is_bounded():
+    description = build_tryon_description({
+        "category": "outerwear", "color": "olive green", "material": "nylon", "pattern": None,
+        "fit": "oversized", "length": "long", "details": ["hooded", "zip front", "ribbed cuffs"] * 5,
+    })
+
+    assert "None" not in description and "undefined" not in description
+    assert len(description.split()) <= 30

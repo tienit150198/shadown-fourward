@@ -5,6 +5,7 @@ import { h, icon, toast, errorToast, navigate, createScope } from '../ui.js';
 import {
   categoryLabel, itemThumb, openCameraCapture, outfitFromHash, providerLabel, outfitHash, pickImageFile, fileToJpeg, fill,
 } from '../wardrobe-ui.js';
+import { detectImagePose, personPoseVerdict } from '../tryon-pose.js';
 
 const PHOTO_KEY = 'shadow.wd.person';
 const STEPS = [
@@ -58,7 +59,7 @@ export function mount(el) {
       })));
   }
 
-  const hasBottoms = () => ids.some((id) => items.find((x) => String(x.id) === id)?.category === 'bottom');
+  const hasBottoms = () => ids.some((id) => ['bottom', 'dress'].includes(items.find((x) => String(x.id) === id)?.category));
 
   // ---------- step 1: photo ----------
   function renderCapture() {
@@ -107,6 +108,18 @@ export function mount(el) {
   // ---------- step 2: run ----------
   async function run() {
     if (!person || !ids.length) return;
+    try {
+      const pose = await detectImagePose(person);
+      const verdict = personPoseVerdict(pose, { needKnees: hasBottoms() });
+      if (!verdict.ok) {
+        toast(verdict.message, { kind: 'error', ms: 7000 });
+        return;
+      }
+    } catch (err) {
+      // MediaPipe is an optional CDN asset. Keep the manual framing fallback when it cannot load.
+      console.info('[tryon-photo] pose gate unavailable', err?.message);
+      toast('Không tải được kiểm tra dáng tự động; hãy tự kiểm tra ảnh thấy rõ đầu và chân.', { ms: 4500 });
+    }
     controller = new AbortController();
     const line = h('div', { class: 'loading-line' }, STEPS[0][1]);
     const secs = h('div', { class: 'wd-secs' }, '0');

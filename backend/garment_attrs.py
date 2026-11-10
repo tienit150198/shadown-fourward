@@ -706,6 +706,80 @@ def public_attrs_vi(item: dict[str, Any]) -> dict[str, str]:
     return out
 
 
+_TRYON_PATTERN_EN = {
+    "ke": "striped", "ke soc": "striped", "soc": "striped", "caro": "plaid",
+    "ke caro": "plaid", "hoa": "floral", "cham bi": "polka-dot", "in hinh": "graphic",
+    "tron": None,
+}
+_TRYON_CATEGORY_NOUN = {
+    "top": "top", "bottom": "trousers", "dress": "dress", "outerwear": "jacket",
+    "shoes": "shoes", "accessory": "accessory",
+}
+
+
+def build_tryon_description(descriptor: dict[str, Any]) -> str:
+    """Build a bounded English garment phrase from allowlisted descriptor fields."""
+    category = descriptor.get("category") if descriptor.get("category") in _TRYON_CATEGORY_NOUN else "top"
+    words: list[str] = []
+    for key in ("color", "pattern", "material"):
+        value = descriptor.get(key)
+        if isinstance(value, str) and value.strip():
+            words.extend(value.strip().split())
+    fit = descriptor.get("fit")
+    if fit in FITS and fit != "regular":
+        words.append(f"{fit}-fit")
+    subtype = descriptor.get("subtype")
+    noun = _NOUN_EN.get(subtype) if subtype in ALL_SUBTYPES else _TRYON_CATEGORY_NOUN[category]
+    words.extend(noun.split())
+    length = descriptor.get("length")
+    if isinstance(length, str) and length.strip() and length not in ("short", "long"):
+        words.extend([",", *length.strip().split()])
+    details = descriptor.get("details") if isinstance(descriptor.get("details"), list) else []
+    clean_details = [str(value).strip() for value in details if isinstance(value, str) and value.strip()]
+    if clean_details:
+        words.extend(["with", *" and ".join(clean_details).split()])
+    text = " ".join(words[:30]).replace(" ,", ",").strip(" ,")
+    return text or _TRYON_CATEGORY_NOUN[category]
+
+
+def tryon_descriptor(item: dict[str, Any]) -> dict[str, Any]:
+    """Structured, confidence-labelled descriptor shared by photo/live VTON."""
+    from stylist import color_en
+
+    attrs = attrs_of(item)
+    category = item.get("category") if item.get("category") in _TRYON_CATEGORY_NOUN else "top"
+    colors = [color_en(value) for value in (item.get("colors") or [])[:2]]
+    colors = [value for value in colors if value]
+    raw_pattern = _fold(item.get("pattern"))
+    pattern = _TRYON_PATTERN_EN.get(raw_pattern)
+    if pattern is None and raw_pattern and raw_pattern not in _TRYON_PATTERN_EN and re.fullmatch(r"[a-z -]+", raw_pattern):
+        pattern = raw_pattern
+    material = attrs.get("fabric") or _fold(item.get("material")) or None
+    details: list[str] = []
+    if attrs.get("sleeve") in ("short", "long"):
+        details.append(f"{attrs['sleeve']} sleeves")
+    source = str(item.get("tag_source") or "").lower()
+    if item.get("metadata_confirmed") is True:
+        confidence = 0.98
+    else:
+        confidence = {"seed": 0.96, "user": 0.95, "ai": 0.72, "mock": 0.55}.get(source, 0.6)
+    descriptor: dict[str, Any] = {
+        "category": category,
+        "color": " and ".join(colors) or None,
+        "material": material,
+        "pattern": pattern,
+        "fit": attrs.get("fit"),
+        "length": attrs.get("length"),
+        "details": details,
+        "confidence": confidence,
+        "needs_confirmation": confidence < 0.8,
+        "subtype": attrs.get("subtype"),
+    }
+    descriptor["description"] = build_tryon_description(descriptor)
+    descriptor.pop("subtype", None)
+    return descriptor
+
+
 # ---- AI tagging integration -------------------------------------------------------------------------
 
 TAG_PROMPT_EXTRA = (

@@ -78,6 +78,42 @@ export function loadPoseLandmarker() {
 
 const vis = (p) => (p && (p.visibility === undefined || p.visibility > 0.5));
 
+/** Strict, user-facing gate shared by still-photo and live try-on flows. */
+export function personPoseVerdict(pose, { needKnees = true } = {}) {
+  if (!pose) {
+    return { ok: false, code: 'no_person', message: 'Chưa thấy rõ người trong ảnh. Hãy đứng thẳng, đủ sáng và chụp lại.' };
+  }
+  const nose = pose[NOSE];
+  if (!vis(nose) || nose.y < 0 || nose.y > 0.35) {
+    return { ok: false, code: 'head_out_of_frame', message: 'Chưa thấy trọn phần đầu. Hãy hạ máy hoặc lùi lại một bước.' };
+  }
+  const hips = [pose[L_HIP], pose[R_HIP]].filter((point) => vis(point) && point.y >= 0 && point.y <= KNEE_IN_FRAME_MAX_Y);
+  if (!hips.length) {
+    return { ok: false, code: 'hips_not_visible', message: 'Chưa thấy rõ phần hông. Hãy lùi xa hơn và để tay không che thân người.' };
+  }
+  if (needKnees) {
+    const knees = [pose[L_KNEE], pose[R_KNEE]].filter((point) => vis(point) && point.y >= 0 && point.y <= KNEE_IN_FRAME_MAX_Y);
+    if (!knees.length) {
+      return { ok: false, code: 'knees_not_visible', message: 'Bộ đồ có quần hoặc váy nên ảnh phải thấy rõ ít nhất đến đầu gối. Hãy lùi xa hơn.' };
+    }
+  }
+  return { ok: true, code: 'ok', message: '' };
+}
+
+/** Detect one pose from an HTML image/canvas/video source. Throws only when MediaPipe is unavailable. */
+export async function detectImagePose(source) {
+  const landmarker = await loadPoseLandmarker();
+  if (!landmarker) throw new Error('pose_unavailable');
+  let input = source;
+  if (typeof source === 'string') {
+    input = new Image();
+    input.decoding = 'async';
+    input.src = source;
+    await input.decode();
+  }
+  return landmarker.detect(input)?.landmarks?.[0] || null;
+}
+
 /**
  * Framing verdict for one pose.
  * @returns {'ok'|'far'|'head'|null} null = cannot tell (no pose).
@@ -86,12 +122,9 @@ const vis = (p) => (p && (p.visibility === undefined || p.visibility > 0.5));
  */
 export function framingVerdict(pose, { needKnees = true } = {}) {
   if (!pose) return null;
-  const nose = pose[NOSE];
-  if (nose && nose.y < 0) return 'head';
-  const pts = needKnees ? [pose[L_KNEE], pose[R_KNEE]] : [pose[L_HIP], pose[R_HIP]];
-  const ys = pts.filter(Boolean).map((p) => p.y);
-  if (!ys.length) return null;
-  return Math.min(...ys) <= KNEE_IN_FRAME_MAX_Y ? 'ok' : 'far';
+  const verdict = personPoseVerdict(pose, { needKnees });
+  if (verdict.ok) return 'ok';
+  return verdict.code === 'head_out_of_frame' ? 'head' : 'far';
 }
 
 /**

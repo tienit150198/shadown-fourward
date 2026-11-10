@@ -546,6 +546,12 @@ export function mount(el) {
     if (phase === 'connecting' || phase === 'live') return;
     if (!slotItems(current).length) { toast('Chọn ít nhất một món đồ trước nhé.'); openPicker(); return; }
     if (!camStream || !camOk) { await openCamera(); if (!camOk) return; }
+    if ((poseStatus === 'ready' || poseStatus === 'slow') && framing !== 'ok') {
+      toast((current.bottom || current.dress)
+        ? 'Hãy lùi lại để camera thấy rõ từ đầu đến đầu gối trước khi bắt đầu.'
+        : 'Hãy lùi lại để camera thấy rõ từ đầu đến hông trước khi bắt đầu.', { kind: 'error', ms: 6000 });
+      return;
+    }
     const my = ++session;
     stopping = false;
     remoteShown = false;
@@ -676,6 +682,12 @@ export function mount(el) {
   async function runApply() {
     if (!rt) return;
     const slots = { ...current };
+    if ((poseStatus === 'ready' || poseStatus === 'slow') && framing !== 'ok') {
+      toast((slots.bottom || slots.dress)
+        ? 'Chưa đổi đồ: hãy lùi lại để thấy rõ đầu gối.'
+        : 'Chưa đổi đồ: hãy lùi lại để thấy rõ phần hông.', { kind: 'error', ms: 5000 });
+      return;
+    }
     const key = slotKey(slots);
     if (!key || key === appliedKey) return;
     if (applying) { applyAgain = true; return; }

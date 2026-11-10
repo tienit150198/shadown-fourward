@@ -54,6 +54,16 @@ def test_create_item_with_ai_tagging(wclient):
     assert provider.calls[0]["model"] == "google/gemini-2.5-flash"  # VISION_MODEL from conftest
 
 
+def test_create_item_returns_garment_image_quality_metadata(wclient):
+    created = wclient.post("/api/wardrobe/items", json={"image": data_url(make_jpeg(size=(240, 320)))})
+
+    assert created.status_code == 200, created.text
+    quality = created.json()["image_quality"]
+    assert quality["status"] == "warn"
+    assert any(warning["code"] == "low_resolution" for warning in quality["warnings"])
+    assert created.json()["garment_photo_type"] in {"flat-lay", "model", "unknown"}
+
+
 def test_seed_demo_is_idempotent_and_complete(wclient, wardrobe_dir):
     first = wclient.post("/api/wardrobe/seed-demo").json()
     assert first["added"] == 10

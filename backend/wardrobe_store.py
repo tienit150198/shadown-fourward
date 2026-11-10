@@ -388,9 +388,12 @@ class WardrobeStore:
     def public_item(item: dict[str, Any]) -> dict[str, Any]:
         data = dict(item)
         data["image_url"] = media_url(item.get("image"))
-        from garment_attrs import public_attrs_vi  # garment_attrs hook: Vietnamese labels of attribute codes
+        from garment_attrs import public_attrs_vi, tryon_descriptor  # garment_attrs hook
 
         data["attrs_vi"] = public_attrs_vi(item)
+        data["tryon_descriptor"] = tryon_descriptor(item)
+        data["attribute_confidence"] = data["tryon_descriptor"]["confidence"]
+        data["needs_confirmation"] = data["tryon_descriptor"]["needs_confirmation"]
         return data
 
     def _load_items(self) -> list[dict[str, Any]]:
@@ -454,6 +457,10 @@ class WardrobeStore:
         from garment_attrs import fill_attrs  # garment_attrs hook: derive missing attributes (+ photo colour)
 
         item = fill_attrs(item, image_jpeg)
+        from image_quality import inspect_garment_image
+
+        item["image_quality"] = inspect_garment_image(image_jpeg)
+        item["garment_photo_type"] = item["image_quality"]["garment_photo_type"]
         with self._lock:
             items = self._load_items()
             if any(row["id"] == item_id for row in items):
@@ -477,6 +484,8 @@ class WardrobeStore:
             for index, item in enumerate(items):
                 if item["id"] == item_id:
                     updated = {**item, **clean, "updated_at": now_iso()}
+                    if any(key in patch for key in ("name", "category", "colors", "pattern", "material", "fit", "length")):
+                        updated["metadata_confirmed"] = True
                     if clean.get("category") not in (None, item.get("category")):
                         # garment_attrs hook: category changed → re-derive category-dependent attributes
                         from garment_attrs import fill_attrs

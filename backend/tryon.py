@@ -175,6 +175,11 @@ def plan_garments(items: list[dict[str, Any]]) -> list[tuple[dict[str, Any], str
 
 
 def garment_description(item: dict[str, Any]) -> str:
+    descriptor = item.get("tryon_descriptor")
+    if isinstance(descriptor, dict):
+        text = str(descriptor.get("description") or "").strip()
+        if text:
+            return text[:180]
     text = str(item.get("description_en") or "").strip()
     if text:
         return text[:120]
@@ -406,6 +411,10 @@ class TryOnService:
         person_jpeg = await asyncio.to_thread(
             lambda: to_jpeg(decode_image_data_url(person_image), max_side=1024, quality=90)
         )
+        from PIL import Image
+
+        with Image.open(io.BytesIO(person_jpeg)) as person_source:
+            person_width, person_height = person_source.size
         passes = plan_garments(items)
         if not passes:
             raise TryOnError("Hãy chọn ít nhất một áo, quần hoặc váy để mặc thử.", status=422)
@@ -418,6 +427,16 @@ class TryOnService:
         for provider in chain:
             try:
                 result = await self._run_provider(provider, person_jpeg, passes, garment_jpegs)
+                from image_quality import ImageQualityError, validate_generated_image
+
+                try:
+                    validate_generated_image(
+                        result.get("jpeg", b""),
+                        min_width=min(384, max(64, person_width // 2)),
+                        min_height=min(512, max(80, person_height // 2)),
+                    )
+                except ImageQualityError as error:
+                    raise TryOnError(f"Ảnh từ {provider} không đạt kiểm tra kỹ thuật ({error.code}).") from error
             except TryOnError as error:
                 if explicit or error.status == 422:
                     raise  # unsupported input for the best available provider: say so, don't fake it

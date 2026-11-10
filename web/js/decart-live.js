@@ -177,6 +177,10 @@ function nounPhrase(text) {
 /** English noun phrase for one wardrobe item, e.g. "a navy striped cotton button-down shirt". */
 export function describeItemEn(item) {
   if (!item) return '';
+  const descriptor = item.tryon_descriptor;
+  if (descriptor && typeof descriptor === 'object' && typeof descriptor.description === 'string' && descriptor.description.trim()) {
+    return nounPhrase(descriptor.description);
+  }
   // Prefer an English description if the backend ever provides one.
   const direct = item.prompt_en || item.description_en || item.tryon_prompt_en;
   if (direct && typeof direct === 'string' && direct.trim()) return nounPhrase(direct);
