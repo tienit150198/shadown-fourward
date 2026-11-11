@@ -7,13 +7,13 @@ Dự án dựa trên GlassKit (MIT). Phần dùng lại và phần làm mới gh
 
 ## SHADOW là gì?
 
-SHADOW là một **trợ lý AI chạy trên điện thoại**, nhìn qua camera và nói chuyện bằng tiếng Việt. Trợ lý có hai kiểu kỹ năng:
+SHADOW là trợ lý AI cho web và điện thoại. Màn hình chính dùng giọng nói, văn bản và camera để trò chuyện, xem thời tiết, phối đồ và hướng dẫn bài đã học. Hai lối vào riêng dành cho việc thêm đồ và quay bài hướng dẫn.
 
 1. **Kỹ năng do người thật dạy.** Người giỏi vừa làm vừa nói trước camera một lần (Dạy). AI tự chia việc đó thành
    từng bước, có câu hướng dẫn, mẹo, cảnh báo và ảnh mẫu. Sau đó người mới mở camera làm lại (Hướng dẫn): SHADOW nhìn
    từng bước, khen khi đúng, nhắc ngay khi sai, và trả lời khi được hỏi.
 2. **Kỹ năng làm sẵn "Trợ lý tủ đồ".** Trợ lý nhìn xem bạn đang mặc gì, phối đồ từ chính tủ đồ của bạn theo thời tiết
-   và sự kiện, rồi cho bạn **mặc thử**: trực tiếp trên camera (Decart) hoặc bằng ảnh (Hugging Face hoặc Mac mini của nhóm).
+   và sự kiện, rồi cho bạn **mặc thử** bằng Vidu S2-Editing trên camera hoặc Vidu Q2 trên ảnh.
    Kỹ năng này **cũng dạy được**: một người (stylist, chị gái, mẹ…) nói "quy tắc phối đồ" của mình, trợ lý áp dụng và
    ghi "Học từ Chị Lan".
 
@@ -21,8 +21,7 @@ SHADOW là một **trợ lý AI chạy trên điện thoại**, nhìn qua camera
 
 ## Chạy nhanh
 
-Server deployment with Docker Compose: see [docs/DOCKER.md](docs/DOCKER.md)
-for persistent storage, operations, and optional HTTPS.
+Trên máy chủ Linux, chạy `bash deploy/run.sh`. Script tạo `.env` lần đầu. Điền các khóa Hypertek, OpenRouter và Vidu rồi chạy lại. Xem cấu hình HTTPS và lưu trữ trong [hướng dẫn triển khai](docs/DOCKER.md).
 
 ### 1. Chạy trên laptop
 
@@ -53,14 +52,15 @@ Mẫu đầy đủ ở [.env.example](.env.example). Máy của trưởng nhóm 
 |---|---|---|
 | `LLM_BASE_URL`, `LLM_API_KEY` | Có (cho AI thật) | Địa chỉ + khoá của gateway LLM. Nhóm dùng gateway Qwen `https://llm.hypertek.vn/v1` (đã cấu hình). |
 | `VISION_MODEL` | Có | Model nhìn ảnh: `qwen3-vl-8b-instruct` (chấm từng khung hình, gắn nhãn quần áo). |
-| `COMPILER_MODEL` | Có | Model "suy nghĩ": `qwen3.6-35b-a3b` (thực chất là Qwen3.8-27B) — sinh kỹ năng, phối đồ. |
+| `COMPILER_MODEL`, `CONVERSATION_MODEL` | Có | `qwen3.6-35b-a3b` cho sinh kỹ năng và trò chuyện. |
 | `LLM_EXTRA_BODY` | Nên có | `'{"chat_template_kwargs": {"enable_thinking": false}}'` — tắt chế độ "suy nghĩ" cho nhanh. **Phải để trong dấu nháy đơn.** |
 | `COMPLETE_CONFIRM_FRAMES` | Không (mặc định 2) | Phải 2 khung hình liên tiếp báo "xong" mới chuyển bước (chống nhảy bước nhầm). |
-| `DECART_API_KEY` | Không | Bật **mặc thử trực tiếp** trên camera (Decart, trả phí ~$0.02/giây). Không có thì nút "Mặc thử trực tiếp" bị mờ. |
+| `OPENROUTER_API_KEY` | Có khi bật Jev | TypeSafe Jev phân loại yêu cầu. Các lệnh rõ ràng có đường xử lý tại backend. |
+| `VIDU_API_KEY` | Có khi mặc thử | Vidu Q2 cho ảnh và Vidu S2-Editing cho video trực tiếp. |
 | `TRYON_WORKER_URL` | Không | Địa chỉ Mac mini chạy mặc thử bằng ảnh, ví dụ `http://192.168.1.50:8188` (cổng mặc định của worker là **8188**). |
 | `TRYON_TOKEN` | Không | Mật khẩu chung với Mac mini — chỉ cần nếu đã đặt `TRYON_TOKEN` bên Mac mini. |
 | `HF_TOKEN` | Không | Token Hugging Face, giúp mặc thử bằng ảnh qua Hugging Face ít bị giới hạn lượt. |
-| `TRYON_PHOTO_PROVIDER` | Không (mặc định `auto`) | Chọn máy mặc thử bằng ảnh: `auto` = Mac mini → Hugging Face → giả lập; hoặc ép `worker` / `hf_space` / `mock`. |
+| `TRYON_PHOTO_PROVIDER` | Không | Mẫu cloud chọn `vidu`. Có thể đặt `mock` cho demo offline. |
 | `STYLIST_MODEL` | Không | Model riêng cho phối đồ; bỏ trống thì dùng `COMPILER_MODEL`. |
 
 Sửa `.env` xong thì **tắt server (Ctrl+C) và chạy lại** `./run.sh`.
@@ -85,16 +85,24 @@ rồi **cho phép camera và micro**. Có thể "Thêm vào màn hình chính" �
 Khi đó mọi `/api/*`, `/session/*` và ảnh cần mã: app tự hỏi mã một lần (lưu cookie 12 giờ), hoặc chia sẻ link
 `https://xxxx.ngrok-free.app/?code=<mã>` để vào thẳng. Để trống = tắt (chạy local như cũ). Luôn bật sẵn: giới hạn tần suất
 theo IP (báo "thao tác nhanh quá" khi vượt), giới hạn kích thước request, tối đa 2 ảnh mặc thử cùng lúc, và mỗi phiên
-mặc thử trực tiếp bị Decart cắt sau `DECART_MAX_SESSION_S` (mặc định 180 giây). Chi tiết: `backend/security.py`, `.env.example`.
+mặc thử trực tiếp mặc định giới hạn 120 giây qua `VIDU_MAX_SESSION_SECONDS`.
 
 ---
 
 ## Đi một vòng các màn hình
 
 ### Trang chủ
-Huy hiệu chế độ (Demo / AI) ở góc trên, nút lớn **"Dạy kỹ năng mới"**, thẻ **"👗 Trợ lý tủ đồ"** (mục *Kỹ năng làm sẵn*),
-và danh sách **"Kỹ năng đã học"** (mỗi thẻ ghi "Học từ <người dạy>", số bước). Có sẵn kỹ năng mẫu
-**"Lắp giá đỡ điện thoại"** (5 bước, học từ Tuấn). Nút ⋯ trên thẻ: bắt đầu, chỉnh sửa, xoá.
+Mở **Trò chuyện với Shadow** để nói hoặc nhập câu hỏi. Khi bạn bật camera, app gửi một khung hình cùng mỗi câu hỏi. **Tủ đồ** và **Dạy kỹ năng** ở thanh điều hướng.
+
+### Backend cho app mobile
+
+- `POST /api/conversation` nhận `text`, tối đa 6 lượt `history` gồm `role` và `text`, và `image` tùy chọn dưới dạng data URL JPEG. Backend trả từng dòng NDJSON với `type` là `text`, `action`, `error` hoặc `done`. Phát nội dung ngay khi tích lũy đủ một câu.
+- `POST /api/intent` nhận `text` và trả `intent`, `suggestions` và `source`.
+- `POST /api/voice/transcribe` nhận audio thô với MIME type tương ứng. `POST /api/voice/speech` nhận `text` và trả WAV. Web ưu tiên nhận và phát giọng bằng API trình duyệt để giảm thời gian chờ. Hypertek là đường dự phòng.
+- `POST /api/images/generate` nhận `prompt` và `size` tùy chọn. Tạo ảnh là tác vụ riêng và có thể mất khoảng một phút.
+- `POST /api/tryon/photo` nhận `person_image` và `item_ids`. `POST /api/tryon/live-session` trả thông tin phiên Vidu ngắn hạn để client nối video qua Agora.
+
+Khi bật cổng truy cập demo, client native gửi mã qua header `X-Shadow-Access`.
 
 ### Phần 1 — Dạy và Hướng dẫn
 
@@ -151,7 +159,7 @@ và danh sách **"Kỹ năng đã học"** (mỗi thẻ ghi "Học từ <ngườ
 | Thời tiết | Open-Meteo (miễn phí, không cần key) | < 1 giây |
 | Ảnh mặc thử — Hugging Face | IDM-VTON (Space `yisol/IDM-VTON`) | ~30 giây / ảnh, miễn phí, có lúc phải xếp hàng |
 | Ảnh mặc thử — Mac mini M4 | CatVTON (`tryon-worker/`) | **Chưa đo trên máy thật** (ước lượng 45–90 giây ở 576x768, 30 bước) |
-| Mặc thử trực tiếp | Decart `lucy-vton-latest` | ~17 khung hình/giây, ~$0.02/giây, kết nối ~3 giây — **chưa thử thật (chưa có key)** |
+| Mặc thử ảnh và video trực tiếp | Vidu Q2 và Vidu S2-Editing | Phụ thuộc thời gian xử lý và kết nối Vidu |
 
 Độ chính xác: trên bộ 20 ảnh thật (kỹ năng "pha trà"), Qwen3-VL-8B chấm **đúng 90%** (trung vị 0,84 giây),
 Qwen3.8 cũng 90% nhưng chậm hơn (1,37 giây) → giữ VL-8B để chấm. Thêm luật **2 khung hình liên tiếp** mới chuyển bước.
@@ -213,6 +221,8 @@ shadow/
     session_workflow.py     # máy trạng thái chấm bước (fork GlassKit)
     vision_runtime.py       # nhận khung hình, gọi model nhìn ảnh, chế độ Demo
     providers.py            # kết nối gateway LLM (OpenAI-compatible) + AI giả lập
+    conversation.py         # chat tiếng Việt, ảnh camera và sự kiện NDJSON
+    intent_router.py        # lệnh rõ ràng và TypeSafe Jev
     skill_compiler.py       # Dạy: lời nói + ảnh → kỹ năng
     skill_store.py  skills/ # kỹ năng đã lưu (JSON + ảnh mẫu)
     eval_store.py  eval_detectors.py        # thu mẫu + chấm độ chính xác
@@ -222,12 +232,13 @@ shadow/
     wardrobe_seed_shop/     # 16 món đồ nam mùa hè YaMe (ảnh © YaMe, chỉ demo nội bộ) + SOURCES.md
     stylist.py              # gắn nhãn đồ, nhìn đồ đang mặc, phối đồ
     weather.py              # thời tiết Open-Meteo
-    tryon.py                # mặc thử: token Decart, Mac mini / Hugging Face / giả lập
+    vidu_live.py            # mở phiên mặc thử trực tiếp với Vidu
+    tryon.py                # mặc thử ảnh và các provider tương thích
     tests/
   web/                      # app điện thoại (JS thuần, không cần build)
     index.html  app.js  styles.css  wardrobe.css  tryon-live.css  sw.js  manifest.webmanifest
     js/screens/             # home, teach, review, guide, done, wardrobe, stylist, rules, tryon-live, tryon-photo
-    js/                     # camera, giọng nói, MediaPipe, Decart, gọi API…
+    js/                     # camera, giọng nói, MediaPipe, Vidu và gọi API
   tryon-worker/             # máy chủ mặc thử CatVTON cho Mac mini (README riêng)
 ```
 

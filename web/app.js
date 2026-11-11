@@ -1,5 +1,7 @@
 // SHADOW web app — hash router. Each screen exports mount(el, ctx) → cleanup().
 import * as home from './js/screens/home.js';
+import * as conversation from './js/screens/conversation.js';
+import * as imageStudio from './js/screens/image-studio.js';
 import * as teach from './js/screens/teach.js';
 import * as review from './js/screens/review.js';
 import * as guide from './js/screens/guide.js';
@@ -11,7 +13,7 @@ import * as rules from './js/screens/rules.js';
 import * as tryonLive from './js/screens/tryon-live.js';
 import { h } from './js/ui.js';
 
-const routes = { home, teach, review, guide, done, wardrobe, stylist, 'tryon-photo': tryonPhoto, 'tryon-live': tryonLive, rules };
+const routes = { conversation, home, teach, review, guide, done, wardrobe, stylist, 'tryon-photo': tryonPhoto, 'tryon-live': tryonLive, 'image-studio': imageStudio, rules };
 const root = document.getElementById('app');
 let current = null; // { name, cleanup }
 
@@ -19,7 +21,7 @@ function parseHash() {
   const [raw, query = ''] = location.hash.replace(/^#\/?/, '').split('?');
   const [name, ...rest] = raw.split('/').filter(Boolean);
   return {
-    name: name || 'home',
+    name: name || 'conversation',
     params: rest.map((p) => { try { return decodeURIComponent(p); } catch { return p; } }),
     query: new URLSearchParams(query),
   };
@@ -29,7 +31,7 @@ function render() {
   const { name, params, query } = parseHash();
   const screen = routes[name];
   if (!screen) {
-    history.replaceState(null, '', '#/home');
+    history.replaceState(null, '', '#/conversation');
     render();
     return;
   }
@@ -56,7 +58,7 @@ function render() {
     el.replaceChildren(h('div', { class: 'fatal' },
       h('h2', null, 'Ối, có lỗi'),
       h('p', null, String(err?.message || err)),
-      h('a', { class: 'btn btn-primary', href: '#/home' }, 'Về trang chủ')));
+      h('a', { class: 'btn btn-primary', href: '#/conversation' }, 'Về trang chủ')));
   }
   current = { name, cleanup: typeof cleanup === 'function' ? cleanup : null };
 }
@@ -72,9 +74,9 @@ window.addEventListener('pageshow', (e) => { if (e.persisted) render(); });
 // Shared demo link https://<host>/?code=<access code>: the server already set the cookie; drop the
 // code from the address bar so it is not shown on screen / copied along.
 if (new URLSearchParams(location.search).has('code')) {
-  history.replaceState(null, '', location.pathname + (location.hash || '#/home'));
+  history.replaceState(null, '', location.pathname + (location.hash || '#/conversation'));
 }
-if (!location.hash) history.replaceState(null, '', '#/home');
+if (!location.hash) history.replaceState(null, '', '#/conversation');
 render();
 
 // Service worker: caches only the app shell (never /api, /session, /skills-media).

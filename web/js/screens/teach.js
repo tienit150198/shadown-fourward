@@ -26,7 +26,7 @@ export function pickEvenly(items, max) {
   return out;
 }
 
-export function mount(el) {
+export function mount(el, { query = new URLSearchParams() } = {}) {
   const scope = createScope();
   const canListen = sttSupported();
   let stream = null;
@@ -339,7 +339,7 @@ export function mount(el) {
       const ok = await confirmSheet('Thoát và bỏ bản ghi đang làm?', { okLabel: 'Thoát', danger: true });
       if (!ok) return;
     }
-    navigate('#/home');
+    navigate(query.get('from') === 'conversation' ? '#/conversation' : '#/home');
   }
 
   return () => scope.dispose();

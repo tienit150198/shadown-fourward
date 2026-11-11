@@ -254,12 +254,12 @@ export class ContinuousTranscriber {
  * Press-and-hold recognition of one utterance (Guide "Hỏi Shadow").
  * Call inside the pointerdown handler. Returns {stop():Promise<string>, cancel()} or null if unsupported.
  */
-export function holdToTalk({ lang = LANG, onInterim } = {}) {
+export function holdToTalk({ lang = LANG, onInterim, onEnd, continuous = true } = {}) {
   const Ctor = RecognitionCtor();
   if (!Ctor) return null;
   const rec = new Ctor();
   rec.lang = lang;
-  rec.continuous = true;
+  rec.continuous = continuous;
   rec.interimResults = true;
   rec.maxAlternatives = 1;
   let finalText = '';
@@ -281,7 +281,8 @@ export function holdToTalk({ lang = LANG, onInterim } = {}) {
     onInterim?.(`${finalText} ${interimText}`.trim());
   };
   rec.onerror = (event) => { errorCode = event.error; };
-  rec.onend = () => { ended = true; endResolve(); };
+  if (!continuous) rec.onspeechend = () => { try { rec.stop(); } catch { /* already ended */ } };
+  rec.onend = () => { ended = true; endResolve(); onEnd?.(); };
   try {
     rec.start();
   } catch (err) {
@@ -295,7 +296,7 @@ export function holdToTalk({ lang = LANG, onInterim } = {}) {
         try { rec.stop(); } catch { /* ignore */ }
         await Promise.race([endPromise, new Promise((r) => setTimeout(r, 2500))]);
       }
-      if (FATAL_ERRORS.has(errorCode)) {
+      if (FATAL_ERRORS.has(errorCode) || (!continuous && errorCode === 'network')) {
         const err = new Error(errorCode);
         err.userMessage = 'Không dùng được micro. Hãy cho phép quyền micro cho trang này.';
         throw err;

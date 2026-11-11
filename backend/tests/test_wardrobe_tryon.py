@@ -196,7 +196,8 @@ def test_mock_provider_composites(monkeypatch):
 
 def test_tryon_routes(wclient):
     config = wclient.get("/api/tryon/config").json()
-    assert config["live"] == {"available": False, "model": "lucy-vton-latest", "max_session_seconds": 180}
+    assert config["live"]["available"] is False
+    assert config["live"]["model"] == "vidu-s2-editing"
     assert config["photo"]["provider"] == "mock"
 
     wclient.post("/api/wardrobe/seed-demo")

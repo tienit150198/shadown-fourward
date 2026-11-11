@@ -48,6 +48,11 @@ from session_manager import ShadowSessionManager  # noqa: E402
 from skill_store import SkillNotFound, SkillStore, SkillValidationError  # noqa: E402
 from eval_store import EvalError, EvalStore, default_evals_root  # noqa: E402
 from session_constants import MAX_FRAME_DATA_URL_CHARS  # noqa: E402
+from intent_router import IntentRouter, router as intent_api  # noqa: E402
+from conversation import router as conversation_api  # noqa: E402
+from voice_api import router as voice_api, voice_client_from_env  # noqa: E402
+from qwen_image import router as image_api  # noqa: E402
+from vidu_live import router as vidu_api  # noqa: E402
 import security  # noqa: E402
 
 security.configure_pillow()
@@ -71,6 +76,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     store = SkillStore(root)
     manager = ShadowSessionManager(provider=provider, skill_store=store)
     app.state.provider = provider
+    app.state.intent_router = IntentRouter.from_env()
+    app.state.voice_client = voice_client_from_env()
     app.state.skill_store = store
     app.state.manager = manager
     logger.info(
@@ -84,6 +91,9 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     finally:
         await manager.close()
         await provider.aclose()
+        await app.state.intent_router.aclose()
+        if app.state.voice_client is not None:
+            await app.state.voice_client.aclose()
 
 
 app = FastAPI(title="SHADOW", lifespan=lifespan)
@@ -511,6 +521,11 @@ async def session_control(websocket: WebSocket) -> None:
 from wardrobe_api import router as wardrobe_router  # noqa: E402
 
 app.include_router(wardrobe_router)
+app.include_router(intent_api)
+app.include_router(conversation_api)
+app.include_router(voice_api)
+app.include_router(image_api)
+app.include_router(vidu_api)
 
 
 # ---- Static web app (mounted last so it never shadows API routes) -------------

@@ -1,36 +1,25 @@
-// Mặc thử trực tiếp — live virtual try-on on the front camera with Decart `lucy-vton-latest`.
+// Mặc thử trực tiếp với Vidu S2-Editing.
 // Route: #/tryon-live?outfit=<encodeURIComponent(JSON array of item ids)>
-//   (also accepts a JSON array of arrays = several outfits, `cap=<seconds>` hard cap,
-//    `idle=<seconds>` idle cut-off (≥5), `speed=fast`, and `mock=1` for the dev fake SDK —
-//    see js/decart-live.js).
-// Flow (port of DecartAI/tryon-examples examples/mobile): preflight (camera, framing, network,
-// server) → "Bắt đầu mặc thử" → connect (token from POST /api/tryon/live-token, fetched by the
-// SDK's apiKeyProvider right before each dial) → setImage(garment, prompt) → switch outfits with
-// setImage again, no reconnect. Cost guard: idle auto-disconnect, hard cap, stop on page hide.
+// Also accepts an array of outfits, `cap=<seconds>`, `idle=<seconds>` and `mock=1`.
 import { h, icon, toast, navigate, createScope, openSheet, fmtDuration } from '../ui.js';
 import { startCamera, stopCamera, keepScreenAwake } from '../camera.js';
 import { wardrobeApi, itemImageUrl } from '../wardrobe-api.js';
-import { fetchWithAccess } from '../api.js';
 import { outfitHash, categoryLabel, categoryEmoji } from '../wardrobe-ui.js';
 import {
-  loadDecartSdk, isMockEnabled, LIVE_MODEL, LIVE_CATEGORIES, slotsFromItems, slotItems, buildOutfitPrompt,
-  composeGarmentImage, decartErrorMessage, sessionEndMessage,
-} from '../decart-live.js';
+  loadAgoraSdk, requestViduSession, connectVidu, LIVE_MODEL, LIVE_CATEGORIES,
+  slotsFromItems, slotItems, composeGarmentReference,
+} from '../vidu-live.js';
 
-const DEFAULT_COST_PER_SEC = 0.02;    // USD, standard tier (PLAN.md; fast tier is billed 2x)
 const DEFAULT_IDLE_SEC = 60;
-const DEFAULT_CAP_SEC = 180;
-const MAX_IDLE_SEC = 300;
+const DEFAULT_CAP_SEC = 120;
 const IDLE_WARN_SEC = 10;             // warn this long before the idle cut-off
 const CAP_WARN_SEC = 15;
-const FIRST_FRAME_FALLBACK_MS = 6000; // show the remote video even if it still looks black
+const FIRST_FRAME_FALLBACK_MS = 6000;
+const START_TIMEOUT_MS = 40000;
 const APPLY_DEBOUNCE_MS = 450;
 
 const QUALITY_VI = { good: 'Tốt', fair: 'Khá', poor: 'Yếu', critical: 'Rất yếu' };
 const QUALITY_BARS = { good: 4, fair: 3, poor: 2, critical: 1 };
-const LIMIT_VI = {
-  bandwidth: 'băng thông thấp', latency: 'độ trễ cao', loss: 'mất gói tin', stall: 'khung hình bị đứng', cpu: 'máy đang quá tải', none: 'mạng chập chờn',
-};
 
 function hashQuery() {
   return new URLSearchParams(location.hash.split('?')[1] || '');
@@ -54,17 +43,6 @@ function parseOutfits(q) {
 
 const slotKey = (slots) => slotItems(slots).map((it) => it.id).sort().join('|');
 
-function money(usd) {
-  return `$${usd < 10 ? usd.toFixed(2) : usd.toFixed(1)}`;
-}
-
-function liveError(message, extra = {}) {
-  const e = new Error(message);
-  e.userMessage = message;
-  Object.assign(e, extra);
-  return e;
-}
-
 function thumb(item, cls = '') {
   const src = itemImageUrl(item);
   return h('span', { class: `tl-thumb ${cls}` },
@@ -74,19 +52,17 @@ function thumb(item, cls = '') {
 
 export function mount(el) {
   const scope = createScope();
-  const mock = isMockEnabled();
   const q = hashQuery();
+  const mock = q.get('mock') === '1';
   const presetIds = parseOutfits(q);
 
   // ---------- state ----------
   let phase = 'preflight'; // preflight | blocked | connecting | live | ended
-  let config = null;
   let liveAvailable = null; // null = unknown (config missing)
-  let costPerSec = DEFAULT_COST_PER_SEC;
-  // URL overrides may only shorten the guards (the server/Decart enforce the real per-session cap).
-  let idleSec = Number(q.get('idle')) >= 5 ? Math.min(Number(q.get('idle')), MAX_IDLE_SEC) : DEFAULT_IDLE_SEC;
+  let creditsPerSecond = mock ? 0 : 1;
+  let idleSec = Number(q.get('idle')) >= 5 ? Math.min(Number(q.get('idle')), DEFAULT_IDLE_SEC) : DEFAULT_IDLE_SEC;
   let capSec = Number(q.get('cap')) > 0 ? Math.min(Number(q.get('cap')), DEFAULT_CAP_SEC) : DEFAULT_CAP_SEC;
-  let speed = q.get('speed') === 'fast' ? 'fast' : null;
+  let sessionCapSec = capSec;
 
   let wardrobe = null; // null = loading, [] = empty
   let itemsById = new Map();
@@ -95,12 +71,11 @@ export function mount(el) {
   let camStream = null;
   let camOk = false;
   let sdk = null;
-  let decart = null;    // createDecartClient(...) result
-  let rt = null;        // realtime client
+  let rt = null;
+  let startAbort = null;
+  let startTimer = null;
   let session = 0;      // bumps on every start/stop; stale callbacks compare against it
-  let stopping = false;
   let connectedAt = 0;
-  let tickSec = null;   // server-reported generation seconds (generationTick)
   let lastActivity = performance.now();
   let remoteShown = false;
   let appliedKey = null;
@@ -112,9 +87,8 @@ export function mount(el) {
   let pose = null;
   let poseStatus = 'off';
   let framing = null;
-  let netReport = null;
   let lastStats = null;
-  const blobCache = new Map();
+  const referenceCache = new Map();
 
   // ---------- DOM ----------
   const localVideo = h('video', { class: 'tl-video tl-local', playsinline: true, autoplay: true, muted: true });
@@ -132,10 +106,10 @@ export function mount(el) {
   const qualityBars = h('span', { class: 'tl-bars', 'aria-hidden': 'true' }, h('i'), h('i'), h('i'), h('i'));
   const liveChip = h('span', { class: 'chip tl-live-chip' }, h('span', { class: 'tl-live-dot' }), 'TRỰC TIẾP', qualityBars);
   const costTime = h('b', null, '00:00');
-  const costUsd = h('span', { class: 'tl-cost-usd' }, '~$0.00');
-  const costRate = h('span', { class: 'tl-cost-rate' }, '~ $0.02/giây');
-  const costChip = h('span', { class: 'chip tl-cost' }, icon('clock', 15), costTime, h('span', { class: 'tl-dot' }, '·'), costUsd);
-  const aiChip = h('span', { class: 'chip tl-ai-chip', title: 'Video do AI tạo (Decart), có watermark' }, icon('sparkle', 14), 'AI');
+  const costCredits = h('span', { class: 'tl-cost-usd' });
+  const costRate = h('span', { class: 'tl-cost-rate' });
+  const costChip = h('span', { class: 'chip tl-cost' }, icon('clock', 15), costTime, h('span', { class: 'tl-dot' }, '·'), costCredits);
+  const aiChip = h('span', { class: 'chip tl-ai-chip', title: mock ? 'Xem thử giao diện' : 'Video do Vidu chỉnh bằng AI' }, icon('sparkle', 14), mock ? 'Giả lập' : 'AI');
   const topBar = h('header', { class: 'tl-top' }, backBtn,
     h('div', { class: 'tl-top-chips' }, h('div', { class: 'tl-chip-row' }, liveChip, aiChip), h('div', { class: 'tl-chip-row' }, costChip, costRate)));
 
@@ -162,8 +136,8 @@ export function mount(el) {
       strip));
 
   // connecting overlay
-  const connectText = h('div', { class: 'tl-connect-text' }, 'Đang kết nối Decart…');
-  const connectSub = h('div', { class: 'tl-connect-sub' }, 'Thường mất khoảng 3 giây');
+  const connectText = h('div', { class: 'tl-connect-text' }, 'Đang kết nối Vidu…');
+  const connectSub = h('div', { class: 'tl-connect-sub' });
   const connectOverlay = h('div', { class: 'tl-connect hidden' },
     h('span', { class: 'tl-spin' }), connectText, connectSub,
     h('button', { class: 'btn btn-ghost btn-sm', type: 'button', onClick: () => stopSession('user') }, 'Huỷ'));
@@ -176,7 +150,7 @@ export function mount(el) {
   const outfitThumbs = h('div', { class: 'tl-pf-thumbs' });
   const outfitName = h('div', { class: 'tl-pf-outfit-name' });
   const startBtn = h('button', { class: 'btn btn-primary btn-xl', type: 'button', onClick: () => startSession() }, icon('play', 20), 'Bắt đầu mặc thử');
-  const photoLink = h('a', { class: 'btn btn-ghost block tl-photo-link', href: '#/tryon-photo' }, icon('image', 20), 'Ảnh mặc thử (miễn phí, chậm hơn)');
+  const photoLink = h('a', { class: 'btn btn-ghost block tl-photo-link', href: '#/tryon-photo' }, icon('image', 20), 'Ảnh mặc thử');
   const pfNote = h('p', { class: 'tl-pf-note' });
   const preflightCard = h('div', { class: 'tl-card tl-preflight' },
     h('div', { class: 'tl-kicker' }, icon('sparkle', 16), mock ? 'Mặc thử trực tiếp · CHẾ ĐỘ GIẢ LẬP' : 'Mặc thử trực tiếp · AI'),
@@ -186,7 +160,8 @@ export function mount(el) {
       h('button', { class: 'btn btn-ghost btn-sm', type: 'button', onClick: () => openPicker() }, 'Đổi đồ')),
     pfNote,
     h('p', { class: 'tl-ai-note' }, icon('alert', 14),
-      h('span', null, 'Video do AI (Decart) tạo ra và có watermark. Hình camera được gửi tới Decart để xử lý trực tiếp, SHADOW không lưu lại.')),
+      h('span', null, mock ? 'Chế độ giả lập hiển thị camera gốc.'
+        : 'Vidu nhận hình camera và ảnh đồ bạn chọn để xử lý trực tiếp bằng AI. SHADOW không lưu video.')),
     startBtn, photoLink);
 
   // message card (blocked / error / ended)
@@ -256,26 +231,22 @@ export function mount(el) {
 
   async function loadConfig() {
     if (mock) { liveAvailable = true; rowServer.set('ok', 'Giả lập (không tốn phí)'); updateStartButton(); return; }
+    let config;
     try {
       config = await wardrobeApi.tryonConfig();
-    } catch (err) {
-      config = null;
-      console.info('[tryon-live] config unavailable', err?.message);
-    }
+    } catch { /* session creation will surface a server error if this request failed */ }
     if (scope.disposed) return;
-    const live = (config && config.live) || {};
-    if (Number(live.cost_per_second) > 0) costPerSec = Number(live.cost_per_second);
-    if (!(Number(q.get('idle')) >= 5) && Number(live.idle_seconds) > 0) idleSec = Number(live.idle_seconds);
-    const cfgCap = Number(live.max_session_seconds || live.max_seconds);
+    const live = config?.live || {};
+    if (Number(live.credits_per_second) > 0) creditsPerSecond = Number(live.credits_per_second);
+    const cfgIdle = Number(live.idle_seconds);
+    if (cfgIdle >= 5) idleSec = Number(q.get('idle')) >= 5 ? Math.min(Number(q.get('idle')), cfgIdle) : cfgIdle;
+    const cfgCap = Number(live.max_session_seconds);
     if (cfgCap > 0) capSec = Number(q.get('cap')) > 0 ? Math.min(Number(q.get('cap')), cfgCap) : cfgCap;
-    if (!speed && live.speed === 'fast') speed = 'fast';
-    if (speed === 'fast' && !(Number(live.cost_per_second) > 0)) costPerSec = DEFAULT_COST_PER_SEC * 2;
-    costRate.textContent = `~ ${money(costPerSec)}/giây`;
     renderNote();
     if (live.available === false) {
       liveAvailable = false;
-      rowServer.set('bad', 'Chưa có DECART_API_KEY');
-      showBlocked(live.detail || live.reason || live.message || '');
+      rowServer.set('bad', 'Chưa cấu hình Vidu');
+      showBlocked(live.detail || '');
       return;
     }
     liveAvailable = live.available === true ? true : null;
@@ -285,8 +256,9 @@ export function mount(el) {
 
   // ---------- render ----------
   function renderNote() {
-    pfNote.textContent = `Chi phí ~ ${money(costPerSec)}/giây khi đang kết nối${speed === 'fast' ? ' (chế độ nhanh)' : ''}. `
-      + `Tự ngắt sau ${idleSec} giây không thao tác, tối đa ${fmtMinutes(capSec)} mỗi phiên.`;
+    costRate.textContent = mock ? 'Giả lập' : `${creditsPerSecond} credit/giây`;
+    const cost = mock ? 'Giả lập miễn phí.' : `Vidu tính ${creditsPerSecond} credit/giây khi phiên đang hoạt động.`;
+    pfNote.textContent = `${cost} Tự ngắt sau ${idleSec} giây không thao tác, tối đa ${fmtMinutes(capSec)} mỗi phiên.`;
   }
 
   function fmtMinutes(sec) {
@@ -369,8 +341,6 @@ export function mount(el) {
   function updateStartButton() {
     const hasOutfit = slotItems(current).length > 0;
     startBtn.disabled = phase !== 'preflight' || !camOk || !hasOutfit || liveAvailable === false;
-    const critical = netReport?.quality === 'critical';
-    startBtn.lastChild.textContent = critical ? 'Vẫn thử (mạng rất yếu)' : 'Bắt đầu mặc thử';
   }
 
   // ---------- picker ----------
@@ -494,114 +464,97 @@ export function mount(el) {
   }
 
   async function checkNetwork() {
-    rowNet.set('wait', 'Đang kiểm tra…');
+    if (mock) { rowNet.set('ok', 'Giả lập'); return; }
+    if (!navigator.onLine) { rowNet.set('bad', 'Đang ngoại tuyến'); return; }
     try {
-      sdk = await loadDecartSdk();
+      sdk = await loadAgoraSdk();
       if (scope.disposed) return;
-      decart = decart || sdk.createDecartClient({ apiKeyProvider: fetchLiveToken });
-      const controller = new AbortController();
-      scope.add(() => controller.abort());
-      const report = await decart.realtime.checkConnectivity({ signal: controller.signal });
-      if (scope.disposed) return;
-      netReport = report;
-      const rtt = report?.metrics?.rttMs;
-      const transport = report?.metrics?.transport;
-      const detail = [QUALITY_VI[report.quality] || report.quality, rtt != null ? `${Math.round(rtt)} ms` : null, transport === 'relay' ? 'qua relay' : null].filter(Boolean).join(' · ');
-      const state = report.quality === 'good' || report.quality === 'fair' ? 'ok' : report.quality === 'poor' ? 'warn' : 'bad';
-      rowNet.set(state, report.quality === 'critical' ? `${detail} — có thể không chạy được` : detail);
+      if (sdk.checkSystemRequirements()) rowNet.set('ok', 'Trình duyệt hỗ trợ video trực tiếp');
+      else rowNet.set('warn', 'Trình duyệt có thể không hỗ trợ video trực tiếp');
     } catch (err) {
-      if (scope.disposed) return;
-      rowNet.set('neutral', err?.userMessage || 'Không kiểm tra được');
+      if (!scope.disposed) rowNet.set('warn', err.userMessage || 'Không kiểm tra được');
     }
-    updateStartButton();
-  }
-
-  // ---------- token ----------
-  /** apiKeyProvider for the SDK: POST /api/tryon/live-token → client token string. */
-  async function fetchLiveToken() {
-    if (mock) return 'ek_mock';
-    let res;
-    try {
-      res = await fetchWithAccess('/api/tryon/live-token', { method: 'POST', headers: { Accept: 'application/json' }, cache: 'no-store' });
-    } catch {
-      throw liveError('Không kết nối được máy chủ SHADOW để lấy token Decart. Kiểm tra mạng.');
-    }
-    const text = await res.text();
-    let data = null;
-    try { data = text ? JSON.parse(text) : null; } catch { data = text; }
-    const detail = data && typeof data === 'object' ? (typeof data.detail === 'string' ? data.detail : (data.detail?.message || data.error || data.message || '')) : (typeof data === 'string' ? data.slice(0, 200) : '');
-    if (res.status === 503) throw liveError(detail || 'Chưa cấu hình DECART_API_KEY.', { code: 'NO_DECART_KEY', status: 503, detail });
-    if (res.status === 429) throw liveError(detail || 'Đang có quá nhiều yêu cầu mặc thử trực tiếp — đợi một chút rồi thử lại nhé.', { status: 429 });
-    if (res.status === 401) throw liveError('Cần mã truy cập để mặc thử trực tiếp. Tải lại trang rồi nhập mã nhé.', { status: 401 });
-    if (res.status === 404) throw liveError('Máy chủ chưa hỗ trợ mặc thử trực tiếp (thiếu /api/tryon/live-token). Cập nhật backend rồi thử lại.', { status: 404 });
-    if (!res.ok) throw liveError(`Máy chủ không cấp được token Decart (lỗi ${res.status})${detail ? `: ${detail}` : ''}.`, { status: res.status });
-    const key = typeof data === 'string' ? data
-      : (data?.apiKey || data?.api_key || data?.client_token || data?.token?.apiKey || (typeof data?.token === 'string' && data.token.startsWith('ek_') ? data.token : null) || data?.key || data?.token);
-    if (!key || typeof key !== 'string') throw liveError('Máy chủ trả token Decart không đúng định dạng (thiếu apiKey).');
-    return key;
   }
 
   // ---------- session ----------
   async function startSession() {
     if (phase === 'connecting' || phase === 'live') return;
     if (!slotItems(current).length) { toast('Chọn ít nhất một món đồ trước nhé.'); openPicker(); return; }
-    if (!camStream || !camOk) { await openCamera(); if (!camOk) return; }
+
     const my = ++session;
-    stopping = false;
+    const controller = new AbortController();
+    startAbort = controller;
     remoteShown = false;
     appliedKey = null;
-    tickSec = null;
     connectedAt = 0;
+    sessionCapSec = capSec;
+    lastStats = null;
     qualityDismissed = false;
-    connectText.textContent = 'Đang kết nối Decart…';
-    connectSub.textContent = 'Thường mất khoảng 3 giây';
+    onQuality({ quality: '' });
+    connectText.textContent = mock ? 'Đang mở phiên giả lập…' : 'Đang kết nối Vidu…';
+    connectSub.textContent = 'Đang chuẩn bị camera và ảnh đồ…';
     setPhase('connecting');
     markActivity();
-    // Pre-compose the first garment image while the connection is being set up.
-    void garmentFor(current).catch(() => {});
-    try {
-      sdk = sdk || await loadDecartSdk();
+    startTimer = setTimeout(() => {
+      if (my === session) stopSession('error', 'Quá lâu chưa nhận được video mặc thử. Kiểm tra mạng rồi thử lại.');
+    }, START_TIMEOUT_MS);
+
+    if (!camOk || camStream?.getVideoTracks()[0]?.readyState !== 'live') {
+      stopCamera(camStream, localVideo);
+      await openCamera();
       if (my !== session) return;
-      decart = decart || sdk.createDecartClient({ apiKeyProvider: fetchLiveToken });
-      const client = await decart.realtime.connect(camStream, {
-        model: sdk.models.realtime(LIVE_MODEL),
+      if (!camOk) { stopSession('user'); return; }
+    }
+
+    const initial = { ...current };
+    try {
+      if (mock) {
+        rt = { switchReference() {}, disconnect() {} };
+        appliedKey = slotKey(initial);
+        connectedAt = performance.now();
+        attachRemote(camStream, my);
+        return;
+      }
+
+      const [loadedSdk, reference] = await Promise.all([sdk || loadAgoraSdk(), garmentFor(initial)]);
+      if (my !== session) return;
+      sdk = loadedSdk;
+      connectSub.textContent = 'Đang mở phiên mặc thử…';
+      const credentials = await requestViduSession(reference, controller.signal);
+      if (my !== session) return;
+      if (Number(credentials.max_session_seconds) > 0) {
+        sessionCapSec = Math.min(sessionCapSec, Number(credentials.max_session_seconds));
+      }
+      appliedKey = slotKey(initial);
+      rt = connectVidu({
+        sdk,
+        session: credentials,
+        camera: camStream,
+        signal: controller.signal,
+        onStarted() {
+          if (my !== session) return;
+          connectedAt = performance.now();
+          connectSub.textContent = 'Đang chờ khung hình đầu tiên…';
+        },
         onRemoteStream: (stream) => { if (my === session) attachRemote(stream, my); },
-        onConnectionChange: (state) => { if (my === session) onConnectionChange(state); },
-        onConnectionQuality: (report) => { if (my === session) onQuality(report); },
-        onQueuePosition: (qp) => { if (my === session && qp) connectSub.textContent = `Đang xếp hàng: vị trí ${qp.position}/${qp.queueSize}`; },
-        onCapacityWait: (w) => { if (my === session && w) connectSub.textContent = `Decart đang bận, tự thử lại sau ${Math.ceil((w.retryAfterMs || 0) / 1000)} giây…`; },
-        retries: 2,
-        capacityRetryBudgetMs: 30000,
-        ...(speed ? { speed } : {}),
+        onQuality: (report) => { if (my === session) onQuality(report); },
+        onDisconnected: (err) => { if (my === session) stopSession('dropped', err.userMessage); },
+        onSwitchError(err) {
+          if (my !== session) return;
+          appliedKey = null;
+          toast(`Không đổi được đồ. ${err.userMessage}`, { kind: 'error' });
+        },
       });
-      if (my !== session) { try { client.disconnect(); } catch { /* ignore */ } return; }
-      rt = client;
-      connectedAt = performance.now();
-      rt.on('error', (err) => {
-        if (my !== session) return;
-        console.warn('[tryon-live] realtime error', err);
-        toast(decartErrorMessage(err), { kind: 'error', ms: 4500 });
-      });
-      rt.on('sessionEnded', (e) => { if (my === session) stopSession('server', sessionEndMessage(e?.reason)); });
-      rt.on('generationTick', (e) => { if (my === session && Number.isFinite(e?.seconds)) tickSec = e.seconds; });
-      connectSub.textContent = 'Đang chờ khung hình đầu tiên…';
-      scheduleApply(0);
+      await rt.ready;
     } catch (err) {
       if (my !== session) return;
-      console.warn('[tryon-live] connect failed', err);
-      rt = null;
-      if (err?.code === 'NO_DECART_KEY') { liveAvailable = false; rowServer.set('bad', 'Chưa có DECART_API_KEY'); showBlocked(err.detail || ''); return; }
-      showEnded('error', decartErrorMessage(err));
-    }
-  }
-
-  function onConnectionChange(state) {
-    if (state === 'reconnecting') {
-      if (phase === 'live') { connectText.textContent = 'Mất kết nối, đang nối lại…'; connectSub.textContent = ''; connectOverlay.classList.remove('hidden'); }
-    } else if (state === 'connected' || state === 'generating') {
-      if (phase === 'live') connectOverlay.classList.add('hidden');
-    } else if (state === 'disconnected' && rt && !stopping) {
-      stopSession('dropped');
+      if (err?.code === 'NO_VIDU_KEY' || err?.code === 'VIDU_INVALID_BASE_URL') {
+        releaseSession();
+        liveAvailable = false;
+        showBlocked(err.userMessage);
+        return;
+      }
+      stopSession('error', err?.userMessage || 'Không mở được phiên mặc thử. Thử lại nhé.');
     }
   }
 
@@ -610,11 +563,11 @@ export function mount(el) {
     const bars = QUALITY_BARS[report.quality] || 0;
     qualityBars.dataset.q = report.quality;
     [...qualityBars.children].forEach((b, i) => b.classList.toggle('on', i < bars));
-    liveChip.title = `Kết nối: ${QUALITY_VI[report.quality] || report.quality}`;
-    const low = !report.warmingUp && (report.quality === 'poor' || report.quality === 'critical');
+    liveChip.title = QUALITY_VI[report.quality] || '';
+    const low = report.quality === 'poor' || report.quality === 'critical';
     if (low && !qualityDismissed && phase === 'live') {
       qualityBanner.replaceChildren(icon('alert', 16),
-        h('span', null, `Mạng ${report.quality === 'critical' ? 'rất yếu' : 'yếu'} (${LIMIT_VI[report.limitingFactor] || LIMIT_VI.none}) — video có thể giật.`),
+        h('span', null, `Mạng ${report.quality === 'critical' ? 'rất yếu' : 'yếu'}, video có thể giật.`),
         h('button', { class: 'tl-banner-x', type: 'button', 'aria-label': 'Ẩn cảnh báo', onClick: () => { qualityDismissed = true; qualityBanner.classList.add('hidden'); } }, icon('close', 16)));
       qualityBanner.classList.remove('hidden');
     } else if (!low) {
@@ -633,7 +586,8 @@ export function mount(el) {
     const check = () => {
       if (my !== session || remoteShown) return;
       let real = false;
-      if (remoteVideo.readyState >= 2 && remoteVideo.videoWidth) {
+      const hasFrame = remoteVideo.readyState >= 2 && remoteVideo.videoWidth;
+      if (hasFrame) {
         try {
           pctx.drawImage(remoteVideo, 0, 0, probe.width, probe.height);
           const d = pctx.getImageData(0, 0, probe.width, probe.height).data;
@@ -642,33 +596,38 @@ export function mount(el) {
           real = sum / (d.length / 4) > 12 || max > 60;
         } catch { real = true; }
       }
-      if (real || performance.now() - t0 > FIRST_FRAME_FALLBACK_MS) { showRemote(); return; }
+      if (real || (hasFrame && performance.now() - t0 > FIRST_FRAME_FALLBACK_MS)) { showRemote(); return; }
       scope.timeout(check, 120);
     };
     check();
   }
 
   function showRemote() {
+    clearTimeout(startTimer);
     remoteShown = true;
     root.classList.add('remote-on');
     setPhase('live');
     renderFraming();
     updateMeter();
+    scheduleApply(0);
   }
 
   function garmentFor(slots) {
     const key = slotKey(slots);
-    if (!blobCache.has(key)) {
-      const p = composeGarmentImage(slotItems(slots), itemImageUrl);
-      p.catch(() => blobCache.delete(key));
-      blobCache.set(key, p);
+    if (!referenceCache.has(key)) {
+      if (referenceCache.size >= 8) referenceCache.delete(referenceCache.keys().next().value);
+      const reference = composeGarmentReference(slotItems(slots), itemImageUrl);
+      referenceCache.set(key, reference);
+      reference.catch(() => {
+        if (referenceCache.get(key) === reference) referenceCache.delete(key);
+      });
     }
-    return blobCache.get(key);
+    return referenceCache.get(key);
   }
 
   function scheduleApply(delay = APPLY_DEBOUNCE_MS) {
     clearTimeout(applyTimer);
-    if (!rt) return;
+    if (!rt || phase !== 'live') return;
     applyTimer = setTimeout(runApply, delay);
   }
   scope.add(() => clearTimeout(applyTimer));
@@ -683,35 +642,31 @@ export function mount(el) {
     const my = session;
     if (phase === 'live') applyingChip.classList.remove('hidden');
     try {
-      const prompt = buildOutfitPrompt(slots);
-      const blob = await garmentFor(slots);
-      if (!rt || my !== session) return;
-      // Same call as tryon-examples mobile/page.tsx applyOutfit(): enhance off (prompt is
-      // already descriptive), 30 s ack timeout.
-      await rt.setImage(blob, { prompt, enhance: false, timeout: 30000 });
-      if (my === session) appliedKey = key;
+      const reference = await garmentFor(slots);
+      if (!rt || my !== session || slotKey(current) !== key) return;
+      rt.switchReference(reference);
+      appliedKey = key;
     } catch (err) {
       if (my === session) {
-        console.warn('[tryon-live] setImage failed', err);
-        toast(`Không đổi được đồ: ${decartErrorMessage(err)}`, { kind: 'error' });
+        toast(err?.userMessage || 'Không đổi được đồ. Thử chọn lại nhé.', { kind: 'error' });
       }
     } finally {
-      applying = false;
-      applyingChip.classList.add('hidden');
-      if (applyAgain && my === session) { applyAgain = false; runApply(); } else applyAgain = false;
+      if (my === session) {
+        applying = false;
+        applyingChip.classList.add('hidden');
+        if (applyAgain) { applyAgain = false; void runApply(); }
+      }
     }
   }
 
   function activeSeconds() {
-    if (!connectedAt) return 0;
-    const local = (performance.now() - connectedAt) / 1000;
-    return tickSec != null ? Math.max(tickSec, Math.min(local, tickSec + 2)) : local;
+    return connectedAt ? (performance.now() - connectedAt) / 1000 : 0;
   }
 
   function updateMeter() {
     const sec = activeSeconds();
     costTime.textContent = fmtDuration(sec * 1000);
-    costUsd.textContent = `~${money(sec * costPerSec)}`;
+    costCredits.textContent = `≈ ${Math.ceil(sec * creditsPerSecond)} credit`;
   }
 
   function markActivity() {
@@ -724,13 +679,13 @@ export function mount(el) {
     if (phase !== 'live' && phase !== 'connecting') return;
     if (phase === 'live') updateMeter();
     const idleLeft = idleSec - (performance.now() - lastActivity) / 1000;
-    const capLeft = connectedAt ? capSec - activeSeconds() : Infinity;
+    const capLeft = connectedAt ? sessionCapSec - activeSeconds() : Infinity;
     if (capLeft <= 0) { stopSession('cap'); return; }
     if (idleLeft <= 0) { stopSession('idle'); return; }
     if (phase !== 'live') return;
     if (capLeft <= CAP_WARN_SEC) {
       timerBanner.dataset.kind = 'cap';
-      timerBanner.replaceChildren(icon('clock', 16), h('span', null, `Phiên sẽ kết thúc sau ${Math.ceil(capLeft)} giây (giới hạn ${fmtMinutes(capSec)}).`));
+      timerBanner.replaceChildren(icon('clock', 16), h('span', null, `Phiên sẽ kết thúc sau ${Math.ceil(capLeft)} giây (giới hạn ${fmtMinutes(sessionCapSec)}).`));
       timerBanner.classList.remove('hidden');
     } else if (idleLeft <= IDLE_WARN_SEC) {
       timerBanner.dataset.kind = 'idle';
@@ -741,26 +696,34 @@ export function mount(el) {
     }
   }, 250);
 
-  function stopSession(reason, message) {
-    if (phase !== 'connecting' && phase !== 'live') return;
-    stopping = true;
+  function releaseSession() {
     session += 1;
-    const sec = activeSeconds();
-    lastStats = connectedAt ? { sec, usd: sec * costPerSec } : null;
+    clearTimeout(startTimer);
     clearTimeout(applyTimer);
-    try { rt?.disconnect(); } catch (err) { console.warn('disconnect failed', err); }
+    startAbort?.abort();
+    startAbort = null;
+    rt?.disconnect();
     rt = null;
     connectedAt = 0;
     remoteShown = false;
+    applying = false;
+    applyAgain = false;
     root.classList.remove('remote-on');
     remoteVideo.srcObject = null;
     framingBanner.classList.add('hidden');
+  }
+
+  function stopSession(reason, message) {
+    if (phase !== 'connecting' && phase !== 'live') return;
+    const sec = activeSeconds();
+    lastStats = connectedAt ? { sec, credits: Math.ceil(sec * creditsPerSecond) } : null;
+    releaseSession();
     const texts = {
       user: 'Bạn đã dừng phiên mặc thử.',
       idle: `Đã tự ngắt vì ${idleSec} giây không thao tác (để tiết kiệm chi phí).`,
-      cap: `Đã hết thời lượng tối đa ${fmtMinutes(capSec)} cho một phiên.`,
+      cap: `Đã hết thời lượng tối đa ${fmtMinutes(sessionCapSec)} cho một phiên.`,
       hidden: 'Đã ngắt khi bạn rời màn hình để không tốn phí.',
-      dropped: 'Mất kết nối với Decart.',
+      dropped: 'Mất kết nối với Vidu.',
     };
     if (reason === 'leave') return;
     if (reason === 'user' && !lastStats) { setPhase('preflight'); return; }
@@ -774,11 +737,7 @@ export function mount(el) {
       h('div', { class: 'tl-msg-ic bad' }, icon('alert', 26)),
       h('h2', { class: 'tl-msg-title' }, 'Chưa bật mặc thử trực tiếp'),
       detail ? h('p', { class: 'tl-msg-detail' }, detail) : null,
-      h('p', { class: 'tl-msg-body' },
-        'Mặc thử trực tiếp dùng Decart (', h('code', null, LIVE_MODEL), '). Người quản trị cần đặt ',
-        h('code', null, 'DECART_API_KEY'), ' trong file ', h('code', null, '.env'), ' của máy chủ SHADOW rồi chạy lại ',
-        h('code', null, './run.sh'), '. Khoá chỉ nằm trên máy chủ; trình duyệt chỉ nhận token ngắn hạn.'),
-      h('p', { class: 'tl-msg-body' }, 'Trong lúc chờ, bạn vẫn có thể dùng Ảnh mặc thử (chụp một tấm ảnh toàn thân, chờ 25–60 giây).'),
+      h('p', { class: 'tl-msg-body' }, 'Bạn có thể chọn Ảnh mặc thử và chụp một tấm ảnh toàn thân.'),
       h('a', { class: 'btn btn-primary block tl-fallback', href }, icon('image', 20), 'Ảnh mặc thử'),
       h('button', { class: 'btn btn-ghost block', type: 'button', onClick: () => leave() }, 'Quay lại'));
     setPhase('blocked');
@@ -792,7 +751,7 @@ export function mount(el) {
       h('p', { class: 'tl-msg-body' }, message),
       lastStats ? h('div', { class: 'tl-msg-stats' },
         h('span', null, icon('clock', 15), fmtDuration(lastStats.sec * 1000)),
-        h('span', null, `ước tính ~${money(lastStats.usd)}`)) : null,
+        h('span', null, `ước tính ${lastStats.credits} credit`)) : null,
       h('button', { class: 'btn btn-primary block', type: 'button', onClick: () => startSession() }, icon('refresh', 20), isError ? 'Thử lại' : 'Mặc thử tiếp'),
       h('div', { class: 'row gap' },
         h('a', { class: 'btn btn-ghost grow', href: photoHref() }, 'Ảnh mặc thử'),
@@ -812,7 +771,7 @@ export function mount(el) {
     ctx.drawImage(v, 0, 0);
     const fs = Math.max(14, Math.round(c.width / 36));
     ctx.font = `600 ${fs}px "Be Vietnam Pro", system-ui, sans-serif`;
-    const label = 'Ảnh do AI tạo · SHADOW × Decart';
+    const label = mock ? 'Ảnh giả lập · SHADOW' : 'Ảnh do AI chỉnh · SHADOW × Vidu';
     const tw = ctx.measureText(label).width;
     ctx.fillStyle = 'rgba(0,0,0,0.45)';
     ctx.fillRect(fs * 0.6, c.height - fs * 2.4, tw + fs, fs * 1.7);
@@ -854,6 +813,7 @@ export function mount(el) {
       pose?.start();
     }
   });
+  scope.listen(window, 'pagehide', () => stopSession('hidden'));
 
   function leave() {
     stopSession('leave');
@@ -864,21 +824,15 @@ export function mount(el) {
   const releaseWake = keepScreenAwake();
   scope.add(releaseWake);
   scope.add(() => {
-    stopping = true;
-    session += 1;
-    try { rt?.disconnect(); } catch { /* ignore */ }
-    rt = null;
-    remoteVideo.srcObject = null;
+    releaseSession();
     stopCamera(camStream, localVideo);
     camStream = null;
   });
 
   // ---------- boot ----------
-  costRate.textContent = `~ ${money(costPerSec)}/giây`;
   renderNote();
   renderOutfit();
   setPhase('preflight');
-  if (mock) console.info('[tryon-live] Decart MOCK mode — no token, no cost');
   loadConfig().then(() => {
     if (scope.disposed || phase === 'blocked') return;
     openCamera();

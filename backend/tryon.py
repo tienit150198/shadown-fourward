@@ -10,12 +10,13 @@ Live (Decart, WebRTC in the browser):
     The browser passes `apiKey` to `createDecartClient({apiKey})` (or returns it from `apiKeyProvider`)
     and connects to model "lucy-vton-latest". Pattern from DecartAI/tryon-examples (MIT).
 
-Photo (server side), TRYON_PHOTO_PROVIDER = auto (default) | worker | hf_space | mock:
+Photo (server side), TRYON_PHOTO_PROVIDER = auto (default) | vidu | worker | hf_space | mock:
+    vidu     — Vidu Q2 reference-to-image with the person photo and selected garment references
     worker   — Mac mini CatVTON worker: POST {TRYON_WORKER_URL}/tryon, GET /health (cached 30 s)
     hf_space — Hugging Face Space (default yisol/IDM-VTON, CC BY-NC-SA 4.0) via gradio_client;
                upper-body only (bottoms are not rendered)
     mock     — offline composite (garment pasted on the photo + "DEMO" label)
-    auto     — worker (if configured and healthy) → hf_space → mock
+    auto     — Vidu when configured, otherwise worker (if healthy) → hf_space → mock
 """
 
 from __future__ import annotations
@@ -34,6 +35,7 @@ from typing import Any
 
 import httpx
 
+from vidu_image import MAX_REFERENCES, ViduImage, ViduImageError
 from wardrobe_store import WardrobeError, decode_image_data_url, jpeg_data_url, to_jpeg
 
 logger = logging.getLogger("uvicorn.error")
@@ -41,7 +43,7 @@ logger = logging.getLogger("uvicorn.error")
 LIVE_MODEL = "lucy-vton-latest"
 DEFAULT_DECART_BASE_URL = "https://api.decart.ai"
 DEFAULT_HF_SPACE = "yisol/IDM-VTON"
-PHOTO_PROVIDERS = ("worker", "hf_space", "mock")
+PHOTO_PROVIDERS = ("vidu", "worker", "hf_space", "mock")
 HF_TIMEOUT_S = 120.0
 WORKER_TIMEOUT_S = 180.0
 # Decart cost guard, enforced by Decart itself through the client-token constraints (the browser's
@@ -211,6 +213,48 @@ def live_prompt(items: list[dict[str, Any]]) -> dict[str, Any]:
 # ---- photo providers -------------------------------------------------------------
 
 
+_VIDU_TRYON_PLACEMENT = {
+    "dress": "Replace the main outfit with this full-body garment.",
+    "top": "Replace the upper-body garment with this top.",
+    "bottom": "Replace the lower-body garment with this bottom.",
+    "outerwear": "Layer this outerwear over the main outfit as an outer layer.",
+    "shoes": "Replace the footwear with these shoes.",
+    "accessory": "Apply this accessory naturally where it is worn or carried.",
+}
+
+
+def _vidu_outfit(items: list[dict[str, Any]], garment_jpegs: dict[str, bytes]) -> list[dict[str, Any]]:
+    usable = [
+        item for item in items
+        if item["id"] in garment_jpegs and item.get("category") in _VIDU_TRYON_PLACEMENT
+    ]
+    seen = {"top", "bottom"} if any(item["category"] == "dress" for item in usable) else set()
+    clothing = []
+    accessories = []
+    for item in usable:
+        category = item["category"]
+        if category == "accessory":
+            accessories.append(item)
+        elif category not in seen:
+            clothing.append(item)
+            seen.add(category)
+    # Reserve the first reference for the person and prioritize main garments over additional accessories.
+    selected_ids = {item["id"] for item in (clothing + accessories)[:MAX_REFERENCES - 1]}
+    return [item for item in usable if item["id"] in selected_ids]
+
+
+def _vidu_tryon_prompt(items: list[dict[str, Any]]) -> str:
+    instructions = [
+        "Edit Image 1, the photo of the person, into one realistic virtual try-on photo.",
+        "Keep the person's identity, face, hair, body proportions, skin tone, expression, pose, framing, lighting and background.",
+        "Use each following image only as a wardrobe reference. Preserve the garment's material, cut, color and pattern.",
+        "Keep unselected clothing, shoes and accessories as they are in Image 1. Retain natural fit, drape and shadows.",
+    ]
+    for index, item in enumerate(items, 2):
+        instructions.append(f"Image {index}: {_VIDU_TRYON_PLACEMENT[item['category']]}")
+    return "\n".join(instructions)
+
+
 def _result_to_jpeg(path_or_bytes: Any) -> bytes:
     if isinstance(path_or_bytes, (bytes, bytearray)):
         raw = bytes(path_or_bytes)
@@ -287,14 +331,16 @@ def mock_composite(
 
 
 class TryOnService:
-    """Photo try-on with a provider chain. Inject `worker_transport` / `hf_runner` in tests."""
+    """Photo try-on with Vidu and legacy providers."""
 
     def __init__(
         self,
         *,
+        vidu_image: ViduImage | None = None,
         worker_transport: httpx.AsyncBaseTransport | None = None,
         hf_runner: Any = None,
     ) -> None:
+        self._vidu_image = ViduImage() if vidu_image is None else vidu_image
         self._worker_transport = worker_transport
         self._hf_runner = hf_runner  # callable(person_path, garment_path, garment_des) -> output path
         self._health: tuple[float, bool] | None = None
@@ -357,6 +403,8 @@ class TryOnService:
         configured = self.configured_provider()
         if configured != "auto":
             return [configured]
+        if self._vidu_image.available():
+            return ["vidu"]
         chain: list[str] = []
         if await self.worker_healthy():
             chain.append("worker")
@@ -378,9 +426,12 @@ class TryOnService:
                 "provider": provider,
                 "configured": self.configured_provider(),
                 "chain": chain,
-                "renders_bottoms": provider in ("worker", "mock"),
-                "expected_seconds": {"worker": 40, "hf_space": 30, "mock": 1}.get(provider),
-                "notice": self.hf_blocked() or None,
+                "renders_bottoms": provider in ("vidu", "worker", "mock"),
+                "expected_seconds": {"vidu": 60, "worker": 40, "hf_space": 30, "mock": 1}.get(provider),
+                "notice": (
+                    (None if self._vidu_image.available() else "Kiểm tra cấu hình khóa API và khu vực Vidu.")
+                    if provider == "vidu" else self.hf_blocked() or None
+                ),
             },
         }
 
@@ -395,15 +446,18 @@ class TryOnService:
         person_jpeg = await asyncio.to_thread(
             lambda: to_jpeg(decode_image_data_url(person_image), max_side=1024, quality=90)
         )
-        passes = plan_garments(items)
+        chain = await self.provider_chain()
+        started = time.monotonic()
+        if chain[0] == "vidu":
+            result = await self._run_vidu(person_jpeg, items, garment_jpegs)
+            return {**result, "provider": "vidu", "seconds": round(time.monotonic() - started, 1)}
+        passes = plan_garments([item for item in items if item["id"] in garment_jpegs])
         if not passes:
             raise TryOnError("Hãy chọn ít nhất một áo, quần hoặc váy để mặc thử.", status=422)
-        chain = await self.provider_chain()
         explicit = self.configured_provider() != "auto"
         errors: list[str] = []
         if not explicit and self.hf_blocked() and "hf_space" not in chain:
             errors.append(f"hf_space: {self.hf_blocked()}")  # skipped (quota): still tell the user why
-        started = time.monotonic()
         for provider in chain:
             try:
                 result = await self._run_provider(provider, person_jpeg, passes, garment_jpegs)
@@ -426,6 +480,24 @@ class TryOnService:
                 result["fallback_reason"] = "; ".join(errors)[:300]
             return result
         raise TryOnError("Không nhà cung cấp mặc thử nào chạy được: " + "; ".join(errors)[:300])
+
+    async def _run_vidu(
+        self, person_jpeg: bytes, items: list[dict[str, Any]], garment_jpegs: dict[str, bytes],
+    ) -> dict[str, Any]:
+        selected = _vidu_outfit(items, garment_jpegs)
+        if not selected:
+            raise TryOnError("Hãy chọn ít nhất một món đồ có ảnh để mặc thử.", status=422)
+        rendered = [item["id"] for item in selected]
+        images = [person_jpeg, *(garment_jpegs[item_id] for item_id in rendered)]
+        try:
+            jpeg = await self._vidu_image.edit(_vidu_tryon_prompt(selected), images)
+        except ViduImageError as error:
+            raise TryOnError(str(error), error.status) from None
+        return {
+            "jpeg": jpeg,
+            "rendered_item_ids": rendered,
+            "skipped_item_ids": [item["id"] for item in items if item["id"] not in rendered],
+        }
 
     async def _run_provider(
         self,

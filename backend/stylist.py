@@ -819,6 +819,7 @@ async def suggest_outfits(
     anchor_id: str | None = None,
     wearing: dict[str, Any] | None = None,
     memory: dict[str, Any] | None = None,
+    prefer_rules: bool = False,
 ) -> dict[str, Any]:
     """→ {"outfits": [...], "rules_used": [rule objects], "source": "ai"|"ai+fallback"|"fallback"|"mock"}.
 
@@ -849,14 +850,15 @@ async def suggest_outfits(
     score_ctx = outfit_scoring.build_context(event, weather, worn_categories=worn_categories, anchor_id=anchor_id)
     dropped: list[dict[str, Any]] = []
 
-    if provider.mode == "mock":
+    if provider.mode == "mock" or prefer_rules:
         outfits = fallback()
         for outfit in outfits:
             outfit["rules_used"] = []
         # ---- style_memory hook 3/3 (mock): repair + rank + accurate credits ----
         outfits, used = style_memory.finalize(outfits, items, style_ctx)
         outfit_scoring.annotate_outfits(outfits, items, score_ctx)  # ---- outfit_scoring hook 3/3 (mock) ----
-        return {"outfits": outfits, "rules_used": [r for r in rules if r["id"] in used], "source": "mock",
+        source = "mock" if provider.mode == "mock" else "fallback"
+        return {"outfits": outfits, "rules_used": [r for r in rules if r["id"] in used], "source": source,
                 "memory": style_memory.stylist_payload(style_ctx), "dropped": []}
 
     prompt = build_stylist_prompt(

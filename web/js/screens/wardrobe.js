@@ -29,7 +29,7 @@ function productLine(it) {
     href ? h('a', { class: 'wd-product-link', href, target: '_blank', rel: 'noopener noreferrer' }, `Xem trên ${brand || 'shop'}`, icon('right', 16)) : null);
 }
 
-export function mount(el) {
+export function mount(el, { query = new URLSearchParams() } = {}) {
   const scope = createScope();
   let items = null; // null = loading
   let rulesCount = null;
@@ -46,7 +46,7 @@ export function mount(el) {
 
   el.append(
     h('header', { class: 'app-bar' },
-      h('button', { class: 'icon-btn', type: 'button', 'aria-label': 'Quay lại', onClick: () => navigate('#/home') }, icon('back', 24)),
+      h('button', { class: 'icon-btn', type: 'button', 'aria-label': 'Quay lại', onClick: () => navigate(query.get('from') === 'conversation' ? '#/conversation' : '#/home') }, icon('back', 24)),
       h('div', { class: 'app-bar-title' }, 'Trợ lý tủ đồ'),
       h('button', { class: 'icon-btn', type: 'button', 'aria-label': 'Thêm đồ', onClick: () => addItemFlow() }, icon('camera', 24))),
     h('div', { class: 'wd-scroll' },

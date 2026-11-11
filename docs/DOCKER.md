@@ -1,56 +1,52 @@
 # Docker deployment
 
-The default stack runs the app on `127.0.0.1:8000`. It works on this
-ARM64 server and on AMD64. The AI try-on worker runs separately.
+Run SHADOW on an AMD64 or ARM64 Linux host with Docker Engine, the Compose plugin, Bash and curl 7.71 or later. The app runs on CPU and calls remote APIs for inference.
+
+From the repository checkout on the server, run:
 
 ```bash
-cp .env.example .env  # first setup only; preserve an existing .env
-chmod 600 .env
-sudo docker compose up -d --build --wait
-curl http://127.0.0.1:8000/api/health
+bash deploy/run.sh
 ```
 
-Without an LLM key the app uses mock mode. Set the gateway URL, key and
-models in `.env` for AI mode. Set `SHADOW_ACCESS_CODE` before public access.
-Optional `SHADOW_PORT` changes the host loopback port.
+Use `sudo bash deploy/run.sh` if your Docker installation requires elevated permissions. On first run, the script copies `.env.example` to `.env` with owner-only permissions. Fill in the following keys in `.env`, then rerun the same command.
+
+| Key | Used for |
+| --- | --- |
+| `LLM_API_KEY` | Hypertek Qwen chat, vision and image generation at `https://llm.hypertek.vn/v1` |
+| `OPENROUTER_API_KEY` | TypeSafe Jev intent routing via OpenRouter |
+| `VIDU_API_KEY` | Vidu photo try-on and Vidu S2 Editing for live video try-on |
+
+The template selects Hypertek and Qwen models for chat and vision, `SHADOW_INTENT_PROVIDER=jev` and `TRYON_PHOTO_PROVIDER=vidu`. Keep `VISION_MODEL` and `COMPILER_MODEL` set to model IDs available through Hypertek. Set `HYPERTEK_API_KEY` if Qwen Image uses a separate key. Vidu defaults to `https://api.vidu.com`. For accounts in the China region, set `VIDU_API_BASE_URL=https://api.vidu.cn`.
+
+Put the launcher settings in `.env` so Compose passes the same values into the app. If a value contains a literal `$`, enclose it in single quotes. The file is loaded at runtime and excluded from the image.
+
+The script builds and starts the containers, waits for Compose health checks, then checks `/api/health` for AI mode. The app listens on `127.0.0.1:8000` by default. `SHADOW_PORT` changes the host port.
 
 ## Public HTTPS
 
-Set `SHADOW_DOMAIN=shadow.example.com` in `.env`, point that domain's DNS
-to this server, and allow inbound TCP 80/443 in the cloud and host firewalls.
-Caddy obtains and renews the certificate and forwards WebSockets. HTTPS
-is required for phone camera access.
+Set `SHADOW_DOMAIN=shadow.example.com` and a `SHADOW_ACCESS_CODE` in `.env`. Point the domain to the server and allow inbound TCP 80 and 443 in both the cloud and host firewalls. Run `bash deploy/run.sh` to start Caddy and check the HTTPS endpoint. Caddy obtains and renews the TLS certificate and forwards WebSockets. HTTPS is required for phone camera access.
 
-```bash
-sudo docker compose -f compose.yaml -f compose.https.yaml up -d --build --wait
-```
-
-Use the same two `-f` flags for subsequent commands when running HTTPS.
-The app trusts forwarded headers because its published port is loopback-only;
-keep that binding private and only use trusted containers on its Docker network.
+If the HTTPS check fails after startup, inspect the Caddy logs and verify DNS and firewall settings. Clearing `SHADOW_DOMAIN` and rerunning the launcher removes the Caddy container from this Compose project.
 
 ## Operations and data
 
 ```bash
-sudo docker compose ps
-sudo docker compose logs --tail=100 -f app
-sudo docker compose up -d --build --wait  # rebuild after code/config changes
-sudo docker compose down               # retains named volumes
+docker compose ps
+docker compose logs --tail=100 -f app
+bash deploy/run.sh                 # rebuild after code or configuration changes
+docker compose down               # stop the stack and retain named volumes
 ```
 
-Skills, wardrobe images/rules/profile and evaluations live in named volumes
-`shadow_skills`, `shadow_wardrobe`, and `shadow_evals`. New skills volumes
-receive the bundled sample skill on first creation. Existing host data is not
-automatically migrated. Back up all three volumes before upgrades; stop the app
-while taking a consistent backup. Do not use `down -v` unless deleting data is intended.
-The HTTPS overlay also retains certificates in `shadow_caddy_data`.
+When HTTPS is enabled, use `docker compose -f compose.yaml -f compose.https.yaml` for manual Compose operations, including `logs --tail=100 proxy` and `down`. Keep the app's published port bound to loopback and use trusted containers on its Docker network because the app trusts forwarded headers.
 
-`.env` is passed at runtime and excluded from the image. Restart/recreate the
-service after changing it. The app runs as a non-root user with one worker:
-sessions, background jobs and rate limits are in memory and reset on restart.
-Dependencies currently follow the repository's version ranges; rebuilds may
-resolve newer releases.
+Skills, wardrobe images, rules, profiles and evaluations live in `shadow_skills`, `shadow_wardrobe` and `shadow_evals`. The launcher preserves existing `.env` and named volumes. New skills volumes receive the bundled sample skill. Host data outside Compose volumes requires manual migration. For a consistent backup, stop the app while copying the volumes. The HTTPS overlay stores certificates in `shadow_caddy_data`. `docker compose down -v` deletes the named volumes.
 
-For Mac mini try-on, use a reachable private VPN address for `TRYON_WORKER_URL`
-and configure `TRYON_TOKEN` on both ends. A home LAN address is not reachable
-from this server by default. No model weights are installed in the app image.
+The app runs as a non-root user with one worker. Active sessions, background jobs and rate limits are in memory and reset when the app restarts. Dependencies follow the repository's version ranges, so rebuilds may resolve newer releases.
+
+SHADOW ends browser try-on sessions after 120 seconds by default. The provider applies its own maximum duration and stops billing on hangup or when its reconnect grace period expires. See the [Vidu realtime API](https://platform.vidu.com/vidu-stream/doc/s2-editing/realtime/parameters).
+
+## Offline demo
+
+For an offline demo, copy `.env.example` to `.env` if needed, leave `LLM_API_KEY` empty and set `SHADOW_MODE=mock` and `TRYON_PHOTO_PROVIDER=mock`. Start the loopback stack directly with `docker compose up -d --build --wait`.
+
+For an existing CatVTON worker, start Compose directly with `TRYON_PHOTO_PROVIDER=worker` and a private VPN address for `TRYON_WORKER_URL`. Configure `TRYON_TOKEN` on both ends if the worker requires it.

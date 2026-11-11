@@ -55,6 +55,8 @@ RATE_RULES: dict[str, tuple[float, float]] = {
     "eval": (30, 15),
     "access": (10, 5),
     "ask": (30, 10),
+    "conversation": (45, 12),
+    "voice": (40, 10),
     "compile": (6, 3),
     "tag": (20, 10),
     "shop_import": (10, 4),  # POST /api/wardrobe/import → outbound shop fetch + one tagger call
@@ -213,6 +215,10 @@ def rate_rule_for(method: str, path: str) -> str | None:
         return "access"
     if path == "/api/ask":
         return "ask"
+    if path in ("/api/conversation", "/api/intent"):
+        return "conversation"
+    if path in ("/api/voice/transcribe", "/api/voice/speech"):
+        return "voice"
     if path == "/api/teach/compile":
         return "compile"
     if path == "/api/teach/verify-step":
@@ -227,9 +233,9 @@ def rate_rule_for(method: str, path: str) -> str | None:
         return "suggest"
     if path == "/api/weather":
         return "weather"
-    if path == "/api/tryon/photo":
+    if path in ("/api/tryon/photo", "/api/images/generate"):
         return "tryon_photo"
-    if path == "/api/tryon/live-token":
+    if path in ("/api/tryon/live-token", "/api/tryon/live-session"):
         return "live_token"
     if path == "/api/eval/capture":
         return "eval"
@@ -385,7 +391,7 @@ class SecurityMiddleware:
             await _send_json(send, 413, TOO_LARGE)
             return
 
-        tryon_slot = path == "/api/tryon/photo" and method == "POST"
+        tryon_slot = path in ("/api/tryon/photo", "/api/images/generate") and method == "POST"
         if tryon_slot:
             if state.tryon_active >= state.tryon_max:
                 await _send_json(send, 429, TRYON_BUSY, [(b"retry-after", b"30")])

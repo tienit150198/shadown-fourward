@@ -26,6 +26,7 @@ export function mount(el) {
       h('div', { class: 'brand' },
         h('div', { class: 'brand-mark', 'aria-hidden': 'true' }),
         h('div', { class: 'brand-text' }, h('div', { class: 'brand-name' }, 'SHADOW'), h('div', { class: 'brand-sub' }, 'AI in your palm'))),
+      h('a', { class: 'btn btn-ghost', href: '#/conversation' }, 'Trò chuyện'),
       badgeSlot),
     h('div', { class: 'home-scroll' },
       h('section', { class: 'hero' },

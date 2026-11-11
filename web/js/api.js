@@ -112,6 +112,8 @@ const enc = encodeURIComponent;
 
 export const api = {
   health: () => request('GET', '/api/health', { timeoutMs: 6000 }),
+  voiceConfig: (opts = {}) => request('GET', '/api/voice/config', { timeoutMs: 5000, ...opts }),
+  generateImage: (body, opts = {}) => request('POST', '/api/images/generate', { body, timeoutMs: 280000, ...opts }),
   listSkills: () => request('GET', '/api/skills'),
   getSkill: (id) => request('GET', `/api/skills/${enc(id)}`),
   saveSkill: (id, skill) => request('PUT', `/api/skills/${enc(id)}`, { body: skill, timeoutMs: 30000 }),
@@ -128,6 +130,40 @@ export const api = {
   /** Remove the most recent capture of `label` for a step → {removed, counts} */
   evalUndo: (skillId, stepId, label) => request('DELETE', `/api/eval/${enc(skillId)}/${enc(stepId)}/${enc(label)}/last`, { timeoutMs: 10000 }),
 };
+
+export async function* conversationEvents(body, signal) {
+  const res = await fetchWithAccess('/api/conversation', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/x-ndjson' },
+    body: JSON.stringify(body),
+    cache: 'no-store',
+    signal,
+  });
+  if (!res.ok || !res.body) {
+    throw new ApiError('Conversation unavailable', { userMessage: statusMessage(res.status) || 'Chưa kết nối được với Shadow. Thử lại nhé.' });
+  }
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let pending = '';
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      pending += decoder.decode(value, { stream: !done });
+      const lines = pending.split('\n');
+      pending = lines.pop() || '';
+      for (const line of lines) {
+        if (line.trim()) yield JSON.parse(line);
+      }
+      if (done) {
+        if (pending.trim()) yield JSON.parse(pending);
+        return;
+      }
+    }
+  } finally {
+    await reader.cancel().catch(() => {});
+    reader.releaseLock();
+  }
+}
 
 /** Resolve a media path from the backend to a usable <img src>. */
 export function mediaUrl(url, skillId) {

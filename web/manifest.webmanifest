@@ -1,9 +1,9 @@
 {
-  "name": "SHADOW — Làm mẫu một lần, AI hướng dẫn người sau",
+  "name": "SHADOW — Trợ lý AI",
   "short_name": "SHADOW",
-  "description": "Show it once. AI can guide the next person.",
+  "description": "Trò chuyện bằng tiếng Việt, phối đồ và học kỹ năng cùng Shadow.",
   "lang": "vi",
-  "start_url": "./#/home",
+  "start_url": "./#/conversation",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",

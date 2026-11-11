@@ -1,21 +1,25 @@
 // SHADOW service worker — caches the app shell only.
 // Network-first (so a fresh deploy is picked up immediately), cache fallback when offline.
 // Never touches /api, /session or /skills-media, and ignores cross-origin requests (CDN, fonts).
-const CACHE = 'shadow-shell-v2';
+const CACHE = 'shadow-shell-v3';
 const SHELL = [
   './',
   'index.html',
   'styles.css',
+  'conversation.css',
   'app.js',
   'manifest.webmanifest',
   'js/api.js',
   'js/ws.js',
   'js/camera.js',
   'js/speech.js',
+  'js/cloud-voice.js',
   'js/cv.js',
   'js/ui.js',
   'js/store.js',
   'js/screens/home.js',
+  'js/screens/conversation.js',
+  'js/screens/image-studio.js',
   'js/screens/teach.js',
   'js/screens/review.js',
   'js/screens/guide.js',
@@ -28,7 +32,7 @@ const SHELL = [
   'js/screens/tryon-photo.js',
   'js/screens/rules.js',
   'tryon-live.css',
-  'js/decart-live.js',
+  'js/vidu-live.js',
   'js/tryon-pose.js',
   'js/screens/tryon-live.js',
   'icons/icon.svg',

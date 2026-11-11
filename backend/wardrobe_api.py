@@ -23,6 +23,7 @@ from garment_attrs import tag_item_with_attrs
 from shop_import import ShopImportError, import_product
 from stylist import describe_wearing, suggest_outfits
 from tryon import TryOnError, TryOnService, create_live_token, live_prompt
+from vidu_live import live_config
 from wardrobe_store import (
     MAX_IMAGE_DATA_URL_CHARS,
     ItemNotFound,
@@ -368,7 +369,9 @@ async def stylist_suggest(payload: SuggestRequest, request: Request) -> dict[str
 
 @router.get("/api/tryon/config")
 async def tryon_config(request: Request) -> dict[str, Any]:
-    return await _tryon(request).config()
+    config = await _tryon(request).config()
+    config["live"] = live_config()
+    return config
 
 
 @router.post("/api/tryon/live-token")
@@ -417,10 +420,9 @@ async def tryon_photo(payload: PhotoTryOnRequest, request: Request) -> dict[str,
         path = store.item_image_path(item)
         if path is not None:
             garments[item["id"]] = path.read_bytes()
-    items = [item for item in items if item["id"] in garments]
     task = asyncio.ensure_future(_tryon(request).run(payload.person_image, items, garments))
     try:
-        # Photo try-on takes ~30 s: if the user cancels (client disconnects) stop the provider
+        # If the user cancels (client disconnects) stop waiting on the provider
         # call and don't write a result image nobody will fetch.
         while not task.done():
             await asyncio.wait({task}, timeout=DISCONNECT_POLL_S)

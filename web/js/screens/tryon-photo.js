@@ -3,7 +3,7 @@
 import { wardrobeApi, resultImageUrl } from '../wardrobe-api.js';
 import { h, icon, toast, errorToast, navigate, createScope } from '../ui.js';
 import {
-  categoryLabel, itemThumb, openCameraCapture, outfitFromHash, providerLabel, outfitHash, pickImageFile, fileToJpeg, fill,
+  categoryLabel, itemThumb, openCameraCapture, outfitFromHash, providerLabel as legacyProviderLabel, outfitHash, pickImageFile, fileToJpeg, fill,
 } from '../wardrobe-ui.js';
 
 const PHOTO_KEY = 'shadow.wd.person';
@@ -16,6 +16,7 @@ const STEPS = [
   [70, 'Máy chủ hơi bận, vẫn đang làm…'],
 ];
 const EXPECT = { worker: 'khoảng 20–40 giây', hf_space: 'khoảng 25–60 giây', mock: 'vài giây' };
+const providerLabel = (provider) => provider === 'vidu' ? 'Vidu' : legacyProviderLabel(provider);
 function expectText(config) {
   const p = config?.photo?.provider;
   const sec = Number(config?.photo?.expected_seconds);

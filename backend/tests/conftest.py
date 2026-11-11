@@ -18,6 +18,10 @@ os.environ["LLM_BASE_URL"] = "https://openrouter.ai/api/v1"
 os.environ["VISION_MODEL"] = "google/gemini-2.5-flash"
 os.environ["COMPILER_MODEL"] = "google/gemini-2.5-flash"
 os.environ["LLM_EXTRA_BODY"] = ""
+os.environ["SHADOW_INTENT_PROVIDER"] = "local"
+os.environ["SHADOW_VOICE_PROVIDER"] = ""
+os.environ["HYPERTEK_API_KEY"] = ""
+os.environ["VIDU_API_KEY"] = ""
 # Legacy tests were written for single-frame completion; test_confirm_frames.py covers 2.
 os.environ["COMPLETE_CONFIRM_FRAMES"] = "1"
 # Per-IP rate limits off for functional tests (tests/test_security.py turns them on).

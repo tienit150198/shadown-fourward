@@ -13,6 +13,7 @@ import logging
 import math
 import os
 import re
+from collections.abc import AsyncIterator
 from typing import Any
 
 import httpx
@@ -49,6 +50,10 @@ def vision_model() -> str:
 
 def compiler_model() -> str:
     return _env("COMPILER_MODEL", DEFAULT_MODEL)
+
+
+def conversation_model() -> str:
+    return _env("CONVERSATION_MODEL", compiler_model())
 
 
 def vision_min_interval_ms() -> int:
@@ -226,6 +231,11 @@ class LLMProvider:
 
     mode: str = "ai"
 
+    def stream_text(
+        self, *, model: str, messages: list[dict[str, Any]], max_tokens: int = 180
+    ) -> AsyncIterator[str]:
+        raise NotImplementedError
+
     async def chat_json(
         self,
         *,
@@ -313,6 +323,41 @@ class OpenAICompatibleProvider(LLMProvider):
             return await self._client.post(f"{self.base_url}/chat/completions", json=body)
         except httpx.HTTPError as error:
             raise ProviderError(f"LLM request failed: {error!r}") from error
+
+    async def stream_text(
+        self, *, model: str, messages: list[dict[str, Any]], max_tokens: int = 180
+    ) -> AsyncIterator[str]:
+        body = {
+            **self._extra_body,
+            "model": model,
+            "messages": messages,
+            "max_tokens": max_tokens,
+            "temperature": 0.3,
+            "stream": True,
+        }
+        try:
+            async with self._client.stream("POST", f"{self.base_url}/chat/completions", json=body) as response:
+                response.raise_for_status()
+                async for line in response.aiter_lines():
+                    if not line.startswith("data:"):
+                        continue
+                    event = line[5:].strip()
+                    if event == "[DONE]":
+                        return
+                    chunk = json.loads(event)
+                    if chunk.get("error"):
+                        raise ProviderError("LLM returned a stream error")
+                    choices = chunk.get("choices") or []
+                    if choices:
+                        choice = choices[0]
+                        delta = _message_text(choice.get("delta"))
+                        if delta:
+                            yield delta
+                        if choice.get("finish_reason"):
+                            return
+                raise ProviderError("LLM stream closed before its terminal event")
+        except (httpx.HTTPError, ValueError, AttributeError, TypeError) as error:
+            raise ProviderError("LLM streaming request failed") from error
 
     async def chat_json(
         self,
