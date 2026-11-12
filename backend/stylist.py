@@ -699,7 +699,7 @@ def build_stylist_prompt(
         "",
         "YÊU CẦU:",
         "- Đưa ra 2-3 bộ khác nhau, chỉ dùng id có trong TỦ ĐỒ (không bịa id).",
-        "- Mỗi bộ mặc được: (1 top + 1 bottom) HOẶC (1 dress); thêm tùy chọn tối đa 1 outerwear, 1 shoes, 1-2 accessory.",
+        "- Chọn các lớp trang phục hợp lý; có thể phối nhiều top (áo trong + sơ mi khoác ngoài) hoặc dress với các lớp khác. item_ids theo thứ tự lớp trong đến lớp ngoài. Giải thích rõ cách mặc từng lớp.",
         "- Độ ấm hợp nhiệt độ: ≥30°C chọn warmth 1-2, không áo khoác; 22-29°C warmth 2-3; 18-21°C warmth 3 + có thể áo khoác mỏng; "
         "<18°C warmth 3-5 + áo khoác. Nếu mưa: nhắc mang ô, tránh giày vải sáng màu.",
         "- Hợp sự kiện (công sở/dự tiệc lịch sự hơn, đi chơi thoải mái), màu sắc hài hoà (tối đa 2 màu nổi, còn lại trung tính).",
@@ -729,7 +729,7 @@ def validate_outfits(
     worn_categories: set[str],
     rule_ids: set[str],
 ) -> tuple[list[dict[str, Any]], set[str]]:
-    """Keep only wearable outfits made of known ids; repair what can be repaired."""
+    """Validate item references without rewriting the model's clothing layers."""
     by_id = {it["id"]: it for it in items}
     anchor = by_id.get(anchor_id) if anchor_id else None
     worn = set(worn_categories) - {"shoes", "accessory"}
@@ -746,36 +746,14 @@ def validate_outfits(
         if not isinstance(ids, list):
             continue
         picked: list[dict[str, Any]] = []
-        counts: dict[str, int] = {}
-        limits = {"top": 1, "bottom": 1, "dress": 1, "outerwear": 1, "shoes": 1, "accessory": 2}
         for item_id in ids:
             item = by_id.get(str(item_id))
-            if item is None or item in picked:
-                continue  # drop unknown / duplicate ids
-            category = item.get("category") or "top"
-            if category in worn and (anchor is None or item is not anchor):
-                continue  # user already wears this kind of garment
-            if counts.get(category, 0) >= limits.get(category, 1):
-                continue
-            counts[category] = counts.get(category, 0) + 1
-            picked.append(item)
+            if item is not None and item not in picked:
+                picked.append(item)
+        # Preserve the model's layers. Categories describe garments, not exclusive slots.
         if anchor and anchor not in picked:
-            picked = [it for it in picked if it.get("category") != anchor.get("category")] + [anchor]
-        cats = {it.get("category") for it in picked}
-        if "dress" in cats:
-            keeps_separates = bool({"top", "bottom"} & worn) or (
-                anchor is not None and anchor.get("category") in ("top", "bottom")
-            )
-            if keeps_separates:
-                # A kept top/bottom (worn or "Giữ món này") can't go under a dress: drop the dress.
-                picked = [it for it in picked if it.get("category") != "dress"]
-            else:
-                picked = [it for it in picked if it.get("category") not in ("top", "bottom")]
-            cats = {it.get("category") for it in picked}
-        if too_hot_for_outerwear(weather):
-            picked = [it for it in picked if not (it.get("category") == "outerwear" and (it.get("warmth") or 0) >= 4)]
-            cats = {it.get("category") for it in picked}
-        if not is_wearable(cats | worn) or not picked:
+            picked.append(anchor)
+        if not picked:
             continue
         key = frozenset(it["id"] for it in picked)
         if key in seen_sets:
@@ -882,10 +860,14 @@ async def suggest_outfits(
             raw, items, weather=weather, anchor_id=anchor_id,
             worn_categories=worn_categories, rule_ids=set(rule_by_id),
         )
-        # ---- outfit_scoring hook 2/3: drop hard violations (shorts at a wedding, jacket at 34°C…), re-rank ----
-        outfits, dropped = outfit_scoring.review_outfits(outfits, items, score_ctx)
-        if dropped:
-            logger.info("stylist: dropped %d model outfit(s): %s", len(dropped), [d["reason_vi"] for d in dropped])
+        if outfits:
+            # Scores are advisory; do not remove, replace or reorder AI-selected layers.
+            outfits, used = style_memory.finalize(outfits, items, style_ctx, preserve_selection=True)
+            outfit_scoring.annotate_outfits(outfits, items, score_ctx)
+            return {
+                "outfits": outfits, "rules_used": [r for r in rules if r["id"] in used],
+                "source": "ai", "memory": style_memory.stylist_payload(style_ctx), "dropped": [],
+            }
         if not outfits:
             logger.warning("stylist reply unusable, using rule-based picker: %s", str(raw)[:300])
     except Exception as error:
@@ -895,16 +877,6 @@ async def suggest_outfits(
     if not outfits:
         outfits = fallback()
         source = "fallback"
-    elif len(outfits) < (3 if dropped else 2):  # outfit_scoring: refill to 3 when outfits were dropped
-        target = 3 if dropped else 2
-        have = {frozenset(o["item_ids"]) for o in outfits}
-        for extra in style_memory.rank_candidates(fallback(6), items, style_ctx):  # style_memory: best-first top-up
-            if len(outfits) >= target:
-                break
-            if frozenset(extra["item_ids"]) not in have:
-                have.add(frozenset(extra["item_ids"]))
-                outfits.append(extra)
-                source = "ai+fallback"
     for outfit in outfits:
         outfit.setdefault("rules_used", [])
     outfits = outfit_scoring.rank_outfits(outfits, items, score_ctx)  # outfit_scoring: best score first

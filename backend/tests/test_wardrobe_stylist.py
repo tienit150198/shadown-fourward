@@ -116,7 +116,7 @@ def test_rule_based_anchor_and_worn_categories():
 # ---- validation of model output -----------------------------------------------------------
 
 
-def test_validate_outfits_drops_unknown_and_unwearable():
+def test_validate_outfits_drops_unknown_ids_and_preserves_layers():
     raw = {"outfits": [
         {"title": "A", "item_ids": ["t2", "b2", "ghost", "t2", "s1"], "reason": "ok", "tips": "x", "rules_used": ["r_1", "r_x"]},
         {"title": "B", "item_ids": ["t1", "s1"], "reason": "no bottom"},
@@ -126,7 +126,7 @@ def test_validate_outfits_drops_unknown_and_unwearable():
     ]}
     valid, used = validate_outfits(raw, sample_wardrobe(), weather=weather(20, 26), anchor_id=None,
                                    worn_categories=set(), rule_ids={"r_1"})
-    assert [o["item_ids"] for o in valid] == [["t2", "b2", "s1"], ["d1"]]
+    assert [o["item_ids"] for o in valid] == [["t2", "b2", "s1"], ["t1", "s1"], ["d1", "t1", "b1"]]
     assert valid[0]["rules_used"] == ["r_1"] and used == {"r_1"}
 
 
@@ -134,23 +134,23 @@ def test_validate_outfits_anchor_heat_and_worn():
     raw = {"outfits": [{"title": "A", "item_ids": ["t1", "b1", "o1"], "reason": "r"}]}
     valid, _ = validate_outfits(raw, sample_wardrobe(), weather=weather(27, 35), anchor_id="b2",
                                 worn_categories=set(), rule_ids=set())
-    assert valid[0]["item_ids"] == ["t1", "b2"]  # anchor replaces same-category item, heavy coat dropped
+    assert valid[0]["item_ids"] == ["t1", "b1", "o1", "b2"]  # add explicit anchor without rewriting layers
     worn, _ = validate_outfits({"outfits": [{"item_ids": ["t2", "b2"]}]}, sample_wardrobe(),
                                weather=None, anchor_id=None, worn_categories={"top"}, rule_ids=set())
-    assert worn[0]["item_ids"] == ["b2"]
+    assert worn[0]["item_ids"] == ["t2", "b2"]
     assert validate_outfits({"nope": 1}, sample_wardrobe(), weather=None, anchor_id=None,
                             worn_categories=set(), rule_ids=set()) == ([], set())
 
 
-def test_validate_outfits_dress_never_hides_a_kept_top_or_bottom():
+def test_validate_outfits_keeps_dress_layers_and_anchor():
     raw = {"outfits": [{"title": "A", "item_ids": ["d1", "s1"], "reason": "r"},
                        {"title": "B", "item_ids": ["b1", "s1"], "reason": "r"}]}
     worn, _ = validate_outfits(raw, sample_wardrobe(), weather=None, anchor_id=None,
                                worn_categories={"top"}, rule_ids=set())
-    assert [o["item_ids"] for o in worn] == [["b1", "s1"]]  # dress over a worn top is dropped
+    assert [o["item_ids"] for o in worn] == [["d1", "s1"], ["b1", "s1"]]
     anchored, _ = validate_outfits({"outfits": [{"item_ids": ["d1", "t1"]}]}, sample_wardrobe(),
                                    weather=None, anchor_id="b2", worn_categories=set(), rule_ids=set())
-    assert anchored[0]["item_ids"] == ["t1", "b2"]  # anchor bottom survives, dress removed
+    assert anchored[0]["item_ids"] == ["d1", "t1", "b2"]
 
 
 def test_vietnamize_replaces_english_tag_words():
@@ -179,10 +179,10 @@ def test_suggest_ai_success():
     assert provider.calls[0]["max_tokens"] == 1200
 
 
-def test_suggest_tops_up_single_outfit_and_falls_back_on_garbage():
+def test_suggest_preserves_single_ai_outfit_and_falls_back_on_garbage():
     provider = FakeProvider({"outfits": [{"title": "A", "item_ids": ["t2", "b2"], "reason": "r"}]})
     result = run(suggest_outfits(provider, sample_wardrobe(), weather=weather(20, 26)))
-    assert result["source"] == "ai+fallback" and len(result["outfits"]) == 2
+    assert result["source"] == "ai" and len(result["outfits"]) == 1
     result = run(suggest_outfits(FakeProvider({"outfits": [{"item_ids": ["ghost"]}]}), sample_wardrobe(), weather=None))
     assert result["source"] == "fallback" and len(result["outfits"]) >= 2
     result = run(suggest_outfits(FakeProvider(RuntimeError("down")), sample_wardrobe(), weather=None))
@@ -219,8 +219,8 @@ def test_suggest_with_worn_top_keeps_it():
         {"title": "B", "item_ids": ["b1", "s1"], "reason": "r"},
     ]})
     result = run(suggest_outfits(provider, sample_wardrobe(), weather=weather(24, 30), wearing=wearing))
-    # worn top kept: no top/dress picked; order may change (outfit_scoring ranks the shoe-complete, casual one first)
-    assert sorted(o["item_ids"] for o in result["outfits"]) == [["b1", "s1"], ["b2"]]
+    # Keep the model selection and order; the worn garment is context in the prompt.
+    assert [o["item_ids"] for o in result["outfits"]] == [["t2", "b2"], ["b1", "s1"]]
     assert "GIỮ NGUYÊN món đang mặc: áo hồng" in provider.calls[0]["content"][0]["text"]
 
 
@@ -307,3 +307,17 @@ def test_suggest_mock_mode_applies_rules_too():
     ids = [i for o in result["outfits"] for i in o["item_ids"]]
     assert result["outfits"] and "t1" not in ids and "s1" not in ids
     assert result["rules_used"] == WEDDING_RULE
+
+
+def test_ai_layered_tops_reach_response_without_replacement_or_reranking():
+    selected = ['t1', 't2', 'b2', 'o1']
+    provider = FakeProvider({'outfits': [{
+        'title': 'Layered shirts', 'item_ids': selected,
+        'reason': 'Wear the second shirt over the first.', 'tips': 'Leave it open.',
+    }]})
+    result = run(suggest_outfits(provider, sample_wardrobe(), weather=weather(28, 35)))
+    assert result['source'] == 'ai'
+    assert len(result['outfits']) == 1
+    assert result['outfits'][0]['item_ids'] == selected
+    assert result['outfits'][0]['reason'] == 'Wear the second shirt over the first.'
+    assert result['dropped'] == []

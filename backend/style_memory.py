@@ -1564,6 +1564,7 @@ def finalize(
     context: dict[str, Any],
     *,
     max_outfits: int = 3,
+    preserve_selection: bool = False,
 ) -> tuple[list[dict[str, Any]], set[str]]:
     """Repair → score (prior from the picker/model order + rule_adjustments) → rank → credit.
 
@@ -1577,7 +1578,7 @@ def finalize(
     for index, outfit in enumerate(outfits):
         outfit = dict(outfit)
         outfit["item_ids"] = [i for i in outfit.get("item_ids") or [] if i in by_id]
-        notes = _repair(outfit, context, pool)
+        notes = [] if preserve_selection else _repair(outfit, context, pool)
         key = frozenset(outfit["item_ids"])
         if not outfit["item_ids"] or key in seen:
             continue
@@ -1590,10 +1591,11 @@ def finalize(
         hard_violation = any(a[0] <= -6.0 for a in adjustments)
         prior = -0.35 * index
         scored.append((hard_violation, -(prior + delta), index, outfit, adjustments))
-    scored.sort(key=lambda row: (row[0], row[1], row[2]))
+    if not preserve_selection:
+        scored.sort(key=lambda row: (row[0], row[1], row[2]))
     # Drop rule-breaking / worn-yesterday outfits when compliant alternatives exist.
     compliant = [row for row in scored if not row[0] and not any(a[1] == "hist:worn" for a in row[4])]
-    if len(compliant) >= min(2, len(scored)):
+    if not preserve_selection and len(compliant) >= min(2, len(scored)):
         scored = compliant + [row for row in scored if row not in compliant][: max(0, 2 - len(compliant))]
     used: set[str] = set()
     result = []

@@ -41,7 +41,7 @@ function parseOutfits(q) {
   return ids.length ? [ids] : [];
 }
 
-const slotKey = (slots) => slotItems(slots).map((it) => it.id).sort().join('|');
+const slotKey = (slots) => slotItems(slots).map((it) => it.id).join('|');
 
 function thumb(item, cls = '') {
   const src = itemImageUrl(item);
@@ -319,7 +319,7 @@ export function mount(el) {
   function toggleItem(item) {
     const items = slotItems(current);
     if (items.some((it) => it.id === item.id)) {
-      if (items.length > 1) current = slotsFromItems(items.filter((it) => it.id !== item.id));
+      current = slotsFromItems(items.filter((it) => it.id !== item.id));
       return;
     }
     current = slotsFromItems([...items, item]);
@@ -364,7 +364,7 @@ export function mount(el) {
         : [h('div', { class: 'tl-pick-empty' }, wardrobe === null ? 'Đang tải tủ đồ…' : `Chưa có ${categoryLabel(tab).toLowerCase()} trong tủ đồ.`,
           h('a', { href: '#/wardrobe', class: 'tl-link' }, 'Mở tủ đồ'))]));
       const items = slotItems(current);
-      summary.textContent = items.length ? `Đang chọn: ${items.map((it) => it.name || categoryLabel(it.category)).join(' + ')}` : 'Chọn áo + quần, hoặc một chiếc váy.';
+      summary.textContent = items.length ? `Đang chọn: ${items.map((it) => it.name || categoryLabel(it.category)).join(' + ')}` : 'Chọn các món muốn mặc cùng nhau, có thể chọn nhiều lớp áo.';
     };
     render();
     let sheet;
@@ -399,7 +399,7 @@ export function mount(el) {
       if (scope.disposed) return;
       pose = createPoseWatcher({
         video: localVideo,
-        needKnees: () => !!(current.bottom || current.dress),
+        needKnees: () => slotItems(current).some((it) => ['bottom', 'dress'].includes(it.category)),
         onStatus: (s) => {
           poseStatus = s;
           if (s === 'failed') { rowFraming.set('neutral', 'Tự căn: thấy từ đầu đến đầu gối'); framingBanner.classList.add('hidden'); }
@@ -433,7 +433,7 @@ export function mount(el) {
   function hideDwell() { dwellRing.classList.add('hidden'); }
 
   function renderFraming() {
-    const kneeText = (current.bottom || current.dress) ? 'đầu gối' : 'hông';
+    const kneeText = slotItems(current).some((it) => ['bottom', 'dress'].includes(it.category)) ? 'đầu gối' : 'hông';
     if (framing === 'ok') rowFraming.set('ok', `Đã thấy từ đầu đến ${kneeText}`);
     else if (framing === 'far') rowFraming.set('warn', `Lùi lại để thấy đến ${kneeText}`);
     else if (framing === 'head') rowFraming.set('warn', 'Hạ máy hoặc lùi lại để thấy cả đầu');

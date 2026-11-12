@@ -59,16 +59,15 @@ def test_photo_route_sends_references_in_order_and_saves_image(wclient, monkeypa
     assert calls == ["/ent/v2/reference2image", "/ent/v2/tasks/test-task/creations", "/ent/v2/tasks/test-task/creations", "/try-on.png"]
 
 
-def test_photo_dress_keeps_outerwear_shoes_and_accessories_and_respects_reference_limit(monkeypatch):
+def test_photo_preserves_dress_layers_in_order_and_respects_reference_limit(monkeypatch):
     monkeypatch.setenv("TRYON_PHOTO_PROVIDER", "vidu")
 
     class ImageProvider(vidu_image.ViduImage):
         async def edit(self, prompt, images):
             assert all(isinstance(image, bytes) for image in images)
             assert len(images) == 7
-            for fragment in ("full-body", "outerwear", "footwear", "accessory"):
+            for fragment in ("full-body", "outerwear", "footwear", "accessory", "upper-body", "lower-body", "intentional layers"):
                 assert fragment in prompt
-            assert "upper-body" not in prompt and "lower-body" not in prompt
             return make_jpeg()
 
     items = [item("t", "top"), item("d", "dress"), item("b", "bottom"), item("j", "outerwear"), item("s", "shoes")]
@@ -76,8 +75,8 @@ def test_photo_dress_keeps_outerwear_shoes_and_accessories_and_respects_referenc
     service = TryOnService(vidu_image=ImageProvider())
     images = {i["id"]: make_jpeg() for i in items}
     result = asyncio.run(service.run(data_url(make_jpeg()), items, images))
-    assert result["rendered_item_ids"] == ["d", "j", "s", "a0", "a1", "a2"]
-    assert result["skipped_item_ids"] == ["t", "b", "a3"]
+    assert result["rendered_item_ids"] == ["t", "d", "b", "j", "s", "a0"]
+    assert result["skipped_item_ids"] == ["a1", "a2", "a3"]
     with pytest.raises(WardrobeError):
         asyncio.run(service.run("data:image/gif;base64,AAAA", items, images))
 
@@ -103,3 +102,19 @@ def test_explicit_provider_requires_key(monkeypatch):
     with pytest.raises(TryOnError) as error:
         asyncio.run(service.run(data_url(make_jpeg()), [item("s", "shoes")], {"s": make_jpeg()}))
     assert error.value.status == 503
+
+
+def test_image_credit_shortage_explains_restricted_trial_credits():
+    response = httpx.Response(400, json={
+        "reason": "CreditInsufficient", "message": "insufficient credits",
+    })
+    with pytest.raises(vidu_image.ViduImageError) as error:
+        vidu_image._task_json(response)
+    assert error.value.status == 503
+    assert "Q2" in str(error.value) and "S2" in str(error.value)
+
+
+def test_vidu_photo_keeps_two_tops_in_inner_to_outer_order():
+    items = [item('inner', 'top'), item('shirt', 'top'), item('pants', 'bottom')]
+    selected = __import__('tryon')._vidu_outfit(items, {it['id']: make_jpeg() for it in items})
+    assert [it['id'] for it in selected] == ['inner', 'shirt', 'pants']

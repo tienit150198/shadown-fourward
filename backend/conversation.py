@@ -128,7 +128,7 @@ async def outfit_reply(payload: ConversationRequest, request: Request) -> AsyncI
         return
     result = await suggest_outfits(
         request.app.state.provider, items, weather=None, event=payload.text[:200],
-        rules=store.list_rules(), memory=style_memory.load_memory(store.root), prefer_rules=True,
+        rules=store.list_rules(), memory=style_memory.load_memory(store.root),
     )
     if result["outfits"]:
         outfit = result["outfits"][0]

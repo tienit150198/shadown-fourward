@@ -146,7 +146,7 @@ def test_picker_is_diverse_and_respects_event():
     assert len(set(cores)) == len(cores)
 
 
-def test_suggest_drops_and_refills_to_three():
+def test_suggest_preserves_ai_outfits_with_advisory_scores():
     from stylist import suggest_outfits
 
     provider = FakeProvider({"outfits": [
@@ -155,8 +155,8 @@ def test_suggest_drops_and_refills_to_three():
     ]})
     result = asyncio.run(suggest_outfits(provider, men_summer(), weather=weather(26, 32), event="Đám cưới"))
     ids = [o["item_ids"] for o in result["outfits"]]
-    assert 2 <= len(ids) <= 3 and ["tee", "shorts", "slides"] not in ids
-    assert result["dropped"] and result["dropped"][0]["title"] == "Sai dịp"
+    assert ids == [["tee", "shorts", "slides"], ["dshirt", "trousers", "loafers"]]
+    assert result["dropped"] == []
     for outfit in result["outfits"]:
         assert isinstance(outfit["score"], int) and outfit["why_line"] and outfit["why"]
 
