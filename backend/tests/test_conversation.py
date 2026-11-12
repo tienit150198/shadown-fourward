@@ -65,10 +65,13 @@ def test_conversation_streams_selected_model(client, monkeypatch, camera):
         body = json.loads(request.content)
         assert request.url.path == "/v1/chat/completions"
         assert body["stream"] is True
-        assert body["messages"][1] == {"role": "user", "content": "Chào bạn"}
+        assert sum(m["role"] == "system" for m in body["messages"]) == 1
+        assert {"role": "user", "content": "Chào bạn"} in body["messages"]
+        assert body["model"] == "conversation-test"
+        assert "inspect_image" in {tool["function"]["name"] for tool in body["tools"]}
         if camera:
-            assert body["model"] == "vision-test"
-            assert body["messages"][-1]["content"][1]["image_url"]["url"].startswith("data:image/jpeg")
+            assert "Ảnh đính kèm tin này: True" in body["messages"][0]["content"]
+            assert body["messages"][-1]["content"] == "Mình có câu hỏi."
         else:
             assert body["model"] == "conversation-test"
             assert body["messages"][-1]["content"] == "Mình có câu hỏi."

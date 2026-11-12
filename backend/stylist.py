@@ -637,6 +637,8 @@ def _compact_wardrobe(items: list[dict[str, Any]]) -> str:
             "style": it.get("style"),
             "warmth": it.get("warmth"),
             "occ": it.get("occasions"),
+            "presentation": it.get("presentation"),
+            "style_notes": it.get("style_notes"),
             **prompt_fields(it),  # garment_attrs hook
         }, ensure_ascii=False))
     return "\n".join(lines)

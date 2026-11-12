@@ -20,6 +20,10 @@ function writeState(s) {
   }
 }
 
+function savedText(value, maxLength) {
+  return typeof value === 'string' ? value.slice(0, maxLength) : '';
+}
+
 function fmtDateVi(iso) {
   if (!iso) return '';
   const [y, m, d] = iso.split('-').map(Number);
@@ -38,6 +42,10 @@ export function mount(el) {
   const st = {
     event: saved.event ?? 'Đi làm',
     text: saved.text || '',
+    clothingPreferences: savedText(saved.clothingPreferences, 200),
+    gender: savedText(saved.gender, 60),
+    ageRange: savedText(saved.ageRange, 40),
+    fitPreferences: savedText(saved.fitPreferences, 200),
     dateMode: saved.dateMode || 'today',
     customDate: saved.customDate || localDate(2),
     city: saved.city || settings.wardrobeCity || 'Hà Nội',
@@ -56,7 +64,9 @@ export function mount(el) {
   let controller = null;
 
   const persist = () => writeState({
-    event: st.event, text: st.text, dateMode: st.dateMode, customDate: st.customDate, city: st.city,
+    event: st.event, text: st.text,
+    clothingPreferences: st.clothingPreferences, gender: st.gender, ageRange: st.ageRange, fitPreferences: st.fitPreferences,
+    dateMode: st.dateMode, customDate: st.customDate, city: st.city,
     currentImage: st.currentImage, anchorId: st.anchorId, result: st.result,
   });
   const dateValue = () => (st.dateMode === 'today' ? localDate(0) : st.dateMode === 'tomorrow' ? localDate(1) : st.customDate);
@@ -76,6 +86,25 @@ export function mount(el) {
     onText: (t) => { textIn.value = t; st.text = t; persist(); },
   });
   scope.add(() => mic.cancel());
+
+  // ---------- optional personal preferences ----------
+  const profileField = (key, label, placeholder, maxLength) => {
+    const input = h('input', {
+      class: 'input', type: 'text', value: st[key], placeholder, maxlength: String(maxLength), autocomplete: 'off',
+    });
+    input.addEventListener('input', () => {
+      st[key] = input.value.slice(0, maxLength);
+      persist();
+    });
+    return h('label', { class: 'field' }, h('span', { class: 'field-label' }, label), input);
+  };
+  const profileFields = h('section', { class: 'wd-block' },
+    h('h2', { class: 'wd-q' }, 'Phong cách của bạn ', h('span', { class: 'wd-muted' }, '(không bắt buộc)')),
+    h('p', { class: 'wd-muted' }, 'Bạn tự mô tả điều mình muốn chia sẻ; có thể bỏ trống mọi mục.'),
+    profileField('clothingPreferences', 'Ưu tiên trang phục', 'Ví dụ: đồ nam, nữ, unisex, casual', 200),
+    profileField('gender', 'Giới tính (tự mô tả)', 'Ví dụ: nữ, nam, phi nhị nguyên…', 60),
+    profileField('ageRange', 'Độ tuổi', 'Ví dụ: 25–34', 40),
+    profileField('fitPreferences', 'Độ vừa / phom dáng', 'Ví dụ: rộng, ôm vừa, thoải mái', 200));
 
   // ---------- date ----------
   const dateSeg = h('div', { class: 'wd-seg', role: 'radiogroup', 'aria-label': 'Ngày' });
@@ -311,7 +340,7 @@ export function mount(el) {
           tips.length ? h('div', { class: 'wd-tips' }, tips.map((t) => h('div', { class: 'wd-tip' }, icon('bulb', 16), h('span', null, t)))) : null,
           rulesShown.length ? h('div', { class: 'wd-rules-used' }, rulesShown.map(ruleBadge)) : null,
           h('div', { class: 'wd-outfit-actions' }, liveBtn, photoBtn),
-          !liveOk ? h('div', { class: 'wd-hint' }, config ? 'Mặc thử trực tiếp: cần DECART_API_KEY' : 'Đang kiểm tra mặc thử trực tiếp…') : null)));
+          !liveOk ? h('div', { class: 'wd-hint' }, config ? 'Mặc thử trực tiếp chưa được bật trên máy chủ.' : 'Đang kiểm tra mặc thử trực tiếp…') : null)));
     });
     nodes.push(h('button', { class: 'btn btn-ghost block wd-again', type: 'button', onClick: () => { el.querySelector('.wd-form')?.scrollIntoView({ behavior: 'smooth' }); } }, icon('refresh', 18), 'Đổi sự kiện / phối lại'));
     resultsEl.replaceChildren(...nodes);
@@ -327,7 +356,14 @@ export function mount(el) {
     const text = (textIn.value || '').trim();
     const event = st.event || text;
     if (!event) { toast('Chọn hoặc nói sự kiện bạn sắp đi nhé.'); return; }
-    const body = { event, date: dateValue() };
+    const body = {
+      event,
+      date: dateValue(),
+      clothing_preferences: st.clothingPreferences.slice(0, 200).trim(),
+      gender: st.gender.slice(0, 60).trim(),
+      age_range: st.ageRange.slice(0, 40).trim(),
+      fit_preferences: st.fitPreferences.slice(0, 200).trim(),
+    };
     if (st.event && text) body.notes = text;
     if (st.coords) { body.lat = st.coords.lat; body.lon = st.coords.lon; } else body.city = st.city;
     if (st.currentImage) body.current_image = st.currentImage;
@@ -376,6 +412,7 @@ export function mount(el) {
         h('section', { class: 'wd-block' },
           h('h2', { class: 'wd-q' }, 'Khi nào?'),
           dateSeg, dateIn, weatherCard),
+        profileFields,
         h('section', { class: 'wd-block' },
           h('h2', { class: 'wd-q' }, 'Tuỳ chọn ', h('span', { class: 'wd-muted' }, '(không bắt buộc)')),
           extrasEl)),

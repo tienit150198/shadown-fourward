@@ -236,6 +236,12 @@ class LLMProvider:
     ) -> AsyncIterator[str]:
         raise NotImplementedError
 
+    def stream_chat(
+        self, *, model: str, messages: list[dict[str, Any]],
+        tools: list[dict[str, Any]], max_tokens: int = 800,
+    ) -> AsyncIterator[dict[str, Any]]:
+        raise NotImplementedError
+
     async def chat_json(
         self,
         *,
@@ -356,6 +362,103 @@ class OpenAICompatibleProvider(LLMProvider):
                         if choice.get("finish_reason"):
                             return
                 raise ProviderError("LLM stream closed before its terminal event")
+        except (httpx.HTTPError, ValueError, AttributeError, TypeError) as error:
+            raise ProviderError("LLM streaming request failed") from error
+
+    async def stream_chat(
+        self, *, model: str, messages: list[dict[str, Any]],
+        tools: list[dict[str, Any]], max_tokens: int = 800,
+    ) -> AsyncIterator[dict[str, Any]]:
+        """Stream visible text and a complete assistant message with function calls."""
+        body = {**self._extra_body, "model": model, "messages": messages,
+                "tools": tools, "max_tokens": max_tokens, "stream": True}
+        content = ""
+        calls: dict[int, dict[str, Any]] = {}
+        size = 0
+        terminal = False
+        try:
+            async with self._client.stream("POST", f"{self.base_url}/chat/completions", json=body) as response:
+                response.raise_for_status()
+                async for line in response.aiter_lines():
+                    if not line.startswith("data:"):
+                        continue
+                    event = line[5:].strip()
+                    if len(event) > 262144:
+                        raise ProviderError("LLM stream event exceeds limit")
+                    if event == "[DONE]":
+                        terminal = True
+                        break
+                    chunk = json.loads(event)
+                    if not isinstance(chunk, dict) or chunk.get("error"):
+                        raise ProviderError("LLM returned a stream error")
+                    choices = chunk.get("choices", [])
+                    if not isinstance(choices, list) or len(choices) > 1:
+                        raise ProviderError("invalid stream choices")
+                    if not choices:
+                        continue
+                    choice = choices[0]
+                    if not isinstance(choice, dict) or choice.get("index", 0) != 0:
+                        raise ProviderError("invalid stream choice")
+                    delta = choice.get("delta", {})
+                    if not isinstance(delta, dict) or delta.get("role", "assistant") != "assistant":
+                        raise ProviderError("invalid assistant delta")
+                    text = delta.get("content")
+                    if text is not None and not isinstance(text, str):
+                        raise ProviderError("invalid assistant content")
+                    fragments = delta.get("tool_calls", [])
+                    if not isinstance(fragments, list):
+                        raise ProviderError("invalid tool-call deltas")
+                    for fragment in fragments:
+                        if not isinstance(fragment, dict):
+                            raise ProviderError("invalid tool-call delta")
+                        index = fragment.get("index")
+                        if type(index) is not int or not 0 <= index < 32:
+                            raise ProviderError("invalid tool-call index")
+                        if fragment.get("type", "function") != "function":
+                            raise ProviderError("unsupported tool-call type")
+                        call = calls.setdefault(index, {"id": "", "type": "function",
+                                                       "function": {"name": "", "arguments": ""}})
+                        function = fragment.get("function", {})
+                        if not isinstance(function, dict):
+                            raise ProviderError("invalid tool-call function")
+                        for source, key, target in ((fragment, "id", call), (function, "name", call["function"]),
+                                                    (function, "arguments", call["function"])):
+                            value = source.get(key, "")
+                            if not isinstance(value, str):
+                                raise ProviderError("invalid tool-call field")
+                            size += len(value)
+                            target[key] += value
+                    if text:
+                        size += len(text)
+                        content += text
+                    if size > 131072:
+                        raise ProviderError("LLM stream output exceeds limit")
+                    if text:
+                        yield {"type": "text", "text": text}
+                    reason = choice.get("finish_reason")
+                    if reason is not None:
+                        if reason not in {"stop", "tool_calls"}:
+                            raise ProviderError("LLM stream truncated or rejected")
+                        if reason == "tool_calls" and not calls:
+                            raise ProviderError("missing tool calls")
+                        terminal = True
+                        break
+            if not terminal:
+                raise ProviderError("LLM stream closed before its terminal event")
+            if sorted(calls) != list(range(len(calls))):
+                raise ProviderError("noncontiguous tool-call indices")
+            ordered = [calls[index] for index in sorted(calls)]
+            ids: set[str] = set()
+            for call in ordered:
+                if not call["id"] or call["id"] in ids or not call["function"]["name"]:
+                    raise ProviderError("incomplete tool call")
+                ids.add(call["id"])
+                if not isinstance(json.loads(call["function"]["arguments"]), dict):
+                    raise ProviderError("tool-call arguments must be an object")
+            message: dict[str, Any] = {"role": "assistant", "content": content or None}
+            if ordered:
+                message["tool_calls"] = ordered
+            yield {"type": "message", "message": message}
         except (httpx.HTTPError, ValueError, AttributeError, TypeError) as error:
             raise ProviderError("LLM streaming request failed") from error
 
