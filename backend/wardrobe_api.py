@@ -290,6 +290,10 @@ class SuggestRequest(BaseModel):
     current_image: str | None = Field(None, max_length=MAX_IMAGE_DATA_URL_CHARS)
     anchor_item_id: str | None = Field(None, max_length=64)
     notes: str = Field("", max_length=300)
+    clothing_preferences: str = Field("", max_length=200)
+    gender: str = Field("", max_length=60)
+    age_range: str = Field("", max_length=40)
+    fit_preferences: str = Field("", max_length=200)
 
 
 @router.post("/api/stylist/suggest")
@@ -323,12 +327,16 @@ async def stylist_suggest(payload: SuggestRequest, request: Request) -> dict[str
     if wearing and not anchor_id and wearing.get("match_item_id"):
         anchor_id = wearing["match_item_id"]
 
+    user_profile = {key: getattr(payload, key).strip() for key in ("clothing_preferences", "gender", "age_range", "fit_preferences") if getattr(payload, key).strip()}
+    notes = payload.notes.strip()
+    if user_profile:
+        notes += "\nUser-provided preferences (optional; do not infer or impose gender restrictions): " + json.dumps(user_profile, ensure_ascii=False)
     result = await suggest_outfits(
         provider,
         items,
         weather=weather_info,
         event=payload.event.strip(),
-        notes=payload.notes.strip(),
+        notes=notes,
         rules=store.list_rules(),
         anchor_id=anchor_id,
         wearing=wearing,

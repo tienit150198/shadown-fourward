@@ -40,7 +40,7 @@ done <<< "$config"
 unset config entry
 
 missing=()
-for key in LLM_BASE_URL LLM_API_KEY VISION_MODEL COMPILER_MODEL SHADOW_INTENT_PROVIDER OPENROUTER_API_KEY TRYON_PHOTO_PROVIDER VIDU_API_KEY; do
+for key in LLM_BASE_URL LLM_API_KEY VISION_MODEL COMPILER_MODEL TRYON_PHOTO_PROVIDER VIDU_API_KEY; do
     if [[ ! ${settings[$key]:-} =~ [^[:space:]] ]]; then
         missing+=("$key")
     fi
@@ -56,7 +56,6 @@ fi
 [[ ${settings[LLM_BASE_URL]%/} == https://llm.hypertek.vn/v1 ]] || fail 'Set LLM_BASE_URL=https://llm.hypertek.vn/v1 in .env.'
 mode=${settings[SHADOW_MODE]:-auto}
 [[ $mode == ai || $mode == auto ]] || fail 'Set SHADOW_MODE=ai or SHADOW_MODE=auto in .env.'
-[[ ${settings[SHADOW_INTENT_PROVIDER]} == jev ]] || fail 'Set SHADOW_INTENT_PROVIDER=jev in .env.'
 [[ ${settings[TRYON_PHOTO_PROVIDER]} == vidu ]] || fail 'Set TRYON_PHOTO_PROVIDER=vidu in .env.'
 image_url=${settings[QWEN_IMAGE_BASE_URL]:-https://llm.hypertek.vn/v1}
 [[ ${image_url%/} == https://llm.hypertek.vn/v1 ]] || fail 'Set QWEN_IMAGE_BASE_URL to the Hypertek endpoint or leave it empty.'

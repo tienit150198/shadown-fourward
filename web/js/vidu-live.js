@@ -66,18 +66,18 @@ export async function requestViduSession(referenceImage, signal) {
 }
 
 export function slotsFromItems(items) {
-  const slots = {};
+  const selected = [];
+  const seen = new Set();
   for (const item of items) {
-    if (!item || !LIVE_CATEGORIES.includes(item.category)) continue;
-    if (item.category === 'dress') { delete slots.top; delete slots.bottom; }
-    if (item.category === 'top' || item.category === 'bottom') delete slots.dress;
-    slots[item.category] = item;
+    if (!item || !LIVE_CATEGORIES.includes(item.category) || seen.has(item.id)) continue;
+    seen.add(item.id);
+    selected.push(item);
   }
-  return slots;
+  return { items: selected };
 }
 
 export function slotItems(slots) {
-  return [slots.outerwear, slots.dress || slots.top, slots.bottom].filter(Boolean);
+  return slots.items || [];
 }
 
 function loadGarmentImage(url) {

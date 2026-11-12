@@ -13,10 +13,10 @@ Use `sudo bash deploy/run.sh` if your Docker installation requires elevated perm
 | Key | Used for |
 | --- | --- |
 | `LLM_API_KEY` | Hypertek Qwen chat, vision and image generation at `https://llm.hypertek.vn/v1` |
-| `OPENROUTER_API_KEY` | TypeSafe Jev intent routing via OpenRouter |
+| `OPENROUTER_API_KEY` | Optional: legacy `/api/intent` classifier only; main chat uses Qwen function calls |
 | `VIDU_API_KEY` | Vidu photo try-on and Vidu S2 Editing for live video try-on |
 
-The template selects Hypertek and Qwen models for chat and vision, `SHADOW_INTENT_PROVIDER=jev` and `TRYON_PHOTO_PROVIDER=vidu`. Keep `VISION_MODEL` and `COMPILER_MODEL` set to model IDs available through Hypertek. Set `HYPERTEK_API_KEY` if Qwen Image uses a separate key. Vidu defaults to `https://api.vidu.com`. For accounts in the China region, set `VIDU_API_BASE_URL=https://api.vidu.cn`.
+The template selects Hypertek and Qwen models for chat and vision, `SHADOW_INTENT_PROVIDER=local` and `TRYON_PHOTO_PROVIDER=vidu`. Keep `VISION_MODEL` and `COMPILER_MODEL` set to model IDs available through Hypertek. Set `HYPERTEK_API_KEY` if Qwen Image uses a separate key. Vidu defaults to `https://api.vidu.com`. For accounts in the China region, set `VIDU_API_BASE_URL=https://api.vidu.cn`.
 
 Put the launcher settings in `.env` so Compose passes the same values into the app. If a value contains a literal `$`, enclose it in single quotes. The file is loaded at runtime and excluded from the image.
 

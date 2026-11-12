@@ -21,7 +21,7 @@ SHADOW là trợ lý AI cho web và điện thoại. Màn hình chính dùng gi�
 
 ## Chạy nhanh
 
-Trên máy chủ Linux, chạy `bash deploy/run.sh`. Script tạo `.env` lần đầu. Điền các khóa Hypertek, OpenRouter và Vidu rồi chạy lại. Xem cấu hình HTTPS và lưu trữ trong [hướng dẫn triển khai](docs/DOCKER.md).
+Trên máy chủ Linux, chạy `bash deploy/run.sh`. Script tạo `.env` lần đầu. Điền các khóa Hypertek và Vidu rồi chạy lại. Xem cấu hình HTTPS và lưu trữ trong [hướng dẫn triển khai](docs/DOCKER.md).
 
 ### 1. Chạy trên laptop
 
@@ -55,7 +55,7 @@ Mẫu đầy đủ ở [.env.example](.env.example). Máy của trưởng nhóm 
 | `COMPILER_MODEL`, `CONVERSATION_MODEL` | Có | `qwen3.6-35b-a3b` cho sinh kỹ năng và trò chuyện. |
 | `LLM_EXTRA_BODY` | Nên có | `'{"chat_template_kwargs": {"enable_thinking": false}}'` — tắt chế độ "suy nghĩ" cho nhanh. **Phải để trong dấu nháy đơn.** |
 | `COMPLETE_CONFIRM_FRAMES` | Không (mặc định 2) | Phải 2 khung hình liên tiếp báo "xong" mới chuyển bước (chống nhảy bước nhầm). |
-| `OPENROUTER_API_KEY` | Có khi bật Jev | TypeSafe Jev phân loại yêu cầu. Các lệnh rõ ràng có đường xử lý tại backend. |
+| `OPENROUTER_API_KEY` | Tuỳ chọn | Chỉ dành cho `/api/intent` cũ. Chat chính dùng Qwen gọi công cụ trực tiếp. |
 | `VIDU_API_KEY` | Có khi mặc thử | Vidu Q2 cho ảnh và Vidu S2-Editing cho video trực tiếp. |
 | `TRYON_WORKER_URL` | Không | Địa chỉ Mac mini chạy mặc thử bằng ảnh, ví dụ `http://192.168.1.50:8188` (cổng mặc định của worker là **8188**). |
 | `TRYON_TOKEN` | Không | Mật khẩu chung với Mac mini — chỉ cần nếu đã đặt `TRYON_TOKEN` bên Mac mini. |
@@ -104,6 +104,8 @@ Mở **Tủ đồ → Thử áo AR** trên web hoặc PWA. Camera Kit chạy Len
 Mở **Trò chuyện với Shadow** để nói hoặc nhập câu hỏi. Khi bạn bật camera, app gửi một khung hình cùng mỗi câu hỏi. **Tủ đồ** và **Dạy kỹ năng** ở thanh điều hướng.
 
 ### Backend cho app mobile
+
+Chat dùng function calling và giữ lịch sử công cụ theo `conversation_id`; xem [luồng hội thoại](docs/CONVERSATION.md).
 
 - `POST /api/conversation` nhận `text`, tối đa 6 lượt `history` gồm `role` và `text`, và `image` tùy chọn dưới dạng data URL JPEG. Backend trả từng dòng NDJSON với `type` là `text`, `action`, `error` hoặc `done`. Phát nội dung ngay khi tích lũy đủ một câu.
 - `POST /api/intent` nhận `text` và trả `intent`, `suggestions` và `source`.

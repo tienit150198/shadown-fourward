@@ -1,0 +1,4 @@
+/images/*.jpg
+/images/.*.tmp
+__pycache__/
+*.py[cod]

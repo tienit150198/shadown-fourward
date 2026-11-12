@@ -131,6 +131,7 @@ export const api = {
   evalUndo: (skillId, stepId, label) => request('DELETE', `/api/eval/${enc(skillId)}/${enc(stepId)}/${enc(label)}/last`, { timeoutMs: 10000 }),
 };
 
+// Events: text, action, tool_status, outfits, error, done (with conversation_id).
 export async function* conversationEvents(body, signal) {
   const res = await fetchWithAccess('/api/conversation', {
     method: 'POST',

@@ -214,9 +214,9 @@ def live_prompt(items: list[dict[str, Any]]) -> dict[str, Any]:
 
 
 _VIDU_TRYON_PLACEMENT = {
-    "dress": "Replace the main outfit with this full-body garment.",
-    "top": "Replace the upper-body garment with this top.",
-    "bottom": "Replace the lower-body garment with this bottom.",
+    "dress": "Use this full-body garment as a layer of the selected outfit.",
+    "top": "Use this upper-body garment as a layer of the selected outfit.",
+    "bottom": "Use this lower-body garment as a layer of the selected outfit.",
     "outerwear": "Layer this outerwear over the main outfit as an outer layer.",
     "shoes": "Replace the footwear with these shoes.",
     "accessory": "Apply this accessory naturally where it is worn or carried.",
@@ -228,19 +228,8 @@ def _vidu_outfit(items: list[dict[str, Any]], garment_jpegs: dict[str, bytes]) -
         item for item in items
         if item["id"] in garment_jpegs and item.get("category") in _VIDU_TRYON_PLACEMENT
     ]
-    seen = {"top", "bottom"} if any(item["category"] == "dress" for item in usable) else set()
-    clothing = []
-    accessories = []
-    for item in usable:
-        category = item["category"]
-        if category == "accessory":
-            accessories.append(item)
-        elif category not in seen:
-            clothing.append(item)
-            seen.add(category)
-    # Reserve the first reference for the person and prioritize main garments over additional accessories.
-    selected_ids = {item["id"] for item in (clothing + accessories)[:MAX_REFERENCES - 1]}
-    return [item for item in usable if item["id"] in selected_ids]
+    # Preserve selected layers and order; Q2 accepts six garment references plus the person.
+    return usable[:MAX_REFERENCES - 1]
 
 
 def _vidu_tryon_prompt(items: list[dict[str, Any]]) -> str:
@@ -248,6 +237,7 @@ def _vidu_tryon_prompt(items: list[dict[str, Any]]) -> str:
         "Edit Image 1, the photo of the person, into one realistic virtual try-on photo.",
         "Keep the person's identity, face, hair, body proportions, skin tone, expression, pose, framing, lighting and background.",
         "Use each following image only as a wardrobe reference. Preserve the garment's material, cut, color and pattern.",
+        "Apply all selected garments together. Multiple garments of the same category are intentional layers, ordered inner to outer.",
         "Keep unselected clothing, shoes and accessories as they are in Image 1. Retain natural fit, drape and shadows.",
     ]
     for index, item in enumerate(items, 2):

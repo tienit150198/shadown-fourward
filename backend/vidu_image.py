@@ -120,6 +120,15 @@ class ViduImage:
 def _task_json(response: httpx.Response) -> dict[str, Any]:
     if not response.is_success:
         logger.warning("Vidu Image returned HTTP %s", response.status_code)
+        try:
+            error = response.json()
+        except ValueError:
+            error = None
+        if isinstance(error, dict) and error.get("reason") == "CreditInsufficient":
+            raise ViduImageError(
+                "Tài khoản Vidu không đủ credit cho tạo ảnh Q2. Credit dùng thử S2 chỉ dành cho video trực tiếp; hãy nạp credit hỗ trợ tạo ảnh.",
+                503,
+            )
         if response.status_code == 429:
             raise ViduImageError("Vidu đã đạt giới hạn lượt gọi. Vui lòng thử lại sau.", 429)
         if response.status_code in (401, 403):
