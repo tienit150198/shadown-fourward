@@ -219,6 +219,8 @@ def rate_rule_for(method: str, path: str) -> str | None:
         return "conversation"
     if path in ("/api/voice/transcribe", "/api/voice/speech"):
         return "voice"
+    if path.startswith("/api/teach/video/") and method == "POST":
+        return "compile"
     if path == "/api/teach/compile":
         return "compile"
     if path == "/api/teach/verify-step":
@@ -387,7 +389,8 @@ class SecurityMiddleware:
             declared = int(headers.get(b"content-length", b"0") or 0)
         except ValueError:
             declared = 0
-        if declared > state.max_body:
+        body_limit = 32 * 1024 * 1024 if path == "/api/teach/video/uploads" else state.max_body
+        if declared > body_limit:
             await _send_json(send, 413, TOO_LARGE)
             return
 
@@ -409,7 +412,7 @@ class SecurityMiddleware:
             message = await receive()
             if message["type"] == "http.request":
                 received += len(message.get("body") or b"")
-                if received > state.max_body:
+                if received > body_limit:
                     # Answer here (frameworks turn exceptions raised while reading into 400s)
                     # and make the app see a disconnected client.
                     cut_off = True

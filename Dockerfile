@@ -12,14 +12,17 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1
 WORKDIR /app
 COPY requirements.txt .
-RUN pip install -r requirements.txt \
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ffmpeg \
+    && rm -rf /var/lib/apt/lists/* \
+    && pip install -r requirements.txt \
     && groupadd --gid 10001 shadowapp \
     && useradd --uid 10001 --gid shadowapp --create-home shadowapp
 COPY --chown=shadowapp:shadowapp backend/ /app/backend/
 COPY --chown=shadowapp:shadowapp web/ /app/web/
 COPY --from=camera-kit --chown=shadowapp:shadowapp /build/web/vendor/snap-camera-kit.js /app/web/vendor/snap-camera-kit.js
 # Populate new named volumes with writable directories and the bundled sample skill.
-RUN mkdir -p /data/skills /data/wardrobe /data/evals \
+RUN mkdir -p /data/skills /data/wardrobe /data/evals /data/skills-video-jobs \
     && cp -a /app/backend/skills/. /data/skills/ \
     && chown -R shadowapp:shadowapp /data
 ENV SHADOW_SKILLS_DIR=/data/skills \

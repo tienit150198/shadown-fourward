@@ -81,6 +81,13 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     app.state.voice_client = voice_client_from_env()
     app.state.skill_store = store
     app.state.manager = manager
+    app.state.video_jobs = None
+    if os.getenv("SHADOW_VIDEO_TEACH_ENABLED", "").lower() in ("1", "true", "on"):
+        import shutil
+        from teach_video.api import VideoJobs
+        if not shutil.which("ffmpeg") or not shutil.which("ffprobe"):
+            raise RuntimeError("Video teaching requires ffmpeg and ffprobe")
+        app.state.video_jobs = VideoJobs(root.parent / (root.name + "-video-jobs"), provider, app.state.voice_client, root)
     logger.info(
         "SHADOW ready mode=%s skills_dir=%s vision_model=%s",
         provider.mode,
@@ -90,6 +97,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     try:
         yield
     finally:
+        if app.state.video_jobs is not None:
+            await app.state.video_jobs.close()
         await manager.close()
         await provider.aclose()
         await app.state.intent_router.aclose()
@@ -330,6 +339,7 @@ class VerifyStepRequest(BaseModel):
     skill: dict[str, Any] | None = None
     # index into the teach frames (GET /api/teach/frames) to use as this step's new reference frame
     reference_frame: int | None = Field(None, ge=0, le=200)
+    refresh_detector: bool = False
     rewrite: bool = True  # let the AI rewrite the detector prompt once if the check fails
     save: bool = False  # skill_id only: persist the result into the saved skill (and its eval set)
 
@@ -378,6 +388,9 @@ async def teach_verify_step(payload: VerifyStepRequest, request: Request) -> dic
             skill["cover_image"] = rel
     key = step.get("detector_key")
     provider = _provider(request)
+    if payload.refresh_detector:
+        from teach_video.detector import refresh
+        await refresh(skill, index, provider, root)
     if provider.mode != "ai":
         summary = {
             "checked": 0, "agree": 0, "status": "unchecked",
@@ -399,6 +412,7 @@ async def teach_verify_step(payload: VerifyStepRequest, request: Request) -> dic
             raise HTTPException(status_code=422, detail=f"Kỹ năng không hợp lệ: {error}")
         _export_teach_eval_set(store, saved)
     return {
+        "detector_refreshed": payload.refresh_detector,
         "step_id": step.get("id"),
         "step": {
             "reference_image": step.get("reference_image"),
@@ -527,6 +541,8 @@ app.include_router(conversation_api)
 app.include_router(voice_api)
 app.include_router(image_api)
 app.include_router(vidu_api)
+from teach_video.api import router as video_teach_api
+app.include_router(video_teach_api)
 
 
 # ---- Static web app (mounted last so it never shadows API routes) -------------
