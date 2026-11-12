@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, Body, HTTPException, Query, Request
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, Field
 
 import style_memory
@@ -372,6 +372,21 @@ async def tryon_config(request: Request) -> dict[str, Any]:
     config = await _tryon(request).config()
     config["live"] = live_config()
     return config
+
+
+@router.get("/api/tryon/ar/config")
+async def tryon_ar_config() -> JSONResponse:
+    # Camera Kit Web expects the public app token in the browser.
+    config = {
+        "api_token": os.getenv("SNAP_CAMERA_KIT_API_TOKEN", "").strip(),
+        "lens_group_id": os.getenv("SNAP_CAMERA_KIT_LENS_GROUP_ID", "").strip(),
+        "lens_id": os.getenv("SNAP_CAMERA_KIT_LENS_ID", "").strip(),
+    }
+    available = all(config.values())
+    return JSONResponse(
+        {"available": True, **config} if available else {"available": False},
+        headers={"Cache-Control": "no-store"},
+    )
 
 
 @router.post("/api/tryon/live-token")

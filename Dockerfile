@@ -1,3 +1,10 @@
+FROM node:22-bookworm-slim AS camera-kit
+WORKDIR /build/web-sdk
+COPY web-sdk/package.json web-sdk/package-lock.json ./
+RUN npm ci
+COPY web-sdk/camera-kit.js ./
+RUN npm run build
+
 FROM python:3.12-slim-bookworm
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -10,6 +17,7 @@ RUN pip install -r requirements.txt \
     && useradd --uid 10001 --gid shadowapp --create-home shadowapp
 COPY --chown=shadowapp:shadowapp backend/ /app/backend/
 COPY --chown=shadowapp:shadowapp web/ /app/web/
+COPY --from=camera-kit --chown=shadowapp:shadowapp /build/web/vendor/snap-camera-kit.js /app/web/vendor/snap-camera-kit.js
 # Populate new named volumes with writable directories and the bundled sample skill.
 RUN mkdir -p /data/skills /data/wardrobe /data/evals \
     && cp -a /app/backend/skills/. /data/skills/ \

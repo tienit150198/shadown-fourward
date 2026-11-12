@@ -1,4 +1,6 @@
 .venv/
+web-sdk/node_modules/
+web/vendor/snap-camera-kit.js
 .env
 __pycache__/
 *.pyc

@@ -91,6 +91,15 @@ mặc thử trực tiếp mặc định giới hạn 120 giây qua `VIDU_MAX_SES
 
 ## Đi một vòng các màn hình
 
+### Thử áo AR với Snap Camera Kit
+
+Mở **Tủ đồ → Thử áo AR** trên web hoặc PWA. Camera Kit chạy Lens trên thiết bị. Màn này mở một Lens mẫu đã cấu hình để thử độ mượt. Các món người dùng tự thêm vẫn có thể thử bằng ảnh.
+
+1. Tạo app **Camera Kit Web** trong [My Lenses](https://my-lenses.snapchat.com/). Lấy Web Staging API Token để thử nội bộ. Production token cần Snap duyệt.
+2. Dùng [Lens Studio Cloth Simulation Try-On](https://developers.snap.com/lens-studio/features/try-on/cloth-simulation-try-on) để tạo Lens áo, bật Web và thêm Lens vào nhóm của app trong [Lens Scheduler](https://developers.snap.com/camera-kit/ar-content/lens-scheduler). Lens mẫu của Snap cũng dùng được để kiểm tra SDK. Tương tác nắm và kéo vạt áo cần được thiết lập trong chính Lens.
+3. Đặt `SNAP_CAMERA_KIT_API_TOKEN`, `SNAP_CAMERA_KIT_LENS_GROUP_ID` và `SNAP_CAMERA_KIT_LENS_ID` trong `.env`, rồi chạy lại script. Docker tự đóng gói SDK. `./run.sh` cần Node.js và npm khi bật Snap. Nếu chạy `uvicorn` trực tiếp, chạy `npm ci` và `npm run build` trong `web-sdk/` trước.
+4. Mở qua `localhost` hoặc HTTPS. Trong DevTools, `performance.getEntriesByName('shadow:snap-ar-startup')` cho biết thời gian mở phiên. Để đo độ trễ khi kéo áo, quay đồng thời bàn tay thật và màn hình bằng camera tốc độ cao, rồi đếm số khung hình giữa hai chuyển động.
+
 ### Trang chủ
 Mở **Trò chuyện với Shadow** để nói hoặc nhập câu hỏi. Khi bạn bật camera, app gửi một khung hình cùng mỗi câu hỏi. **Tủ đồ** và **Dạy kỹ năng** ở thanh điều hướng.
 

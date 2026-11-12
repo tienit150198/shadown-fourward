@@ -1,6 +1,6 @@
-/* Mặc thử trực tiếp (Decart live try-on) — js/screens/tryon-live.js. Uses tokens from styles.css. */
-body[data-screen="tryon-live"] { overflow: hidden; background: #000; }
-.screen-tryon-live { position: fixed; inset: 0; overflow: hidden; background: #000; transform: none; }
+/* Mặc thử trực tiếp — dùng chung cho Vidu và Camera Kit. */
+body:is([data-screen="tryon-live"], [data-screen="tryon-ar"]) { overflow: hidden; background: #000; }
+.screen-tryon-live, .screen-tryon-ar { position: fixed; inset: 0; overflow: hidden; background: #000; transform: none; }
 .tl-root { position: absolute; inset: 0; overflow: hidden; }
 
 /* ---------- stage ---------- */
@@ -10,6 +10,9 @@ body[data-screen="tryon-live"] { overflow: hidden; background: #000; }
   transform: scaleX(-1); /* front camera: show it like a mirror (the SDK sends/returns un-mirrored video) */
 }
 .tl-remote { opacity: 0; transition: opacity 0.25s var(--ease); }
+.tl-ar-canvas { transform: none; object-fit: contain; }
+.tl-ar-canvas { visibility: hidden; }
+.tl-root[data-phase="live"] .tl-ar-canvas { visibility: visible; }
 .remote-on .tl-remote { opacity: 1; }
 .remote-on .tl-local { opacity: 0; }
 .tl-flash { position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; }
