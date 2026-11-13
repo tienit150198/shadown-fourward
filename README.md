@@ -103,7 +103,7 @@ Giao diện và lời nói chỉ dùng “thử đồ”, “Chúng tôi đang t
 
 Nói **“Chọn một bộ đồ nam và mặc thử luôn”** hoặc **“Mặc áo thun trắng với quần nỉ xám cho tôi”**: backend tìm đồ thật trong tủ và tự mở Xmax, không cần bấm nút mặc thử. Nói **“mặc bộ đó đi”** dùng bộ đã chọn hoặc bộ vừa được gợi ý trong hội thoại; **“đổi sang quần jeans xanh”** giữ áo hiện tại. Nếu chưa tìm được món phù hợp, Shadow hỏi lại bằng giọng nói. Chỉ xem danh sách khi người dùng yêu cầu xem/chọn trước. Các ảnh và nút **Mặc thử bộ đã chọn** vẫn dùng được tùy ý. Nếu chưa có ảnh, dùng **Thêm ảnh trang phục vào bộ**. Backend ghép ảnh của tất cả món đã chọn và yêu cầu Xmax mặc đồng thời trong một phiên. Để camera thấy cả người khi thử áo và quần. SHADOW dùng lại camera đang mở. Trong lúc Xmax tải, vẫn có thể trò chuyện; chỉ báo video đã chạy khi nhận được khung hình kết quả đầu tiên.
 
-Trong hội thoại, **“tủ đồ”, “trong tủ”, “đồ của tôi” mặc định là tủ đồ trong SHADOW**. Decisions và Live nhận cùng quy tắc này, cùng tổng số món, số lượng từng loại và danh sách thật được tìm theo yêu cầu. Chỉ hiểu là tủ vật lý khi người dùng nói rõ tủ trong phòng/ngoài đời/đang chỉ qua camera.
+Trong hội thoại, **“tủ đồ”, “trong tủ”, “đồ của tôi” mặc định là tủ đồ trong SHADOW**. Live và chat chữ dùng công cụ đọc dữ liệu thật theo yêu cầu; không nạp toàn bộ tủ đồ vào mỗi lượt. Công cụ đọc tối đa 50 món mỗi trang, còn công cụ gợi ý tự đọc đầy đủ tủ đồ. Chỉ hiểu là tủ vật lý khi người dùng nói rõ tủ trong phòng/ngoài đời/đang chỉ qua camera.
 
 Chạy `npm ci`, `npm run build:xmax` và `npm run build:app` trong `web-sdk/` khi chạy backend trực tiếp bằng `uvicorn`. `./run.sh` và Docker chuẩn bị SDK theo cấu hình. [Web SDK chính thức](https://github.com/Xmax-AI/XmaxSDK-Web).
 
@@ -121,12 +121,12 @@ Trang mặc định là **một camera chung**. Khi vào trang, SHADOW tự mở
 
 Camera phủ toàn màn hình. Chữ chat hiện trực tiếp trên hình camera, không có nền khung hay bong bóng; chữ có bóng nhẹ để dễ đọc. Ô nhập nằm phía dưới cùng. Bấm **Mở rộng / Thu gọn** để xem lại đoạn chat hoặc dành thêm chỗ nhìn thao tác. Ô nhập tự nâng lên khi bàn phím mở.
 
-Khi có `GEMINI_API_KEY` (hoặc `GOOGLE_API_KEY`) trong `.env`, nút **Live** được chọn sẵn. **Gemini Live nghe → Google Decisions phân loại → camera thực hiện tác vụ → Gemini Live nói lại theo kết quả thật**. Bạn có thể hỏi tiếp, nhập câu hỏi trong cùng phiên hoặc nói chen để ngắt lời. Bấm micro lần nữa để dừng; mỗi phiên tối đa 5 phút. Nhóm nhu cầu và độ tin cậy hiện phía trên cuộc trò chuyện. Nút đổi camera trước/sau nằm ngay trên khung hình.
+Khi có `GEMINI_API_KEY` (hoặc `GOOGLE_API_KEY`) trong `.env`, nút **Live** được chọn sẵn. **Gemini Live nghe → tự chọn công cụ cần dùng → backend trả dữ liệu thật hoặc camera thực hiện tác vụ → Gemini Live nói theo kết quả thật**. Câu chào và trò chuyện thông thường không cần gọi Decisions. Bạn có thể hỏi tiếp, nhập câu hỏi trong cùng phiên hoặc nói chen để ngắt lời. Bấm micro lần nữa để dừng; mỗi phiên tối đa 5 phút. Tiến trình công cụ và ảnh bộ phối hiển thị theo đúng thứ tự trong cuộc trò chuyện. Nút đổi camera trước/sau nằm ngay trên khung hình.
 
 Ví dụ dùng ngay trong camera:
 
 - **“Hướng dẫn tôi pha cà phê / đóng gói ly / gấp áo.”** Shadow hướng dẫn bằng giọng nói, xem hình ảnh nếu camera mở và ưu tiên bài đã học. Nếu có bài khớp, các bước hiện ngay trên camera; có thể bấm Trước/Tiếp để xem.
-- **“Tôi dạy bạn cách gấp áo để bạn học lại.”** Tự bắt đầu ghi khung hình và lời hướng dẫn từ cùng camera và micro Live. Có thể sửa tên bài ngay trên khung hình. Nói từng bước, rồi nói **“Tôi đã dạy xong toàn bộ bài, lưu lại”**, hoặc bấm **Lưu bài dạy**. Decisions phân biệt kết thúc cả bài với “xong bước một”. SHADOW biên soạn bằng API gốc, lưu thành bài mới với mã riêng, rồi thông báo kết quả. Không tự lưu bản compiler fallback/mock như bài đã học bằng AI.
+- **“Tôi dạy bạn cách gấp áo để bạn học lại.”** Tự bắt đầu ghi khung hình và lời hướng dẫn từ cùng camera và micro Live. Có thể sửa tên bài ngay trên khung hình. Nói từng bước, rồi nói **“Tôi đã dạy xong toàn bộ bài, lưu lại”**, hoặc bấm **Lưu bài dạy**. Công cụ camera chỉ kết thúc khi người dùng yêu cầu lưu toàn bộ bài; “xong bước một” vẫn là lời mô tả. SHADOW biên soạn bằng API gốc, lưu thành bài mới với mã riêng, rồi thông báo kết quả. Không tự lưu bản compiler fallback/mock như bài đã học bằng AI.
 - **“Tôi muốn thử áo.”** Hiện các món trong tủ để chọn, rồi tự bật video mặc thử Xmax X2.1 ngay trong camera. Khi thiếu key hoặc dịch vụ báo lỗi, hiện đúng trạng thái; không giả lập kết quả.
 - **“Tư vấn tôi mặc gì đi làm.”** Dùng đồ và quy tắc thực trong tủ để tư vấn bằng giọng nói. Các chức năng phụ như thêm/xóa đồ, tạo ảnh và mặc thử ảnh vẫn có đường dẫn tài nguyên riêng.
 
@@ -146,7 +146,7 @@ Backend giữ key lâu dài và cấp token Google dùng một lần, mở kết
 
 - `POST /api/conversation` nhận `text`, tối đa 6 lượt `history` gồm `role` và `text`, và `image` tùy chọn dưới dạng data URL JPEG. Backend trả từng dòng NDJSON với `type` là `text`, `action`, `error` hoặc `done`. Phát nội dung ngay khi tích lũy đủ một câu.
 - `POST /api/intent` nhận `text` và trả `intent`, `suggestions` và `source`.
-- `GET /api/live/config` trả trạng thái Gemini Live, model và các nhóm nhu cầu. `POST /api/live/session` nhận tối đa 6 lượt `history` để tiếp tục ngữ cảnh trước đó và trả token tạm. `POST /api/live/classify` nhận `text` (tối đa 12.000 ký tự), `current_task` và `task_title` tùy chọn; gọi `gemini-decision-1` và trả `intent`, `label`, `confidence`, `probabilities`, `camera_command`, ngữ cảnh thật và các action. Khi có tác vụ ghi bài/thử áo, Decisions trả thêm lệnh tiếp tục/kết thúc/hủy/chuyển việc. Trình duyệt bổ sung `context.execution` sau khi thực hiện, trước khi trả tool response cho Live. Model Live dùng `gemini-3.8-live`.
+- `GET /api/live/config` cho biết khả năng Live và `routing:tool_calls`. `POST /api/live/session` nhận `history` (tối đa 6 bản ghi) và `configured_city`, trả token Gemini tạm cùng `toolSessionId`. `POST /api/live/tool` thực thi công cụ đã kiểm tra đối số và trả kết quả/sự kiện cho Live. `camera_task` dùng bộ điều phối camera/Xmax hiện có và chỉ nói đã làm sau `context.execution` thực tế. `/api/live/classify` được giữ ở trạng thái deprecated cho client cũ, không còn là bước bắt buộc. Model Live vẫn là `gemini-3.8-live`. Xem [luồng function calling và ngữ cảnh](docs/CONVERSATION.md).
 - `POST /api/voice/transcribe` nhận audio thô với MIME type tương ứng. `POST /api/voice/speech` nhận `text` và trả WAV. Web ưu tiên nhận và phát giọng bằng API trình duyệt để giảm thời gian chờ. Hypertek là đường dự phòng.
 - `POST /api/images/generate` nhận `prompt` và `size` tùy chọn. Tạo ảnh là tác vụ riêng và có thể mất khoảng một phút.
 - `POST /api/tryon/photo` nhận `person_image` và `item_ids`. `POST /api/tryon/live-session` trả thông tin phiên Vidu ngắn hạn để client nối video qua Agora.
@@ -259,10 +259,10 @@ Kiểm tra JavaScript cho Gemini Live từ thư mục gốc, không cần cài t
 
 ```bash
 npm --prefix web run check
-npm --prefix web test     # 8 test: PCM, thứ tự Decisions trước câu trả lời, ngắt lời và hủy request cũ
+npm --prefix web test     # PCM, function calling, camera, ngắt lời và hủy request cũ
 ```
 
-Đã kiểm tra bằng Chrome với micro/camera giả lập và Google API thật: nhận yêu cầu pha cà phê, phân loại, phát tiếng Việt; gửi câu hỏi tiếp trong cùng Live; mở đúng màn hình tủ đồ; giải phóng micro/camera/âm thanh khi chuyển màn hình; mở lại Live với lịch sử đã có. Quyền và chất lượng thiết bị thật phụ thuộc trình duyệt người dùng.
+Luồng trước khi port function calling đã được kiểm tra bằng Chrome với micro/camera giả lập và Google API thật: nhận yêu cầu pha cà phê, phân loại, phát tiếng Việt; gửi câu hỏi tiếp trong cùng Live; mở đúng màn hình tủ đồ; giải phóng micro/camera/âm thanh khi chuyển màn hình; mở lại Live với lịch sử đã có. Quyền và chất lượng thiết bị thật phụ thuộc trình duyệt người dùng.
 
 ---
 

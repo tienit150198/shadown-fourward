@@ -1,13 +1,15 @@
 import { pcmBase64, decodePcm16 } from './live-pcm.js';
 
 export class GeminiLiveSession {
-  constructor(callbacks = {}, { fetchImpl = globalThis.fetch, getFrame = () => null, getHistory = () => [], getTaskContext = () => ({}) } = {}) {
+  constructor(callbacks = {}, { fetchImpl = globalThis.fetch, getFrame = () => null, getHistory = () => [], getTaskContext = () => ({}), getCity = () => "Hà Nội" } = {}) {
     this.callbacks = callbacks;
     // Window.fetch requires the Window receiver in browsers.
     this.fetchImpl = fetchImpl.bind(globalThis);
     this.getFrame = getFrame;
     this.getHistory = getHistory;
     this.getTaskContext = getTaskContext;
+    this.getCity = getCity;
+    this.completedTools = new Map();
     this.notices = [];
     this.status = "idle";
     this.generation = 0;
@@ -72,12 +74,15 @@ export class GeminiLiveSession {
       this.abort = new AbortController();
       const history = this.getHistory().slice(-6);
       const response = await this.fetchImpl("/api/live/session", {
-        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ history }),
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ history, configured_city: this.getCity() }),
         signal: AbortSignal.any([this.abort.signal, AbortSignal.timeout(20000)]),
       });
       const session = await response.json();
       if (!response.ok) throw new Error(session.detail || session.error?.message || "Chưa tạo được phiên trò chuyện.");
       if (generation !== this.generation) return;
+      this.toolSessionId = session.toolSessionId;
+      this.toolLabels = session.toolLabels || {};
+      this.completedTools.clear();
       const socket = new WebSocket(session.socketUrl + "?access_token=" + encodeURIComponent(session.token));
       this.socket = socket;
       socket.binaryType = "arraybuffer";
@@ -105,7 +110,7 @@ export class GeminiLiveSession {
       if (generation !== this.generation) return;
       if (history.length) this.send({ clientContent: {
         turns: history.map((turn) => ({ role: turn.role === 'assistant' ? 'model' : 'user', parts: [{ text: turn.text }] })),
-        turnComplete: true,
+        turnComplete: false,
       } });
       await this.inputContext.audioWorklet.addModule('/js/live-pcm-worklet.js');
       if (generation !== this.generation) return;
@@ -181,17 +186,14 @@ export class GeminiLiveSession {
       const text = content.inputTranscription.text;
       this.turn.input += text;
       this.callbacks.onTranscript?.("user", text);
-      if (this.turn.pendingAudio.length && !this.turn.promise) this.classify(this.turn.input).catch(() => {});
+
     }
     for (const call of message.toolCall?.functionCalls || []) this.handleTool(call).catch((error) => this.fail(error));
     if (content?.outputTranscription?.text) this.callbacks.onTranscript?.("assistant", content.outputTranscription.text);
     for (const part of content?.modelTurn?.parts || []) {
       if (!part.inlineData?.data || !part.inlineData.mimeType?.startsWith("audio/pcm")) continue;
-      if (this.turn.classified) this.playAudio(part.inlineData);
-      else {
-        this.turn.pendingAudio.push(part.inlineData);
-        if (this.turn.input && !this.turn.promise) this.classify(this.turn.input).catch(() => {});
-      }
+      // Tools are on demand. Ordinary speech is never held behind a classifier.
+      this.playAudio(part.inlineData);
     }
     if (content?.turnComplete && !content.interrupted && content.interactionStatus !== "IN_PROGRESS") {
       this.awaitingTurn = true;
@@ -218,7 +220,7 @@ export class GeminiLiveSession {
       const result = await response.json();
       if (!response.ok) throw new Error(result.detail || result.error?.message || "Chưa phân tích được yêu cầu. Bạn thử lại nhé.");
       if (generation !== this.generation || turn !== this.turn || turn.controller.signal.aborted) return null;
-      const execution = await this.callbacks.onClassification?.(result, { request: turn.input || request, signal: turn.controller.signal, itemId, itemIds });
+      const execution = await (this.callbacks.onClassification || this.callbacks.onCameraTask)?.(result, { request: turn.input || request, signal: turn.controller.signal, itemId, itemIds });
       if (generation !== this.generation || turn !== this.turn || turn.controller.signal.aborted) return null;
       if (execution) result.context = { ...result.context, execution };
       turn.classified = true;
@@ -231,7 +233,7 @@ export class GeminiLiveSession {
     return turn.promise;
   }
 
-  async handleTool(call) {
+  async handleLegacyTool(call) {
     if (this.awaitingTurn) this.newTurn();
     const turn = this.turn;
     turn.clientTextPending = false;
@@ -249,6 +251,62 @@ export class GeminiLiveSession {
           context: result.context, actions: result.actions },
       }] } });
       this.setState("thinking");
+    } finally { this.tools.delete(call.id); }
+  }
+
+  async handleTool(call) {
+    // Keep a temporary adapter for already issued sessions with the old declaration.
+    if (call.name === 'classify_request') return this.handleLegacyTool(call);
+    if (!call || typeof call.id !== 'string' || typeof call.name !== 'string' || !call.args || typeof call.args !== 'object' || Array.isArray(call.args)) throw new Error('Yêu cầu công cụ không hợp lệ.');
+    if (this.awaitingTurn) this.newTurn();
+    if (this.tools?.has(call.id)) return;
+    const previous = this.completedTools.get(call.id);
+    const fingerprint = JSON.stringify({ name: call.name, args: call.args });
+    if (previous) {
+      if (previous.fingerprint !== fingerprint) throw new Error('Mã gọi công cụ bị trùng.');
+      this.send({ toolResponse: { functionResponses: [previous.response] } });
+      return;
+    }
+    if (!this.toolSessionId) throw new Error('Phiên công cụ chưa sẵn sàng. Hãy mở lại micro.');
+    this.turn.toolCount = (this.turn.toolCount || 0) + 1;
+    if (this.turn.toolCount > 12) throw new Error('Đã đạt giới hạn công cụ của lượt.');
+    const turn = this.turn, generation = this.generation;
+    const controller = new AbortController();
+    const signal = AbortSignal.any([controller.signal, turn.controller.signal, this.abort?.signal || controller.signal, AbortSignal.timeout(95000)]);
+    this.tools ??= new Map();
+    this.tools.set(call.id, { controller });
+    const labels = this.toolLabels?.[call.name] || ['Đang kiểm tra…', 'Đã kiểm tra'];
+    const visible = !['showcase_outfits','open_screen'].includes(call.name);
+    const emit = event => { if (generation === this.generation && turn === this.turn && this.status !== 'idle') this.callbacks.onToolEvent?.(event); };
+    if (visible) emit({ type:'tool_status', id:call.id, state:'running', label:labels[0] });
+    this.setState('thinking');
+    try {
+      const response = await this.fetchImpl('/api/live/tool', {
+        method:'POST', headers:{ 'Content-Type':'application/json' },
+        body:JSON.stringify({session_id:this.toolSessionId,call_id:call.id,name:call.name,arguments:call.args,
+          ...this.getTaskContext(),history:this.getHistory().slice(-6).filter(turn => turn.text?.trim())}), signal,
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || (typeof data.detail === 'string' ? data.detail : '') || 'Chưa thực hiện được công cụ.');
+      if (signal.aborted || generation !== this.generation || turn !== this.turn || this.status === 'idle') return;
+      const result = data.result;
+      if (!result || typeof result !== 'object') throw new Error('Kết quả công cụ chưa hợp lệ.');
+      if (result.camera_decision) {
+        const execute = this.callbacks.onCameraTask || this.callbacks.onClassification;
+        const execution = await execute?.(result.camera_decision,{request:call.args.request || turn.input,signal,itemIds:call.args.item_ids});
+        if (execution) result.camera_decision.context = {...result.camera_decision.context,execution};
+      }
+      if (signal.aborted || generation !== this.generation || turn !== this.turn || this.status === 'idle') return;
+      if (visible) emit({type:'tool_status',id:call.id,state:result.error ? 'error':'done',label:result.error ? 'Chưa hoàn tất thao tác':labels[1]});
+      for (const event of data.events || []) emit(event);
+      const toolResponse={id:call.id,name:call.name,response:result.camera_decision || result};
+      this.completedTools.set(call.id,{fingerprint,response:toolResponse});
+      if (this.completedTools.size > 60) this.completedTools.delete(this.completedTools.keys().next().value);
+      this.send({toolResponse:{functionResponses:[toolResponse]}});
+      this.setState('thinking');
+    } catch (error) {
+      if (visible) emit({type:'tool_status',id:call.id,state:'error',label:signal.aborted ? 'Đã huỷ thao tác':'Chưa hoàn tất thao tác'});
+      if (!signal.aborted && generation === this.generation && turn === this.turn) throw error;
     } finally { this.tools.delete(call.id); }
   }
 

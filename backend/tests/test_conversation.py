@@ -66,12 +66,11 @@ def test_conversation_streams_selected_model(client, monkeypatch, camera):
         assert request.url.path == "/v1/chat/completions"
         assert body["stream"] is True
         assert body["messages"][1] == {"role": "user", "content": "Chào bạn"}
-        if camera:
-            assert body["model"] == "vision-test"
-            assert body["messages"][-1]["content"][1]["image_url"]["url"].startswith("data:image/jpeg")
-        else:
-            assert body["model"] == "conversation-test"
-            assert body["messages"][-1]["content"] == "Mình có câu hỏi."
+        # The coordinator remains tool-capable even with an attached image.
+        # Vision is called through inspect_image, covered by tool-loop tests.
+        assert body['model'] == 'conversation-test'
+        assert body['messages'][-1]['content'] == 'Mình có câu hỏi.'
+        assert any(tool['function']['name'] == 'inspect_image' for tool in body['tools'])
         return httpx.Response(200, text=(
             'data: {"choices":[{"delta":{"reasoning_content":"internal"}}]}\n\n'
             'data: {"choices":[{"delta":{"content":"Xin chào."}}]}\n\n'

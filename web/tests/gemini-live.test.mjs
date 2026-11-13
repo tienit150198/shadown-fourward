@@ -221,3 +221,67 @@ test('PCM playback reads signed little-endian samples and capture clamps safely'
   assert.deepEqual([...decodePcm16(pcmBase64(frame))], [-1, -1, .5, 32767 / 32768]);
   assert.throws(() => decodePcm16(btoa('x')));
 });
+
+test('ordinary Live audio does not trigger Decisions or any HTTP tool request', () => {
+  const requests=[],played=[];
+  const live=new GeminiLiveSession({}, {fetchImpl:async url => {requests.push(url);throw new Error('unexpected request');}});
+  live.status='listening';
+  live.playAudio=audio=>played.push(audio);
+  live.handleMessage({serverContent:{inputTranscription:{text:'Xin chào'},modelTurn:{parts:[{inlineData:{mimeType:'audio/pcm;rate=24000',data:'AAAA'}}]}}});
+  assert.equal(played.length,1);
+  assert.deepEqual(requests,[]);
+  live.stop();
+});
+
+test('on-demand tools use the opaque Live session and replay duplicate IDs without re-execution', async () => {
+  const requests=[],sent=[],events=[];
+  const live=new GeminiLiveSession({onToolEvent:event=>events.push(event)}, {fetchImpl:async (url,options)=>{
+    requests.push({url,body:JSON.parse(options.body)});
+    return Response.json({result:{profile:{}},events:[]});
+  }});
+  live.toolSessionId='test-tool-session';
+  live.status='listening';
+  live.socket={readyState:1,send:raw=>sent.push(JSON.parse(raw)),close(){}};
+  const request={id:'read-profile',name:'get_style_profile',args:{}};
+  await live.handleTool(request);
+  await live.handleTool(request);
+  assert.equal(requests.length,1);
+  assert.equal(requests[0].url,'/api/live/tool');
+  assert.equal(requests[0].body.session_id,'test-tool-session');
+  assert.equal(sent.length,2);
+  assert.deepEqual(sent[0],sent[1]);
+  assert.deepEqual(events.map(event=>event.state),['running','done']);
+  live.stop();
+});
+
+test('camera function waits for actual shared-camera execution without a Decisions request', async () => {
+  const sent=[];
+  const live=new GeminiLiveSession({onCameraTask:async (decision,turn)=>{
+    assert.equal(decision.intent,'teach_skill');
+    assert.equal(turn.request,'Dạy bài mới');
+    return {mode:'teaching',status:'recording'};
+  }},{fetchImpl:async url=>{
+    assert.equal(url,'/api/live/tool');
+    return Response.json({result:{camera_decision:{intent:'teach_skill',context:{},actions:[],source:'tool_call'}},events:[]});
+  }});
+  live.status='listening';live.toolSessionId='test-session';
+  live.socket={readyState:1,send:raw=>sent.push(JSON.parse(raw)),close(){}};
+  await live.handleTool({id:'camera',name:'camera_task',args:{intent:'teach_skill',request:'Dạy bài mới'}});
+  assert.equal(sent[0].toolResponse.functionResponses[0].response.context.execution.status,'recording');
+  live.stop();
+});
+
+test('a cancelled on-demand tool cannot emit late cards or a tool result', async () => {
+  let resolve;
+  const sent=[],events=[];
+  const live=new GeminiLiveSession({onToolEvent:event=>events.push(event)}, {fetchImpl:()=>new Promise(done=>{resolve=done;})});
+  live.status='listening';live.toolSessionId='test-session';
+  live.socket={readyState:1,send:raw=>sent.push(JSON.parse(raw)),close(){}};
+  const pending=live.handleTool({id:'cancel-me',name:'list_wardrobe',args:{}});
+  live.handleMessage({toolCallCancellation:{ids:['cancel-me']}});
+  resolve(Response.json({result:{items:[]},events:[{type:'outfits',outfits:[]}]}));
+  await pending;
+  assert.equal(sent.length,0);
+  assert.equal(events.filter(event=>event.type==='outfits').length,0);
+  live.stop();
+});

@@ -1,7 +1,7 @@
 // SHADOW service worker — caches the app shell only.
 // Cached shell renders immediately; refresh it in the background.
 // Never touches /api, /session or /skills-media, and ignores cross-origin requests (CDN, fonts).
-const CACHE = 'shadow-shell-v12';
+const CACHE = 'shadow-shell-v13-tools';
 const SHELL = [
   './',
   'index.html',
