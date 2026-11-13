@@ -10,14 +10,15 @@ Live (Decart, WebRTC in the browser):
     The browser passes `apiKey` to `createDecartClient({apiKey})` (or returns it from `apiKeyProvider`)
     and connects to model "lucy-vton-latest". Pattern from DecartAI/tryon-examples (MIT).
 
-Photo (server side), TRYON_PHOTO_PROVIDER = auto (default) | openrouter | vidu | worker | hf_space | mock:
+Photo (server side), TRYON_PHOTO_PROVIDER = auto (default) | gemini | openrouter | vidu | worker | hf_space | mock:
+    gemini   — direct Google AI Studio Nano Banana 2.1 using GEMINI_API_KEY
     openrouter — Nano Banana 2.1; person plus up to 13 garments in one image edit
     vidu     — Vidu Q2 reference-to-image with the person photo and selected garment references
     worker   — Mac mini CatVTON worker: POST {TRYON_WORKER_URL}/tryon, GET /health (cached 30 s)
     hf_space — Hugging Face Space (default yisol/IDM-VTON, CC BY-NC-SA 4.0) via gradio_client;
                upper-body only (bottoms are not rendered)
     mock     — offline composite (garment pasted on the photo + "DEMO" label)
-    auto     — OpenRouter when configured, then Vidu when configured, otherwise worker (if healthy) → hf_space → mock
+    auto     — Gemini when configured, then OpenRouter when configured, then Vidu when configured, otherwise worker (if healthy) → hf_space → mock
 """
 
 from __future__ import annotations
@@ -36,6 +37,7 @@ from typing import Any
 
 import httpx
 
+from gemini_image import GeminiImage, GeminiImageError
 from openrouter_image import OpenRouterImage, OpenRouterImageError
 from vidu_image import MAX_REFERENCES, ViduImage, ViduImageError
 from wardrobe_store import WardrobeError, decode_image_data_url, jpeg_data_url, to_jpeg
@@ -45,7 +47,7 @@ logger = logging.getLogger("uvicorn.error")
 LIVE_MODEL = "lucy-vton-latest"
 DEFAULT_DECART_BASE_URL = "https://api.decart.ai"
 DEFAULT_HF_SPACE = "yisol/IDM-VTON"
-PHOTO_PROVIDERS = ("openrouter", "vidu", "worker", "hf_space", "mock")
+PHOTO_PROVIDERS = ("gemini", "openrouter", "vidu", "worker", "hf_space", "mock")
 HF_TIMEOUT_S = 120.0
 WORKER_TIMEOUT_S = 180.0
 # Decart cost guard, enforced by Decart itself through the client-token constraints (the browser's
@@ -338,9 +340,11 @@ class TryOnService:
         *,
         vidu_image: ViduImage | None = None,
         openrouter_image: OpenRouterImage | None = None,
+        gemini_image: GeminiImage | None = None,
         worker_transport: httpx.AsyncBaseTransport | None = None,
         hf_runner: Any = None,
     ) -> None:
+        self._gemini_image = gemini_image or GeminiImage()
         self._openrouter_image = openrouter_image or OpenRouterImage()
         self._vidu_image = ViduImage() if vidu_image is None else vidu_image
         self._worker_transport = worker_transport
@@ -405,6 +409,8 @@ class TryOnService:
         configured = self.configured_provider()
         if configured != "auto":
             return [configured]
+        if self._gemini_image.available():
+            return ["gemini"]
         if self._openrouter_image.available():
             return ["openrouter"]
         if self._vidu_image.available():
@@ -430,13 +436,15 @@ class TryOnService:
                 "provider": provider,
                 "configured": self.configured_provider(),
                 "chain": chain,
-                "renders_bottoms": provider in ("openrouter", "vidu", "worker", "mock"),
-                "expected_seconds": {"openrouter": 60, "vidu": 60, "worker": 40, "hf_space": 30, "mock": 1}.get(provider),
+                "renders_bottoms": provider in ("gemini", "openrouter", "vidu", "worker", "mock"),
+                "expected_seconds": {"gemini": 60, "openrouter": 60, "vidu": 60, "worker": 40, "hf_space": 30, "mock": 1}.get(provider),
                 "notice": (
                     (None if self._vidu_image.available() else "Kiểm tra cấu hình khóa API và khu vực Vidu.")
                     if provider == "vidu" else
                     (None if self._openrouter_image.available() else "Chưa cấu hình OPENROUTER_API_KEY.")
-                    if provider == "openrouter" else self.hf_blocked() or None
+                    if provider == "openrouter" else
+                    (None if self._gemini_image.available() else "Kiểm tra GEMINI_API_KEY và GEMINI_IMAGE_MODEL.")
+                    if provider == "gemini" else self.hf_blocked() or None
                 ),
             },
         }
@@ -454,7 +462,7 @@ class TryOnService:
         )
         chain = await self.provider_chain()
         started = time.monotonic()
-        if chain[0] == "openrouter":
+        if chain[0] in ("gemini", "openrouter"):
             selected = [item for item in items if item["id"] in garment_jpegs]
             if not selected:
                 raise TryOnError("Hãy chọn ít nhất một món đồ có ảnh để mặc thử.", 422)
@@ -462,13 +470,14 @@ class TryOnService:
                 raise TryOnError("Nano Banana hỗ trợ tối đa 13 món đồ cùng ảnh người.", 422)
             rendered = [item["id"] for item in selected]
             try:
-                jpeg = await self._openrouter_image.edit(
+                image_provider = self._gemini_image if chain[0] == "gemini" else self._openrouter_image
+                jpeg = await image_provider.edit(
                     _outfit_tryon_prompt(selected),
                     [person_jpeg, *(garment_jpegs[item_id] for item_id in rendered)],
                 )
-            except OpenRouterImageError as error:
+            except (OpenRouterImageError, GeminiImageError) as error:
                 raise TryOnError(str(error), error.status, code=error.code, service=error.service, retryable=error.retryable) from None
-            return {"jpeg": jpeg, "provider": "openrouter",
+            return {"jpeg": jpeg, "provider": chain[0],
                     "seconds": round(time.monotonic() - started, 1),
                     "rendered_item_ids": rendered,
                     "skipped_item_ids": [item["id"] for item in items if item["id"] not in rendered]}

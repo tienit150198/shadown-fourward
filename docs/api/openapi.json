@@ -905,6 +905,73 @@
         "title": "IntentResult",
         "type": "object"
       },
+      "LiveConfig": {
+        "properties": {
+          "available": {
+            "title": "Available",
+            "type": "boolean"
+          },
+          "code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code"
+          },
+          "input_sample_rate": {
+            "title": "Input Sample Rate",
+            "type": "integer"
+          },
+          "max_session_seconds": {
+            "title": "Max Session Seconds",
+            "type": "integer"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "model": {
+            "title": "Model",
+            "type": "string"
+          },
+          "output_sample_rate": {
+            "title": "Output Sample Rate",
+            "type": "integer"
+          },
+          "provider": {
+            "const": "gemini",
+            "title": "Provider",
+            "type": "string"
+          },
+          "transport": {
+            "const": "backend_websocket",
+            "title": "Transport",
+            "type": "string"
+          },
+          "websocket_path": {
+            "title": "Websocket Path",
+            "type": "string"
+          }
+        },
+        "required": [
+          "available",
+          "provider",
+          "model",
+          "max_session_seconds",
+          "code",
+          "message",
+          "transport",
+          "websocket_path",
+          "input_sample_rate",
+          "output_sample_rate"
+        ],
+        "title": "LiveConfig",
+        "type": "object"
+      },
       "LivePromptRequest": {
         "properties": {
           "item_ids": {
@@ -1622,6 +1689,12 @@
           "description_vi": {
             "type": "string"
           },
+          "fallback": {
+            "type": "boolean"
+          },
+          "fallback_reason": {
+            "type": "string"
+          },
           "lat": {
             "type": "number"
           },
@@ -1629,6 +1702,9 @@
             "type": "number"
           },
           "message": {
+            "type": "string"
+          },
+          "provider": {
             "type": "string"
           },
           "rain_prob": {
@@ -4206,6 +4282,64 @@
           }
         ],
         "summary": "Config",
+        "tags": [
+          "Voice"
+        ]
+      }
+    },
+    "/api/voice/live/config": {
+      "get": {
+        "description": "Discover optional Gemini Live. Configuration does not verify provider credits or model access.",
+        "operationId": "live_config_api_voice_live_config_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LiveConfig"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Deployment access code is required or invalid."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Rate limit, concurrent generation cap, or live quota exceeded. Honor Retry-After.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ShadowAccessHeader": []
+          },
+          {
+            "ShadowAccessCookie": []
+          }
+        ],
+        "summary": "Live Config",
         "tags": [
           "Voice"
         ]

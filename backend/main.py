@@ -537,6 +537,8 @@ app.include_router(wardrobe_router)
 app.include_router(intent_api)
 app.include_router(conversation_api)
 app.include_router(voice_api)
+from gemini_live import router as gemini_live_router
+app.include_router(gemini_live_router)
 app.include_router(image_api)
 app.include_router(vidu_api)
 

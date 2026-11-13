@@ -1,7 +1,7 @@
 // SHADOW service worker — caches the app shell only.
 // Network-first (so a fresh deploy is picked up immediately), cache fallback when offline.
 // Never touches /api, /session or /skills-media, and ignores cross-origin requests (CDN, fonts).
-const CACHE = 'shadow-shell-v4';
+const CACHE = 'shadow-shell-v5';
 const SHELL = [
   './',
   'index.html',
@@ -14,6 +14,9 @@ const SHELL = [
   'js/camera.js',
   'js/speech.js',
   'js/cloud-voice.js',
+  'js/gemini-live.js',
+  'js/pcm-capture-worklet.js',
+  'js/pcm-resampler.js',
   'js/cv.js',
   'js/ui.js',
   'js/store.js',

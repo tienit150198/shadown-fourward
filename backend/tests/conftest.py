@@ -23,6 +23,8 @@ os.environ["SHADOW_VOICE_PROVIDER"] = ""
 os.environ["HYPERTEK_API_KEY"] = ""
 os.environ["VIDU_API_KEY"] = ""
 os.environ["OPENROUTER_API_KEY"] = ""
+os.environ["GEMINI_API_KEY"] = ""
+os.environ["GEMINI_LIVE_ENABLED"] = "off"
 # Legacy tests were written for single-frame completion; test_confirm_frames.py covers 2.
 os.environ["COMPLETE_CONFIRM_FRAMES"] = "1"
 # Per-IP rate limits off for functional tests (tests/test_security.py turns them on).

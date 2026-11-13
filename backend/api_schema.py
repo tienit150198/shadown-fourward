@@ -35,7 +35,7 @@ def mobile_schemas() -> dict[str, Any]:
         "AccessResponse": obj({"ok": BOOL, "access_required": BOOL}, ("ok", "access_required")),
         "WardrobeItem": obj({"id": STRING, "name": STRING, "category": STRING, "colors": STRINGS, "style": STRING, "warmth": {"type": "integer", "minimum": 1, "maximum": 5}, "occasions": STRINGS, "material": STRING, "subtype": STRING, "image_url": {"anyOf": [STRING, {"type": "null"}], "description": "Relative protected media URL. Resolve against the API origin and send access credentials."}, "attrs_vi": {"type": "object", "additionalProperties": True}, "created_at": STRING}, ("id",)),
         "PhotoTryOnResponse": obj({"image_url": STRING, "provider": STRING, "seconds": NUMBER, "rendered_item_ids": STRINGS, "skipped_item_ids": STRINGS, "note": STRING, "fallback_reason": STRING}, ("image_url", "provider", "seconds", "rendered_item_ids", "skipped_item_ids")),
-        "WeatherResponse": obj({"available": BOOL, "message": STRING, "city": STRING, "date": {"type": "string", "format": "date"}, "lat": NUMBER, "lon": NUMBER, "t_min": NULLABLE_NUMBER, "t_max": NULLABLE_NUMBER, "rain_prob": NULLABLE_NUMBER, "code": NULLABLE_NUMBER, "description_vi": STRING, "summary_vi": STRING}, ("available",)),
+        "WeatherResponse": obj({"provider": STRING, "fallback": BOOL, "fallback_reason": STRING, "available": BOOL, "message": STRING, "city": STRING, "date": {"type": "string", "format": "date"}, "lat": NUMBER, "lon": NUMBER, "t_min": NULLABLE_NUMBER, "t_max": NULLABLE_NUMBER, "rain_prob": NULLABLE_NUMBER, "code": NULLABLE_NUMBER, "description_vi": STRING, "summary_vi": STRING}, ("available",)),
 
     }
 

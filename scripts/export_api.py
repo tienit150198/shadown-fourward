@@ -14,7 +14,7 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'backend'))
 # main imports dotenv; pin provider secrets off before import. No app lifespan runs.
-for name in ('LLM_API_KEY', 'OPENROUTER_API_KEY', 'VIDU_API_KEY', 'HYPERTEK_API_KEY', 'DECART_API_KEY'):
+for name in ('LLM_API_KEY', 'OPENROUTER_API_KEY', 'VIDU_API_KEY', 'HYPERTEK_API_KEY', 'DECART_API_KEY', 'GEMINI_API_KEY'):
     os.environ[name] = ''
 os.environ['SHADOW_MODE'] = 'mock'
 

@@ -18,6 +18,7 @@ MESSAGES = {
     'missing_api_key': 'Chưa cấu hình khóa API cho dịch vụ.',
     'invalid_configuration': 'Cấu hình dịch vụ chưa hợp lệ.',
     'provider_auth_failed': 'Nhà cung cấp từ chối khóa API hoặc quyền sử dụng. Kiểm tra khóa và quyền tài khoản.',
+    'billing_required': 'Dự án nhà cung cấp chưa bật thanh toán. Hãy kiểm tra cấu hình thanh toán.',
     'insufficient_credits': 'Tài khoản nhà cung cấp không đủ credit. Hãy nạp credit rồi thử lại.',
     'rate_limited': 'Dịch vụ đang giới hạn lượt gọi. Đợi một chút rồi thử lại.',
     'provider_timeout': 'Dịch vụ phản hồi quá lâu. Bạn có thể thử lại.',
@@ -112,8 +113,12 @@ async def service_status(request: Request) -> dict[str, Any]:
         services[feature] = {**llm, 'dependency': 'llm'}
     tryon = getattr(request.app.state, 'wardrobe_tryon', None) or TryOnService()
     photo_provider = (await tryon.provider_chain())[0]
-    required = {'openrouter': ['OPENROUTER_API_KEY'], 'vidu': ['VIDU_API_KEY'], 'worker': ['TRYON_WORKER_URL']}.get(photo_provider, [])
+    required = {'gemini': ['GEMINI_API_KEY'], 'openrouter': ['OPENROUTER_API_KEY'], 'vidu': ['VIDU_API_KEY'], 'worker': ['TRYON_WORKER_URL']}.get(photo_provider, [])
     services['photo_tryon'] = _status(photo_provider, required=required, missing=[k for k in required if not _env(k)], state='demo' if photo_provider == 'mock' else None)
+    if photo_provider == 'gemini':
+        from gemini_image import GeminiImage
+        if not GeminiImage.valid_model():
+            services['photo_tryon'] = _status('gemini', state='invalid_configuration', code='invalid_configuration', missing=['GEMINI_IMAGE_MODEL'])
     if photo_provider == 'hf_space' and not importlib.util.find_spec('gradio_client'):
         services['photo_tryon'] = _status(photo_provider, state='invalid_configuration', code='invalid_configuration', missing=['gradio_client'])
     services['legacy_live_tryon'] = _status('decart', required=['DECART_API_KEY'], missing=[] if _env('DECART_API_KEY') else ['DECART_API_KEY'])
@@ -130,7 +135,12 @@ async def service_status(request: Request) -> dict[str, Any]:
     services['voice'] = _status(voice_provider or 'none', required=['HYPERTEK_API_KEY or Hypertek LLM_API_KEY'], missing=[] if voice_key else ['HYPERTEK_API_KEY or Hypertek LLM_API_KEY'], state='disabled' if not voice_provider else ('invalid_configuration' if voice_provider != 'hypertek' else None), code='invalid_configuration' if voice_provider and voice_provider != 'hypertek' else None)
     ar_required = ['SNAP_CAMERA_KIT_API_TOKEN', 'SNAP_CAMERA_KIT_LENS_GROUP_ID', 'SNAP_CAMERA_KIT_LENS_ID']
     services['ar_tryon'] = _status('snap', required=ar_required, missing=[k for k in ar_required if not _env(k)], code='invalid_configuration' if any(not _env(k) for k in ar_required) else None)
+    from gemini_live import config as gemini_config
+    gemini = gemini_config()
+    services['gemini_live'] = _status('gemini', required=['GEMINI_API_KEY'], missing=[] if _env('GEMINI_API_KEY') else ['GEMINI_API_KEY'], state='disabled' if gemini['code'] == 'service_disabled' else 'invalid_configuration' if gemini['code'] == 'invalid_configuration' else None, code=gemini['code'])
     services['weather'] = _status('open-meteo')
+    services['weather_primary'] = _status('open-meteo')
+    services['weather_fallback'] = _status('wttr.in')
     for name, status in services.items():
         candidates = [value for value in (_observations.get(name), _observations.get(status['dependency'] or '')) if value]
         observed = max(candidates, key=lambda value: value[0]) if candidates else None

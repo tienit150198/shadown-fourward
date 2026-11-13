@@ -65,3 +65,7 @@ labels, and repeat try-on actions for displayed outfits do not add standalone bu
 
 A successful final `showcase_outfits` call completes the turn after displaying its
 introduction and cards, without another model request just to acknowledge the UI.
+
+## Optional native audio conversation
+
+The Gemini Live relay is a separate, optional voice coordinator using the same validated server tool implementations. It provides speech-to-speech audio, transcripts, interruption/cancellation, progress and outfit cards. Existing typed chat continues to use `CONVERSATION_MODEL`; ordinary browser/Hypertek voice remains the default when Live is disabled. See [Gemini Live setup and protocol](GEMINI_LIVE.md).

@@ -4,6 +4,7 @@ import { recordVoice, recordingSupported, transcribeVoice, voiceAudio } from '..
 import { cancelSpeech, hasVietnameseVoice, holdToTalk, speak, sttSupported, unlockTTS } from '../speech.js';
 import { h, icon } from '../ui.js';
 import { getSettings } from '../store.js';
+import { liveVoiceConfig, liveVoiceSupported, startGeminiLive } from '../gemini-live.js';
 
 const ACTION_ROUTES = new Set(['wardrobe', 'stylist', 'tryon-live', 'tryon-photo', 'teach', 'home', 'guide', 'image-studio']);
 const SESSION_KEY = 'shadow:conversation';
@@ -123,6 +124,10 @@ export function mount(el) {
   let listening = false;
   let restart = null;
   let noSpeech = 0;
+  let liveAvailable = false;
+  let liveSession = null;
+  let liveAbort = null;
+  let liveTurn = null;
   let cloud = false;
   let cloudMic = !sttSupported();
   let recording = null;
@@ -180,6 +185,11 @@ export function mount(el) {
     if (disposed) return;
     cloud = config.available;
     if (cloudMic && cloud && recordingSupported()) mic.hidden = false;
+  }).catch(() => {});
+  if (liveVoiceSupported()) liveVoiceConfig(configRequest.signal).then(config => {
+    if (disposed) return;
+    liveAvailable = config.available === true;
+    if (liveAvailable) { mic.hidden = false; mic.setAttribute('aria-label', 'Bật Gemini Live'); mic.title = 'Trò chuyện giọng nói trực tiếp với Gemini'; }
   }).catch(() => {});
 
   function stopOutput() {
@@ -264,6 +274,117 @@ export function mount(el) {
     current?.cancel();
   }
 
+  function finishLiveTurn() {
+    if (!liveTurn) return;
+    const turn = liveTurn;
+    liveTurn = null;
+    if (turn.question || turn.answer || turn.outfits.length) {
+      for (const entry of turn.activities.values()) {
+        if (entry.block.state === 'running') { entry.block.state = 'error'; entry.row.dataset.state = 'error'; }
+      }
+      completedTurns.push({ question: turn.question.slice(0, 500), answer: turn.answer.slice(0, 500), actions: turn.actions,
+        timeline: normalizeTimeline(turn.timeline), outfits: turn.outfits,
+        activities: normalizeActivities([...turn.activities.values()].map(entry => entry.block)) });
+      if (completedTurns.length > 12) completedTurns.shift();
+      // Live uses connection-scoped context. Resume HTTP chat from recent text rather than stale UUID state.
+      conversationState.conversationId = null;
+      saveConversation();
+    }
+  }
+
+  function stopLive() {
+    const current = liveAbort;
+    liveAbort = null;
+    const session = liveSession;
+    liveSession = null;
+    current?.abort();
+    session?.stop();
+    finishLiveTurn();
+    if (current || session) {
+      mic.setAttribute('aria-pressed', 'false');
+      mic.setAttribute('aria-label', liveAvailable ? 'Bật Gemini Live' : 'Bật micro');
+      if (!disposed) status.textContent = 'Đã tắt giọng nói trực tiếp.';
+    }
+  }
+
+  function liveEvent(item) {
+    if (disposed || !liveAbort) return;
+    if (item.type === 'ready') { status.textContent = 'Gemini Live đang nghe… Bấm micro để dừng.'; return; }
+    if (item.type === 'turn_complete' || item.type === 'interrupted') {
+      finishLiveTurn();
+      status.textContent = item.type === 'interrupted' ? 'Đã ngắt lời. Gemini đang nghe…' : 'Gemini Live đang nghe…';
+      return;
+    }
+    if (item.type === 'error') { status.textContent = item.message || 'Giọng nói trực tiếp gặp lỗi.'; return; }
+    if (!['input_transcription', 'text', 'tool_status', 'outfits', 'action'].includes(item.type)) return;
+    liveTurn ??= { question: '', answer: '', timeline: [], activities: new Map(), outfits: [], actions: [], questionNode: null, textNode: null };
+    const turn = liveTurn;
+    if (item.type === 'input_transcription') {
+      turn.question = (turn.question + (typeof item.text === 'string' ? item.text : '')).slice(0, 4000);
+      if (!turn.questionNode) { turn.questionNode = h('p', { class: 'chat-bubble chat-user' }); transcript.append(turn.questionNode); }
+      turn.questionNode.textContent = turn.question;
+    } else if (item.type === 'text') {
+      const chunk = typeof item.text === 'string' ? item.text.slice(0, 4000) : '';
+      if (turn.answer.length + chunk.length > 16000) { stopLive(); status.textContent = 'Phản hồi quá dài. Mở lại phiên để tiếp tục.'; return; }
+      turn.answer += chunk;
+      if (turn.timeline.at(-1)?.type !== 'text') {
+        if (turn.timeline.length >= 80) return;
+        turn.timeline.push({ type: 'text', text: '' });
+        turn.textNode = h('p', { class: 'chat-bubble chat-assistant' }); transcript.append(turn.textNode);
+      }
+      turn.timeline.at(-1).text += chunk;
+      turn.textNode.textContent = turn.timeline.at(-1).text;
+    } else if (item.type === 'tool_status') {
+      const id = shortText(item.id, 160), label = shortText(item.label, 120);
+      if (!id || !label || !['running', 'done', 'error'].includes(item.state)) return;
+      let entry = turn.activities.get(id);
+      if (!entry && turn.activities.size < 30 && turn.timeline.length < 80) {
+        const block = { type: 'tool_status', state: item.state, label };
+        const row = activityRow(block); entry = { block, row };
+        turn.activities.set(id, entry); turn.timeline.push(block); transcript.append(row);
+      }
+      if (entry) { Object.assign(entry.block, { state: item.state, label }); entry.row.dataset.state = item.state; entry.row.replaceChildren(...activityRow(entry.block).childNodes); }
+    } else if (item.type === 'outfits') {
+      const known = new Set(turn.outfits.map(outfit => JSON.stringify(outfit.item_ids)));
+      const fresh = normalizeOutfits(item.outfits).filter(outfit => !known.has(JSON.stringify(outfit.item_ids))).slice(0, 3 - turn.outfits.length);
+      if (fresh.length && turn.timeline.length < 80) { turn.outfits.push(...fresh); turn.timeline.push({ type: 'outfits', outfits: fresh }); transcript.append(outfitCards(fresh)); }
+    } else if (item.type === 'action' && turn.actions.length < 12 && turn.timeline.length < 80) {
+      const link = actionLink(item);
+      if (link) { turn.actions.push(item); turn.timeline.push({ type: 'action', action: item }); transcript.append(h('div', { class: 'chat-actions' }, link)); }
+    }
+    transcript.scrollTop = transcript.scrollHeight;
+  }
+
+  async function startLive() {
+    setListening(false);
+    cancelRecording();
+    request?.abort(); request = null;
+    stopOutput();
+    const current = new AbortController();
+    liveAbort = current;
+    mic.setAttribute('aria-pressed', 'true');
+    mic.setAttribute('aria-label', 'Dừng Gemini Live');
+    status.textContent = 'Đang mở Gemini Live… Bấm micro để huỷ.';
+    const history = completedTurns.slice(-3).flatMap(turn => [{ role: 'user', text: turn.question }, { role: 'assistant', text: turn.answer }]).filter(turn => turn.text.trim());
+    try {
+      const session = await startGeminiLive({ configuredCity: shortText(getSettings().wardrobeCity, 80) || 'Hà Nội', history, conversationId: conversationState.conversationId,
+        signal: current.signal, onEvent: liveEvent, onClose: message => {
+          if (liveAbort !== current) return;
+          liveAbort = null; liveSession = null; finishLiveTurn();
+          mic.setAttribute('aria-pressed', 'false'); mic.setAttribute('aria-label', 'Bật Gemini Live');
+          if (!disposed) status.textContent = message;
+        } });
+      if (disposed || current.signal.aborted || liveAbort !== current) { session.stop(); return; }
+      liveSession = session;
+    } catch (error) {
+      if (liveAbort === current) {
+        liveAbort = null;
+        mic.setAttribute('aria-pressed', 'false'); mic.setAttribute('aria-label', 'Bật Gemini Live');
+        if (!disposed && !current.signal.aborted) status.textContent = error.userMessage || error.message || 'Không mở được Gemini Live.';
+      }
+    }
+  }
+
   function setListening(value) {
     listening = value;
     mic.setAttribute('aria-pressed', String(value));
@@ -272,6 +393,8 @@ export function mount(el) {
   }
 
   function toggleMic() {
+    if (liveAbort || liveSession) { stopLive(); return; }
+    if (liveAvailable) { void startLive(); return; }
     unlockAudio();
     if (cloudMic) {
       if (recording) void finishRecording();
@@ -395,6 +518,7 @@ export function mount(el) {
   }
 
   async function submit(question, { spoken = false } = {}) {
+    stopLive();
     stopRecognition();
     request?.abort();
     stopOutput();
@@ -402,7 +526,7 @@ export function mount(el) {
     request = current;
     const context = completedTurns.slice(-3).flatMap(({ question: q, answer: a }) => [
       { role: 'user', text: q }, { role: 'assistant', text: a },
-    ]);
+    ]).filter(turn => turn.text.trim());
     const image = camera ? captureFrame(video, { maxSide: 448 }) : null;
     let bubble = null;
     const timeline = [];
@@ -533,6 +657,7 @@ export function mount(el) {
 
   function onVisibility() {
     if (!document.hidden) return;
+    stopLive();
     setListening(false);
     cancelRecording();
     stopOutput();
@@ -541,6 +666,7 @@ export function mount(el) {
   document.addEventListener('visibilitychange', onVisibility);
   return () => {
     disposed = true;
+    stopLive();
     configRequest.abort();
     setListening(false);
     cancelRecording();

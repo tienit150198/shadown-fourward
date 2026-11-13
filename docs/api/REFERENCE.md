@@ -876,6 +876,20 @@ Responses:
 - `429`: Rate limit, concurrent generation cap, or live quota exceeded. Honor Retry-After. (`application/json`)
 - `413`: Request exceeds deployment body cap (16 MiB by default). (`application/json`)
 
+## GET /api/voice/live/config
+
+Live Config
+
+Operation ID: `live_config_api_voice_live_config_get`. Authentication: required when access gate is enabled.
+
+Discover optional Gemini Live. Configuration does not verify provider credits or model access.
+
+Responses:
+
+- `200`: Successful Response (`application/json`)
+- `401`: Deployment access code is required or invalid. (`application/json`)
+- `429`: Rate limit, concurrent generation cap, or live quota exceeded. Honor Retry-After. (`application/json`)
+
 ## GET /api/images/config
 
 Image Config

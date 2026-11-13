@@ -97,7 +97,7 @@ Weather dates use ISO `YYYY-MM-DD`; default “today” uses UTC+7 and forecasts
 {"person_image":"data:image/jpeg;base64,...","item_ids":["shirt-id","jacket-id","pants-id"]}
 ```
 
-`POST /api/tryon/photo` accepts one to eight IDs. Keep the selection order for layers. It returns `image_url`, `provider`, `seconds`, `rendered_item_ids`, `skipped_item_ids`, and optional explanatory fields. Inspect the returned IDs and display skipped-item or fallback notices. Resolve the output URL against the backend and attach authentication while downloading. The currently configured OpenRouter path uses Nano Banana 2.1, one 1K image, and all available selected references in one request. Legacy providers have different capabilities. Missing image references can be skipped.
+`POST /api/tryon/photo` accepts one to eight IDs. Keep the selection order for layers. It returns `image_url`, `provider`, `seconds`, `rendered_item_ids`, `skipped_item_ids`, and optional explanatory fields. Inspect the returned IDs and display skipped-item or fallback notices. Resolve the output URL against the backend and attach authentication while downloading. The direct Gemini and optional OpenRouter paths use Nano Banana 2.1, one 1K image, and all available selected references in one request. The current deployment selects direct Gemini (`provider:gemini`). Legacy providers have different capabilities. Missing image references can be skipped.
 
 Generation can take minutes. Use a 300-second client timeout for photo try-on and let the user cancel. A disconnected request stops backend waiting and avoids saving the result; it cannot guarantee cancellation or refund of an already accepted upstream generation. Never automatically retry a paid POST after an ambiguous timeout.
 
@@ -176,7 +176,7 @@ HTTP errors share a compact contract (`code`, `message`, `retryable`, and option
 }
 ```
 
-Service errors use `missing_api_key`, `invalid_configuration`, `service_disabled`, `provider_auth_failed`, `insufficient_credits`, `rate_limited`, `provider_timeout`, `provider_unavailable`, `provider_request_rejected`, or `invalid_provider_response`. Other HTTP errors include `invalid_access_code` (wrong code supplied to `/api/access`), `access_required` (missing/invalid credentials on a protected request), `not_found`, `validation_error`, `state_conflict`, `payload_too_large`, `unsupported_media_type`, `request_cancelled`, and `internal_error`. `service` is optional for generic errors. Treat unknown codes generically and display `message` to the user.
+Service errors use `missing_api_key`, `invalid_configuration`, `service_disabled`, `provider_auth_failed`, `insufficient_credits`, `billing_required`, `rate_limited`, `provider_timeout`, `provider_unavailable`, `provider_request_rejected`, or `invalid_provider_response`. Other HTTP errors include `invalid_access_code` (wrong code supplied to `/api/access`), `access_required` (missing/invalid credentials on a protected request), `not_found`, `validation_error`, `state_conflict`, `payload_too_large`, `unsupported_media_type`, `request_cancelled`, and `internal_error`. `service` is optional for generic errors. Treat unknown codes generically and display `message` to the user.
 
 Missing/invalid keys and exhausted credit are non-retryable until an administrator fixes the account. Provider credential failures map to HTTP 503, rather than 401, to avoid confusing them with the app access gate. Transient connection failures, rate limits and timeouts may be retryable; this permits an explicit retry, not automatic replay of a paid operation. Inspect `Retry-After` when supplied.
 
@@ -189,3 +189,11 @@ Access-code rejection example (HTTP 401):
 ```
 
 Use `code` for client branching and `message` for display. Optional `details` contains structured diagnostics only. Correcting an access code is a new request; `retryable:false` means do not automatically resend the same invalid value. Existing middleware codes `busy`, `quota`, and `too_large` remain supported for compatibility.
+
+## Optional Gemini Live voice
+
+[Gemini Live integration](GEMINI_LIVE.md) documents the Google AI Studio/Developer API provider, `/api/voice/live/config`, and `/session/voice` audio WebSocket contract. This is separate from `/api/voice/transcribe` and `/api/voice/speech`. The backend holds the Google key and executes app tools; native clients send 16 kHz PCM and play 24 kHz output. The feature is off until explicitly configured and does not replace typed HTTP chat.
+
+## Weather fallback
+
+Open-Meteo is primary; wttr.in is the keyless fallback for network/provider/malformed-data failures, including primary geocoding outages. Weather JSON adds `provider`, `fallback`, and optional `fallback_reason`, while preserving existing fields. Both successful providers are cached for 30 minutes. wttr.in normally covers three days; a requested date must match exactly or the backend reports unavailable. See [weather behavior](WEATHER.md) for timeout budgets, provider-specific day boundaries and diagnostic statuses.

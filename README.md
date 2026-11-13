@@ -273,3 +273,9 @@ Chi tiết: [NOTICE.md](NOTICE.md), [tryon-worker/README.md](tryon-worker/README
 ## Native mobile API
 
 See [mobile integration and transport guide](docs/MOBILE_API.md), [generated OpenAPI](docs/api/openapi.json), [HTTP endpoint reference](docs/api/REFERENCE.md), and [API/tool review](docs/api/REVIEW.md). Regenerate contracts with `python scripts/export_api.py`; use `--check` to detect stale artifacts. Chat uses NDJSON and requires a native streaming adapter in addition to generated HTTP clients.
+
+Optional [Gemini Live voice through Google AI Studio](docs/GEMINI_LIVE.md) adds real-time audio conversation and existing wardrobe tools. It is disabled by default; configure `GEMINI_API_KEY` and `GEMINI_LIVE_ENABLED=on` to enable it.
+
+[Nano Banana photo try-on through Google AI Studio](docs/GEMINI_IMAGE.md) uses the same `GEMINI_API_KEY`; select `TRYON_PHOTO_PROVIDER=gemini`. OpenRouter remains an optional photo provider.
+
+[Weather fallback](docs/WEATHER.md) automatically uses keyless wttr.in when Open-Meteo is unavailable, preserving the same weather contract for the web app and AI tools.
