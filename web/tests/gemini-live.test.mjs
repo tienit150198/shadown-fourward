@@ -299,3 +299,19 @@ test('live view tool returns the actual client display state to Gemini', async (
   assert.equal(sent[0].toolResponse.functionResponses[0].response.execution.view,'original');
   live.stop();
 });
+
+test('lesson tools return actual reviewed draft revision to Live instead of pretending it was saved',async()=>{
+  const sent=[];
+  const live=new GeminiLiveSession({onLessonControl:async control=>{
+    assert.equal(control.command,'finish_teaching');
+    return {mode:'reviewing',status:'review',lesson_state:{revision:4,title:'Gấp áo',steps:[{number:1,instruction:'Gấp tay áo'}]}};
+  }},{fetchImpl:async()=>Response.json({result:{lesson_control:{command:'finish_teaching'}},events:[]})});
+  live.status='listening';live.toolSessionId='session';
+  live.socket={readyState:1,send:raw=>sent.push(JSON.parse(raw)),close(){}};
+  await live.handleTool({id:'lesson',name:'lesson_control',args:{command:'finish_teaching'}});
+  const result=sent[0].toolResponse.functionResponses[0].response.execution;
+  assert.equal(result.status,'review');
+  assert.equal(result.lesson_state.revision,4);
+  assert.equal(result.saved_skill,undefined);
+  live.stop();
+});

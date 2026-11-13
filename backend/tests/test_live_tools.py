@@ -141,3 +141,11 @@ def test_visible_outfit_is_available_to_voice_tryon_resolution(client,tool_sessi
     result=invoke(client,key,'camera_task',{'intent':'tryon_live','request':'Thử bộ này đi'},suggested_item_ids=['item-0','item-1']).json()
     assert seen[0]['selected_ids']==['item-0','item-1']
     assert result['result']['camera_decision']['context']['tryon_plan']['status']=='ready'
+
+
+def test_live_lesson_controls_return_client_command_with_no_navigation(client,tool_session):
+    key,_=tool_session
+    response=invoke(client,key,'lesson_control',{'command':'review','skill_id':'test-skill'},lesson_state={'status':'review','title':'Bài của tôi','revision':3,'steps':[]}).json()
+    assert response['result']['lesson_control']['skill_id']=='test-skill'
+    assert response['events']==[]
+    assert 'lesson_control' in {tool['name'] for tool in live_tools.declarations()}

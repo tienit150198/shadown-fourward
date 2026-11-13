@@ -56,6 +56,7 @@ from voice_api import router as voice_api, voice_client_from_env  # noqa: E402
 from qwen_image import router as image_api  # noqa: E402
 from vidu_live import router as vidu_api  # noqa: E402
 from gemini_live import router as gemini_live_api, client_from_env as gemini_live_client_from_env  # noqa: E402
+from conversation_actions import router as conversation_actions_api
 from xmax_live import router as xmax_api, client_from_env as xmax_client_from_env  # noqa: E402
 import security  # noqa: E402
 
@@ -539,6 +540,7 @@ app.include_router(image_api)
 app.include_router(vidu_api)
 app.include_router(gemini_live_api)
 app.include_router(xmax_api)
+app.include_router(conversation_actions_api)
 
 
 # ---- Static web app (mounted last so it never shadows API routes) -------------

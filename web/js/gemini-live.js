@@ -297,6 +297,11 @@ export class GeminiLiveSession {
       if (signal.aborted || generation !== this.generation || turn !== this.turn || this.status === 'idle') return;
       const result = data.result;
       if (!result || typeof result !== 'object') throw new Error('Kết quả công cụ chưa hợp lệ.');
+      if (result.lesson_control) {
+        result.execution = await this.callbacks.onLessonControl?.(result.lesson_control, {signal});
+        if (!result.execution) result.error='Lesson control unavailable; do not claim success.';
+        else if (result.execution.error) result.error=result.execution.error;
+      }
       if (result.live_control) {
         result.execution = await this.callbacks.onLiveControl?.(result.live_control, {signal});
         if (!result.execution) result.error = 'Live view control is unavailable. Do not claim it succeeded.';

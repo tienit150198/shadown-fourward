@@ -1,4 +1,5 @@
 import { api, conversationEvents, fetchWithAccess } from '../api.js';
+import { lessonPanel } from '../live-lessons.js';
 import { LiveOutfits } from '../live-outfits.js';
 import { GeminiLiveSession } from '../gemini-live.js';
 import { CameraTasks } from '../camera-tasks.js';
@@ -121,7 +122,7 @@ function timelineNodes(timeline) {
   });
 }
 
-export function mount(el) {
+export function mount(el, {query=new URLSearchParams()}={}) {
   let disposed = false;
   let camera = null;
   let cameraRevision = 0;
@@ -280,6 +281,8 @@ export function mount(el) {
       let ids=[]; try { ids=JSON.parse(query.get('outfit') || '[]'); } catch { /* invalid legacy link */ }
       if (ids.length) void tryOverlayOutfit({title:'Bộ đã chọn',item_ids:ids});
       else void askInPlace('Mình muốn thử đồ trực tiếp trong camera này.');
+    } else if (path.startsWith('guide/')) {
+      void runLessonControl({command:'start_guidance',skill_id:decodeURIComponent(path.slice(6))});
     } else void askInPlace(({wardrobe:'Cho xem đồ trong tủ và gợi ý bộ phù hợp.',stylist:'Gợi ý trang phục cho mình.',home:'Liệt kê bài đã học.',teach:'Mình muốn dạy bạn một bài mới.'})[path] || `Hãy giúp mình ngay trong camera này: ${link.textContent}`);
   }
   el.addEventListener('click',localAction);
@@ -311,6 +314,7 @@ export function mount(el) {
     notify(execution) {
       if (disposed) return;
       if (live.status === 'idle') {
+        if (execution.speech) void speak(execution.speech);
         transcript.append(h('p', { class: 'chat-bubble chat-assistant' }, execution.message));
         transcript.scrollTop = transcript.scrollHeight;
       } else live.notifyTaskResult(execution);
@@ -353,9 +357,21 @@ export function mount(el) {
 
   function renderTask(state) {
     if (disposed) return;
-    if (state.mode === 'teaching' && taskCard.contains(document.activeElement) && document.activeElement.matches('input')) {
-      const stats = taskCard.querySelector('.chat-task-stats');
-      if (stats) stats.textContent = `${state.lines || 0} câu hướng dẫn · ${state.frames || 0} khung hình`;
+    const lessonMode=['teaching','compiling','reviewing','guiding'].includes(state.mode);
+    taskCard.classList.toggle('chat-lesson-panel',lessonMode);
+    taskCard.classList.toggle('chat-lesson-guidance',state.mode==='guiding');
+    taskCard.classList.toggle('chat-lesson-minimized',state.mode==='reviewing' && Boolean(state.reviewHidden));
+    if (lessonMode) {
+      originalView=false; stage.classList.remove('chat-show-original');
+      outfitPanel.dismiss(); taskCard.classList.remove('chat-fitting-bar');
+      taskCard.dataset.mode=state.mode; taskCard.dataset.status=state.status;
+      taskCard.replaceChildren(lessonPanel(state,{
+        onConfirm:()=>{void runLessonControl({command:'save',revision:tasks.lessonRevision});},
+        onDismiss:()=>{
+          if (state.mode==='reviewing') tasks.update({reviewHidden:true});
+          else {tasks.cancel();live.notifyTaskResult(tasks.execution());}
+        },
+      }));
       return;
     }
     if (state.mode === 'tryon' && ['loading','live'].includes(state.status) && !state.showGarments) {
@@ -382,24 +398,6 @@ export function mount(el) {
     taskCard.dataset.status = state.status;
     taskCard.replaceChildren(h('span', { class: 'chat-task-label' }, ({ chat: 'SHADOW', guiding: 'HƯỚNG DẪN', teaching: 'ĐANG GHI BÀI DẠY', compiling: 'ĐANG BIÊN SOẠN', tryon: state.status === 'loading' ? 'ĐANG THAY ĐỒ' : 'THỬ ĐỒ' })[state.mode]),
       h('strong', null, state.title), h('p', null, state.message));
-    if (state.mode === 'teaching') {
-      const title = h('input', { class: 'chat-task-title', value: state.title, maxlength: 160, 'aria-label': 'Tên bài dạy', onInput: event => tasks.rename(event.target.value) });
-      taskCard.append(title, h('small', { class: 'chat-task-stats' }, `${state.lines || 0} câu hướng dẫn · ${state.frames || 0} khung hình`),
-        h('button', { type: 'button', class: 'chat-action', onClick: () => {
-          const execution = tasks.finish();
-          status.textContent = execution.message;
-          live.notifyTaskResult(execution);
-        } }, 'Lưu bài dạy'));
-    }
-    if (state.lesson?.steps?.length) {
-      const steps = state.lesson.steps;
-      const index = Math.max(0, Math.min(state.step || 0, steps.length - 1));
-      taskCard.append(h('div', { class: 'chat-task-step' }, h('small', null, `Bước ${index + 1}/${steps.length}`),
-        h('p', null, steps[index].instruction || steps[index].on_enter_speech),
-        h('div', { class: 'chat-task-controls' },
-          h('button', { type: 'button', class: 'chat-action', disabled: index === 0, onClick: () => tasks.update({ step: index - 1 }) }, 'Trước'),
-          h('button', { type: 'button', class: 'chat-action', disabled: index === steps.length - 1, onClick: () => tasks.update({ step: index + 1 }) }, 'Tiếp'))));
-    }
     const showGarments = state.status !== 'live' || state.showGarments;
     if (state.mode === 'tryon' && ['selecting', 'live', 'error'].includes(state.status) && showGarments && state.items?.length) {
       const selected = (state.selected_ids || []).map(id => state.items.find(item => item.id === id)).filter(Boolean);
@@ -441,6 +439,18 @@ export function mount(el) {
       h('button', { type: 'button', class: 'chat-task-cancel', onClick: () => {
         tasks.cancel(); live.notifyTaskResult(tasks.execution());
       } }, 'Dừng tác vụ'));
+  }
+  async function runLessonControl(control,{signal}={}) {
+    if (disposed || signal?.aborted) return null;
+    try {
+      const result=await tasks.lessonControl(control,{signal});
+      if (result?.error) status.textContent=result.error;
+      return result;
+    } catch(error) {
+      if (disposed || signal?.aborted) return null;
+      status.textContent=error.userMessage || error.message || 'Chưa thực hiện được thao tác bài học.';
+      return {...tasks.execution(),error:status.textContent};
+    }
   }
   function liveTranscript(role, value) {
     if (disposed) return;
@@ -498,6 +508,10 @@ export function mount(el) {
     },
     onTranscript: liveTranscript,
     onToolEvent: liveToolEvent,
+    async onLessonControl(control,turn) {
+      if (tasks.recording && control.command==='finish_teaching' && !liveNarrated && liveQuestion) { tasks.narrate(liveQuestion); liveNarrated=true; }
+      return runLessonControl(control,turn);
+    },
     onLiveControl(control, {signal}) { if (disposed || signal.aborted) return null; return setLiveView(control.view); },
     async onCameraTask(result, turn) {
       if (disposed) return;
@@ -539,7 +553,7 @@ export function mount(el) {
       prompt.hidden = active || Boolean(camera);
       pane.dataset.live = value;
       if (value === 'idle') outfitPanel.dismiss();
-      if (value === 'idle' && tasks.state.mode === 'teaching') tasks.cancel('Phiên Live đã dừng. Bản ghi chưa lưu đã được hủy.');
+
       mic.setAttribute('aria-pressed', String(active));
       mic.setAttribute('aria-label', active ? 'Dừng trò chuyện Live' : 'Bật micro');
       stage.classList.toggle('chat-live-active', active);
@@ -662,7 +676,7 @@ export function mount(el) {
 
   async function toggleCamera() {
     if (camera) {
-      tasks.cancel('Camera đã tắt. Bạn vẫn có thể trò chuyện.');
+      if (tasks.state.mode!=='reviewing') tasks.cancel('Camera đã tắt. Bạn vẫn có thể trò chuyện.');
       closeCamera();
       status.textContent = 'Camera đã tắt.';
       return;
@@ -859,6 +873,7 @@ export function mount(el) {
   }
 
   async function submit(question, { spoken = false } = {}) {
+    if (tasks.recording) tasks.narrate(question);
     intentBadge.hidden = true;
     stopRecognition();
     request?.abort();
@@ -888,6 +903,7 @@ export function mount(el) {
     const city = shortText(getSettings().wardrobeCity, 80) || 'Hà Nội';
     const visibleOutfit=outfitPanel.outfits[outfitPanel.index];
     const payload = {
+      lesson_state:tasks.lessonContext(),
       ...(visibleOutfit ? {current_outfit:{title:(visibleOutfit.title || 'Bộ hiện tại').slice(0,80),item_ids:visibleOutfit.item_ids,reason:(visibleOutfit.reason || '').slice(0,500),tips:(visibleOutfit.tips || '').slice(0,300)}} : {}),
       ...(city ? { configured_city: city } : {}),
       text: question.slice(0, 500),
@@ -951,6 +967,12 @@ export function mount(el) {
             timeline.push({ type: 'outfits', outfits: fresh });
             outfitPanel.show(turnOutfits,answer);
           }
+        } else if (item.type === 'action' && item.execute && item.route==='lesson-control') {
+          const execution=await runLessonControl(item.control,{signal:current.signal});
+          if (item.result_token && !current.signal.aborted) {
+            const response=await fetchWithAccess('/api/conversation/action-result',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:item.result_token,execution:execution ? {...execution,message:String(execution.message || '').slice(0,1000),...(execution.error?{error:String(execution.error).slice(0,1000)}:{})} : {status:'cancelled',error:'The lesson action was cancelled.'}}),signal:current.signal});
+            if(!response.ok) throw new Error('Chưa xác nhận được kết quả bài học. Hãy kiểm tra trạng thái rồi thử lại.');
+          }
         } else if (item.type === 'action' && item.execute && item.route==='tryon-live') {
           if (item.stop) tasks.cancel();
           else await tryOverlayOutfit({title:'Bộ đã chọn',item_ids:item.items || []});
@@ -1001,10 +1023,15 @@ export function mount(el) {
     }
   }
 
+  const entryLesson=query.get('lesson'), entrySkill=query.get('skill');
+  if (entryLesson==='teach') queueMicrotask(()=>{if(!disposed) void runLessonControl({command:'start_teaching'});});
+  else if (entrySkill && ['guide','review'].includes(entryLesson)) queueMicrotask(()=>{
+    if(!disposed) void runLessonControl({command:entryLesson==='guide'?'start_guidance':'review',skill_id:entrySkill});
+  });
   function onVisibility() {
     if (!document.hidden) { autoStartLive(); return; }
     live.stop();
-    tasks.cancel('Đã dừng tác vụ khi đưa ứng dụng vào nền.');
+    if (tasks.state.mode!=='reviewing') tasks.cancel('Đã dừng tác vụ khi đưa ứng dụng vào nền.');
     setListening(false);
     cancelRecording();
     stopOutput();

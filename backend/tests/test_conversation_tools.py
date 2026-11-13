@@ -379,3 +379,71 @@ def test_showcase_schema_requires_exactly_one_outfit():
     from pydantic import ValidationError
     with pytest.raises(ValidationError):
         ShowcaseArgs.model_validate({'introduction':'Hai bộ', 'outfits':[{'title':'A','item_ids':['t1']},{'title':'B','item_ids':['t2']}]})
+
+
+def test_lesson_control_returns_in_place_execution_and_receives_current_draft_context(client,setup_chat,monkeypatch):
+    import conversation
+    async def ack(request,token): return {'status':'review','lesson_state':{'revision':3}}
+    monkeypatch.setattr(conversation,'wait_action',ack)
+    provider=setup_chat(tools(call('lesson_control',{'command':'rename','title':'Gấp áo nhanh','revision':2})),answer('Mình đang đổi tên bản nháp.'))
+    rows=post(client,text='Đổi tên thành Gấp áo nhanh',lesson_state={'status':'review','title':'Gấp áo','revision':2,'step':0,'steps':[{'number':1,'instruction':'Gấp tay áo'}]})
+    action=next(row for row in rows if row['type']=='action')
+    assert action['execute'] is True and action['route']=='lesson-control'
+    assert action['control']['revision']==2
+    assert 'Gấp tay áo' in provider.calls[0]['messages'][0]['content']
+    assert not any(row['type']=='outfits' for row in rows)
+
+
+def test_lesson_tool_loads_exact_saved_skill_without_saving(client,setup_chat,monkeypatch):
+    import conversation
+    async def ack(request,token): return {'status':'guiding'}
+    monkeypatch.setattr(conversation,'wait_action',ack)
+    provider=setup_chat(tools(call('lesson_control',{'command':'start_guidance','skill_id':'test-skill'})),answer())
+    rows=post(client,text='Hướng dẫn bài đã học')
+    action=next(row for row in rows if row['type']=='action')
+    assert action['control']['skill_id']=='test-skill'
+    assert 'lesson' not in action['control']
+
+
+def test_streamed_lesson_action_waits_for_real_client_revision_before_model_continues(client,setup_chat,monkeypatch):
+    import conversation
+    from concurrent.futures import ThreadPoolExecutor
+    from threading import Event
+    ready=Event()
+    token=[]
+    original=conversation.create_action
+    def create(request):
+        key=original(request)
+        token.append(key);ready.set()
+        return key
+    monkeypatch.setattr(conversation,'create_action',create)
+    provider=setup_chat(tools(call('lesson_control',{'command':'rename','title':'Bài mới','revision':1})),answer('Đã đổi tên bản nháp.'))
+    with ThreadPoolExecutor(max_workers=1) as pool:
+        result=pool.submit(post,client,text='Đổi tên bản nháp')
+        try:
+            assert ready.wait(5)
+            assert len(provider.calls)==1
+            response=client.post('/api/conversation/action-result',json={'token':token[0],'execution':{'mode':'reviewing','status':'review','lesson_state':{'status':'review','title':'Bài mới','revision':2,'step':0,'steps':[]}}})
+            assert response.status_code==200, response.text
+            rows=result.result(timeout=5)
+        finally:
+            async def release():
+                for future in getattr(client.app.state,'lesson_actions',{}).values():
+                    if not future.done(): future.set_result({'status':'unknown','error':'Test cleanup'})
+            client.portal.call(release)
+    assert rows[-1]['type']=='done'
+    assert results(provider)[-1]['execution']['lesson_state']['revision']==2
+    assert results(provider)[-1]['status']=='review'
+    assert not client.app.state.lesson_actions
+    assert client.post('/api/conversation/action-result',json={'token':token[0],'execution':{'status':'saved'}}).status_code==410
+
+
+def test_fallback_system_teaches_model_to_execute_guidance_and_correct_teaching_confusion():
+    from conversation import TOOL_SYSTEM
+    from conversation_tools import tool_schemas
+    assert 'lesson_control' in TOOL_SYSTEM
+    assert 'command=start_guidance' in TOOL_SYSTEM
+    assert 'start_teaching' in TOOL_SYSTEM
+    assert 'ý định mới' in TOOL_SYSTEM
+    screen=next(t['function']['parameters']['properties']['screen']['enum'] for t in tool_schemas() if t['function']['name']=='open_screen')
+    assert 'stylist' not in screen and 'guide' not in screen and 'teach' not in screen

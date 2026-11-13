@@ -12,6 +12,7 @@ from uuid import UUID, uuid4
 from fastapi import HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, ValidationError
 
+from lesson_actions import LessonSnapshot
 from conversation import MAX_TOOL_RESULT, TOOL_LABELS, ConversationTurn
 from conversation_tools import execute, tool_schemas
 from tryon_selection import plan_tryon
@@ -54,9 +55,14 @@ def declarations() -> list[dict]:
     result.append({'name':'set_live_view','behavior':'BLOCKING',
         'description':'Control the live video UI in response to speech: show original camera, show the active try-on result, dismiss the outfit overlay, or reopen the latest suggestions. Switching original/tryon preserves the running fitting session; to stop fitting use camera_task cancel_task. Wait for actual client execution before claiming success.',
         'parametersJsonSchema':LiveViewArgs.model_json_schema()})
-    result.append({'name':'camera_task', 'behavior':'BLOCKING',
-        'description':'Execute an explicitly requested shared-camera task: guidance, recording a lesson, fitting selected wardrobe clothes, or finishing/cancelling the current task. Call only when the user requests a camera operation; ordinary chat, wardrobe reads and outfit suggestions use other tools. finish_teaching means the ENTIRE lesson is finished, not one step. Preserve ongoing teaching; do not switch until the user finishes or cancels. Use actual wardrobe IDs for fitting. Camera execution happens in the client; wait for context.execution before claiming success.',
-        'parametersJsonSchema':CameraArgs.model_json_schema()})
+    camera_schema=CameraArgs.model_json_schema()
+    camera_schema['properties']['intent']['enum']=['tryon_live']
+    camera_schema['properties']['intent']['default']='tryon_live'
+    camera_schema['properties']['command']['enum']=['route_request','cancel_task','continue_task','switch_task']
+    camera_schema['properties'].pop('skill_id',None)
+    result.append({'name':'camera_task','behavior':'BLOCKING',
+        'description':'Execute explicitly requested live fitting, clothing changes or cancellation in this shared camera. Ordinary chat and suggestions use their own tools. Teaching, draft review and guided practice use lesson_control instead. Use actual wardrobe IDs and wait for context.execution before claiming success.',
+        'parametersJsonSchema':camera_schema})
     return result
 
 
@@ -107,7 +113,8 @@ class LiveToolRequest(BaseModel):
     call_id: Annotated[str,StringConstraints(min_length=1,max_length=160)]
     name: Annotated[str,StringConstraints(min_length=1,max_length=80)]
     arguments: dict[str,Any] = Field(default_factory=dict)
-    current_task: Literal['idle','chat','guiding','teaching','compiling','tryon'] = 'idle'
+    lesson_state: LessonSnapshot | None = None
+    current_task: Literal['idle','chat','guiding','teaching','compiling','reviewing','tryon'] = 'idle'
     task_title: str = Field(default='',max_length=200)
     selected_item_ids: list[Annotated[str,StringConstraints(min_length=1,max_length=100)]] = Field(default_factory=list,max_length=3)
     suggested_item_ids: list[Annotated[str,StringConstraints(min_length=1,max_length=100)]] = Field(default_factory=list,max_length=20)
@@ -123,7 +130,7 @@ async def camera_decision(args: CameraArgs, payload: LiveToolRequest, request):
             if args.skill_id:
                 skill=request.app.state.skill_store.get_dict(args.skill_id)
                 keys=('id','instruction','tip','warning','on_enter_speech')
-                context['lesson']={'name':skill['display_name'], 'learned_from':skill.get('learned_from'),
+                context['lesson']={**skill,'name':skill['display_name'], 'learned_from':skill.get('learned_from'),
                     'steps':[{key:step[key] for key in keys if key in step} for step in skill.get('steps',[])[:20]]}
         elif args.intent=='tryon_live' and payload.current_task not in ('teaching','compiling'):
             context['tryon_plan']=await plan_tryon(request.app.state.provider,_store(request),args.request,
@@ -167,7 +174,7 @@ async def run(payload: LiveToolRequest, request: Request) -> dict:
                         if payload.name=='showcase_outfits':
                             events.append({'type':'live_outfit_intro','text':result['introduction']})
                         events.append({'type':'outfits','outfits':result['outfits'][:3]})
-                    if action:
+                    if action and payload.name!='lesson_control':
                         events.append({'type':'action',**action})
         except ValidationError:
             result={'error':'Invalid tool arguments. Check the function schema.'}

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+from lesson_actions import LessonControlArgs, DESCRIPTION as LESSON_DESCRIPTION
 from datetime import date as Date
 from typing import Annotated, Literal
 
@@ -65,13 +66,14 @@ class StyleProfileArgs(Arguments):
 
 
 class OpenArgs(Arguments):
-    screen: Literal['wardrobe', 'teach', 'home', 'stylist', 'image-studio', 'tryon-photo', 'tryon-live', 'guide'] = Field(description='Use tryon-live for video/live camera; tryon-photo is still-photo generation. Match the user request exactly.')
+    screen: Literal['wardrobe', 'home', 'image-studio', 'tryon-photo', 'tryon-live'] = Field(description='Use tryon-live for video/live camera; tryon-photo is still-photo generation. Match the user request exactly.')
     item_ids: list[str] = Field(default_factory=list, max_length=8)
     skill_id: str | None = Field(default=None, max_length=64)
     prompt: str = Field(default='', max_length=500)
 
 
 DEFINITIONS = {
+    'lesson_control': (LessonControlArgs, LESSON_DESCRIPTION),
     'get_style_profile': (Empty, 'Read the clothing preferences, optional self-described gender, age range and fit preferences supplied by this user in this conversation. Missing fields are unknown, not inferred.'),
     'update_style_profile': (StyleProfileArgs, 'Save only preferences the user explicitly stated, or their decision to skip a question (clothing_preferences=["no preference"]). Never infer gender or age from camera, name or garments. Empty strings/lists clear a field. Stored only in this conversation.'),
     'list_wardrobe': (InventoryArgs, 'Read the current wardrobe inventory and taught styling rules, optionally filtered by category. Paginated: use next_offset if has_more. Use actual item IDs, never invent garments.'),
@@ -81,7 +83,7 @@ DEFINITIONS = {
     'list_skills': (Empty, 'List learned skills with their exact IDs and names.'),
     'get_skill': (SkillArgs, 'Read steps of an existing learned skill by its exact ID.'),
     'inspect_image': (InspectArgs, 'Ask the vision model a question about the camera image attached to THIS message. Cannot access the camera without an attached image.'),
-    'open_screen': (OpenArgs, 'Offer a user-clickable app action. This does NOT start a camera, spend credits, or generate images. For try-on pass exact wardrobe item IDs in layer order; for guide pass skill_id; for image-studio pass prompt.'),
+    'open_screen': (OpenArgs, 'Offer navigation only when the user explicitly asks to open saved resources or a separate image studio/photo screen. This never starts teaching, learning or live fitting. For lessons use lesson_control; for fitting use start_tryon. Do not use home as a substitute for starting a lesson.'),
 }
 
 
@@ -101,6 +103,13 @@ async def execute(name, raw_args, *, request, context, image):
         return {'error': 'Unknown tool. Choose a provided tool.'}, None
     args = DEFINITIONS[name][0].model_validate_json(raw_args)
     store = _store(request)
+    if name == 'lesson_control':
+        control=args.model_dump(exclude_none=True)
+        if args.command in ('start_guidance','review') and args.skill_id:
+            request.app.state.skill_store.get_dict(args.skill_id)  # Validate existence; client fetches full lesson without putting detector prompts into the model context.
+        if args.command=='start_guidance' and not args.skill_id:
+            return {'error':'Choose an exact skill_id from list_skills first.'}, None
+        return {'lesson_control':control,'status':'execution_requested','message':'The client executes this in the camera. Do not claim saved or edited until actual lesson state confirms it.'}, {'route':'lesson-control','execute':True,'control':control}
     if name == 'get_style_profile':
         return {'profile': context.get('style_profile', {}), 'scope': 'this_conversation'}, None
     if name == 'update_style_profile':
