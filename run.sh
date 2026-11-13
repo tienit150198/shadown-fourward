@@ -27,7 +27,7 @@ fi
 if command -v npm >/dev/null 2>&1; then
   echo '==> Building compact SHADOW frontend'
   (cd web-sdk && npm ci && npm run build:app)
-  if [ -n "${XMAX_API_KEY:-}" ]; then (cd web-sdk && npm run build:xmax); fi
+  if [ -n "${XMAX_API_KEY:-}${XMAX_API_KEYS:-}" ]; then (cd web-sdk && npm run build:xmax); fi
 fi
 
 if [ -n "${SNAP_CAMERA_KIT_API_TOKEN:-}" ] && [ -n "${SNAP_CAMERA_KIT_LENS_GROUP_ID:-}" ] && [ -n "${SNAP_CAMERA_KIT_LENS_ID:-}" ]; then

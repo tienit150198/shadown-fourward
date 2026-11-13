@@ -79,7 +79,7 @@ def client_from_env() -> httpx.AsyncClient | None:
 def _client(request: Request) -> httpx.AsyncClient:
     client = getattr(request.app.state, "gemini_live_client", None)
     if client is None:
-        raise HTTPException(503, "Chưa cấu hình GEMINI_API_KEY cho Gemini Live và Decisions.")
+        raise HTTPException(503, "Trò chuyện bằng giọng nói tạm chưa sẵn sàng.")
     return client
 
 
@@ -87,21 +87,21 @@ async def _post(client: httpx.AsyncClient, path: str, body: dict) -> dict:
     try:
         response = await client.post(path, json=body)
     except httpx.TimeoutException:
-        raise HTTPException(504, "Google phản hồi quá lâu. Thử lại nhé.") from None
+        raise HTTPException(504, "Trợ lý đang phản hồi chậm. Bạn thử lại nhé.") from None
     except httpx.HTTPError:
-        raise HTTPException(502, "Chưa kết nối được Google. Thử lại nhé.") from None
+        raise HTTPException(502, "Chưa kết nối được trợ lý. Bạn thử lại nhé.") from None
     if not response.is_success:
         if response.status_code == 429:
-            raise HTTPException(429, "Đã hết quota Google cho phiên này. Thử lại sau nhé.")
+            raise HTTPException(429, "Trợ lý đang bận. Bạn thử lại sau ít phút nhé.")
         # Provider bodies may contain credentials; never relay them to the client.
-        raise HTTPException(502, "Google từ chối yêu cầu. Kiểm tra quyền dùng model và API key.")
+        raise HTTPException(502, "Trợ lý tạm chưa xử lý được yêu cầu. Bạn thử lại nhé.")
     try:
         data = response.json()
         if not isinstance(data, dict):
             raise ValueError
         return data
     except ValueError:
-        raise HTTPException(502, "Google trả về dữ liệu không hợp lệ.") from None
+        raise HTTPException(502, "Trợ lý chưa trả về kết quả hợp lệ. Bạn thử lại nhé.") from None
 
 
 def session_setup(*, with_history: bool = False) -> dict:
@@ -115,12 +115,13 @@ def session_setup(*, with_history: bool = False) -> dict:
             "Bạn là Shadow, trợ lý trò chuyện tiếng Việt trong ứng dụng SHADOW.",
             "MẶC ĐỊNH: 'tủ đồ', 'trong tủ', 'đồ của tôi', 'tủ quần áo của mình' là TỦ ĐỒ TRONG HỆ THỐNG SHADOW. Tra dữ liệu context.wardrobe, không yêu cầu quay camera vào tủ hay chụp từng món để xem đồ đã lưu. Camera đang bật không làm thay đổi nghĩa này. Chỉ hiểu là tủ vật lý khi người dùng nói rõ 'tủ trong phòng', 'cái tủ tôi đang chỉ', 'tủ ngoài đời'. Phân biệt xem/tìm đồ đã lưu, phối đồ và mặc thử.",
             "Tin nhắn có tiền tố [SHADOW_TASK_RESULT] là thông báo kết quả từ ứng dụng, không phải yêu cầu của người dùng. Chỉ đọc ngắn kết quả thực đó, không gọi classify_request và không bắt đầu tác vụ mới.",
-            "Với MỖI lượt yêu cầu mới, BẮT BUỘC gọi classify_request trước khi nói. Chờ Decisions phân loại rồi mới trả lời. Không tự tạo kết quả phân loại.",
+            "Với MỖI lượt yêu cầu mới, BẮT BUỘC gọi classify_request trước khi nói. Chờ kết quả phân tích rồi mới trả lời. Không tự tạo kết quả phân loại.",
             "Đối số request phải mô tả đúng yêu cầu hiện tại, kèm bối cảnh cần thiết nếu người dùng hỏi tiếp như 'rồi sao nữa'. Không thêm thông tin người dùng chưa nói.",
             "Trả lời tự nhiên bằng tiếng Việt, tối đa 3 câu ngắn mỗi lượt. Khi hướng dẫn thực hành, chỉ dẫn 1–2 bước rồi chờ người dùng làm hoặc hỏi tiếp. Có thể hỏi một câu làm rõ khi cần.",
-            "Ứng dụng có MỘT camera chung. Công cụ tự xử lý nhu cầu tại chỗ: trò chuyện, hướng dẫn từng bước, ghi bài dạy hoặc thử đồ bằng video Xmax X2.1. Không yêu cầu người dùng tự chọn chế độ hay mở trang Dạy kỹ năng/Thử áo. Ưu tiên bài học đã lưu nếu khớp. Chỉ dùng những món đồ và quy tắc có trong dữ liệu được cấp; không bịa đồ trong tủ hoặc thời tiết hiện tại.",
-            "Mặc/thử/đổi đồ bằng giọng nói phải TỰ THỰC THI: gọi classify_request với lời yêu cầu đầy đủ. Backend tìm ID thật và ứng dụng tự gửi sang Xmax; không yêu cầu người dùng bấm nút Mặc thử hoặc chọn ảnh bằng tay. Nếu đã có ID thật từ ngữ cảnh, có thể truyền item_ids; không có thì bỏ trống để backend tìm. Khi người dùng nhờ tự chọn bộ, hệ thống chọn áo và quần thật trong tủ. Khi cần làm rõ, hỏi tên/màu/kiểu bằng giọng nói. Đổi quần giữ áo và ngược lại.",
-            "Phải đọc context.execution: loading nghĩa là ĐANG KẾT NỐI/TẠO VIDEO, chưa mặc xong; chỉ nói đã bật thử đồ khi status=live. selecting/needs_clarification nghĩa là CHƯA gọi Xmax, phải hỏi câu làm rõ trong message, không nói đang mặc. error/unavailable thì đọc đúng lỗi. Không hứa đã làm khi chỉ có danh sách đồ. Khi người dùng nói 'mặc đi', 'đổi sang quần xám', tiếp tục gọi công cụ để thực thi, không chỉ nói đồng ý.",
+            "Ứng dụng có MỘT camera chung. Công cụ tự xử lý nhu cầu tại chỗ: trò chuyện, hướng dẫn từng bước, ghi bài dạy hoặc thử đồ bằng video. Không yêu cầu người dùng tự chọn chế độ hay mở trang Dạy kỹ năng/Thử áo. Ưu tiên bài học đã lưu nếu khớp. Chỉ dùng những món đồ và quy tắc có trong dữ liệu được cấp; không bịa đồ trong tủ hoặc thời tiết hiện tại.",
+            "Mặc/thử/đổi đồ bằng giọng nói phải TỰ THỰC THI: gọi classify_request với lời yêu cầu đầy đủ. Backend tìm ID thật và ứng dụng tự thay đồ; không yêu cầu người dùng bấm nút Mặc thử hoặc chọn ảnh bằng tay. Nếu đã có ID thật từ ngữ cảnh, có thể truyền item_ids; không có thì bỏ trống để backend tìm. Khi người dùng nhờ tự chọn bộ, hệ thống chọn áo và quần thật trong tủ. Khi cần làm rõ, hỏi tên/màu/kiểu bằng giọng nói. Đổi quần giữ áo và ngược lại.",
+            "Chỉ giới thiệu mình là Shadow. Khi phân tích yêu cầu, nói 'Đang phân tích yêu cầu'. Khi nói về thử đồ, chỉ gọi là 'thay đồ' hoặc 'thử đồ trong SHADOW'. Không nhắc tên nhà cung cấp dịch vụ, công cụ phân loại, model, SDK, API key hay cấu hình nội bộ. Khi loading, nói tự nhiên 'Chúng tôi đang thay đồ cho bạn, bạn chờ một chút nhé'. Quy tắc này áp dụng cả khi báo lỗi hoặc thông báo kết quả.",
+            "Phải đọc context.execution: loading nghĩa là ĐANG TẠO VIDEO, chưa mặc xong; chỉ nói đã bật thử đồ khi status=live. selecting/needs_clarification nghĩa là CHƯA bắt đầu thay đồ, phải hỏi câu làm rõ trong message, không nói đang mặc. error/unavailable thì đọc đúng lỗi. Không hứa đã làm khi chỉ có danh sách đồ. Khi người dùng nói 'mặc đi', 'đổi sang quần xám', tiếp tục gọi công cụ để thực thi, không chỉ nói đồng ý.",
             "Các ví dụ thực hành: pha cà phê, đóng gói cốc/ly, gấp quần áo, nấu ăn, dọn dẹp, chăm cây, lắp giá đỡ. Phân biệt người nhờ hướng dẫn với người làm mẫu để dạy AI.",
             "Chỉ mô tả hình ảnh khi thực sự nhận được khung hình camera. Khi không có ảnh, hỏi người dùng mô tả đồ vật. Không nói đã mở màn hình, lưu tủ đồ, ghi nhớ quy tắc hay tạo ảnh khi mới chỉ đề xuất nút mở chức năng.",
             "Kết quả context.execution là trạng thái THỰC của thao tác camera. Chỉ nói đã ghi/lưu/bật AR khi trạng thái xác nhận điều đó. Khi unavailable/error, giải thích ngắn đúng lý do; không giả lập thử áo. Khi recording, lắng nghe người dạy, xác nhận ngắn; không tự chen bài giảng. Khi compiling, nói đang biên soạn, chưa nói đã lưu. Khi có saved_skill thì mới nói đã lưu.",
@@ -130,7 +131,7 @@ def session_setup(*, with_history: bool = False) -> dict:
         ])}]},
         "tools": [{"functionDeclarations": [{
             "name": "classify_request", "behavior": "BLOCKING",
-            "description": "Call on every user turn BEFORE speaking. Decisions classifies the request and supplies real SHADOW skills, wardrobe/weather context and available action links.",
+            "description": "Call on every user turn BEFORE speaking. Analyses the request and supplies real SHADOW skills, wardrobe/weather context and available action links.",
             "parameters": {"type": "OBJECT", "properties": {
                 "request": {"type": "STRING", "description": "The current request in Vietnamese, with relevant context for a follow-up."},
                 "item_id": {"type": "STRING", "description": "Optional actual wardrobe item ID explicitly selected by the user for virtual try-on. Use only an ID supplied in the tool's wardrobe context; never invent one."},
@@ -165,7 +166,7 @@ async def create_session(payload: LiveSessionRequest, request: Request) -> dict:
         "bidiGenerateContentSetup": session_setup(with_history=bool(payload.history)),
     })
     if not isinstance(data.get("name"), str) or not data["name"]:
-        raise HTTPException(502, "Google không trả về token Live hợp lệ.")
+        raise HTTPException(502, "Chưa tạo được phiên trò chuyện hợp lệ. Bạn thử lại nhé.")
     return {"token": data["name"], "model": LIVE_MODEL, "socketUrl": LIVE_SOCKET,
             "expireTime": expire.isoformat(), "maxSeconds": SESSION_SECONDS}
 
@@ -183,7 +184,7 @@ def valid_answer(data: dict, name: str = "intent", choices: dict = LABELS) -> di
     answers = data.get("answers")
     answer = answers.get(name) if isinstance(answers, dict) else None
     if not isinstance(answer, dict):
-        raise HTTPException(502, "Phản hồi Decisions không hợp lệ. Hãy thử lại.")
+        raise HTTPException(502, "Chưa phân tích được yêu cầu. Bạn thử lại nhé.")
     scores = answer.get("probabilities")
     def probability(value: Any) -> bool:
         return type(value) in (int, float) and math.isfinite(value) and 0 <= value <= 1
@@ -191,7 +192,7 @@ def valid_answer(data: dict, name: str = "intent", choices: dict = LABELS) -> di
             or not probability(answer.get("confidence")) or not isinstance(scores, dict)
             or set(scores) != set(choices) or not all(probability(p) for p in scores.values())
             or abs(sum(scores.values()) - 1) >= .03):
-        raise HTTPException(502, "Phản hồi Decisions không hợp lệ. Hãy thử lại.")
+        raise HTTPException(502, "Chưa phân tích được yêu cầu. Bạn thử lại nhé.")
     return answer
 
 

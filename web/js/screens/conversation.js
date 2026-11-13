@@ -59,7 +59,7 @@ export function mount(el) {
   const cameraButton = h('button', {
     type: 'button', class: 'chat-toggle', 'aria-label': 'Bật camera', 'aria-pressed': 'false', onClick: toggleCamera,
   }, icon('camera', 20));
-  const tryonView = h('div', { class: 'chat-xmax', hidden: true, 'aria-label': 'Video thử đồ Xmax X2.1' });
+  const tryonView = h('div', { class: 'chat-xmax', hidden: true, 'aria-label': 'Video thử đồ trực tiếp' });
   const taskCard = h('section', { class: 'chat-task', 'aria-label': 'Tác vụ camera', 'aria-live': 'polite' });
   const flipButton = h('button', { type: 'button', class: 'chat-toggle chat-flip', 'aria-label': 'Đổi camera trước sau', onClick: async () => {
     tasks.cancel('Đã đổi camera. Bạn có thể nói yêu cầu tiếp theo.');
@@ -95,7 +95,7 @@ export function mount(el) {
   }, mic, text, h('button', { class: 'chat-send', type: 'submit', 'aria-label': 'Gửi câu hỏi' }, icon('up', 19)));
   const liveMode = h('button', {
     type: 'button', class: 'chat-live-mode', disabled: true, 'aria-pressed': 'false',
-    'aria-label': 'Dùng Gemini Live', onClick: () => {
+    'aria-label': 'Trò chuyện bằng giọng nói trực tiếp', onClick: () => {
       autoStartPending = false;
       setListening(false);
       cancelRecording();
@@ -180,7 +180,7 @@ export function mount(el) {
     }
     taskCard.dataset.mode = state.mode;
     taskCard.dataset.status = state.status;
-    taskCard.replaceChildren(h('span', { class: 'chat-task-label' }, ({ chat: 'SHADOW', guiding: 'HƯỚNG DẪN', teaching: 'ĐANG GHI BÀI DẠY', compiling: 'ĐANG BIÊN SOẠN', tryon: 'XMAX X2.1' })[state.mode]),
+    taskCard.replaceChildren(h('span', { class: 'chat-task-label' }, ({ chat: 'SHADOW', guiding: 'HƯỚNG DẪN', teaching: 'ĐANG GHI BÀI DẠY', compiling: 'ĐANG BIÊN SOẠN', tryon: state.status === 'loading' ? 'ĐANG THAY ĐỒ' : 'THỬ ĐỒ' })[state.mode]),
       h('strong', null, state.title), h('p', null, state.message));
     if (state.mode === 'teaching') {
       const title = h('input', { class: 'chat-task-title', value: state.title, maxlength: 160, 'aria-label': 'Tên bài dạy', onInput: event => tasks.rename(event.target.value) });
@@ -237,7 +237,6 @@ export function mount(el) {
       } });
       taskCard.append(upload, h('button', { type: 'button', class: 'chat-action', onClick: () => upload.click() }, 'Thêm ảnh trang phục vào bộ'));
     }
-    if (state.status === 'unavailable') taskCard.append(h('a', { class: 'chat-action', href: 'https://platform.xmax.ai/api-keys', target: '_blank', rel: 'noopener noreferrer' }, 'Tạo API key Xmax'));
     if (['teaching', 'compiling', 'tryon', 'guiding'].includes(state.mode)) taskCard.append(
       h('button', { type: 'button', class: 'chat-task-cancel', onClick: () => {
         tasks.cancel(); live.notifyTaskResult(tasks.execution());
@@ -266,7 +265,7 @@ export function mount(el) {
       intentBadge.hidden = false;
       intentBadge.dataset.intent = result.intent;
       intentBadge.replaceChildren(h('strong', null, result.confidence < .5 ? 'Chưa rõ yêu cầu' : result.label),
-        h('span', null, `${new Intl.NumberFormat('vi-VN', { style: 'percent', maximumFractionDigits: 1 }).format(result.confidence)} · Decisions`));
+        h('span', null, `${new Intl.NumberFormat('vi-VN', { style: 'percent', maximumFractionDigits: 1 }).format(result.confidence)} · Phân tích`));
       liveActions = (result.actions || []).filter(action => !['teach', 'tryon-live', 'guide'].includes(action.route));
       liveActionBox?.remove();
       liveActionBox = h('div', { class: 'chat-actions' }, liveActions.map(actionLink));
@@ -297,9 +296,9 @@ export function mount(el) {
       stage.classList.toggle('chat-live-speaking', value === 'speaking');
       liveMode.disabled = value === 'connecting' || !liveAvailable;
       status.textContent = detail || ({
-        idle: 'Bấm micro để bắt đầu phiên Live mới.', connecting: 'Đang mở micro và kết nối Gemini Live…',
+        idle: 'Bấm micro để bắt đầu trò chuyện.', connecting: 'Đang mở micro và kết nối trò chuyện…',
         listening: 'Đang nghe. Nói tự nhiên rồi ngừng một nhịp để Shadow trả lời.',
-        classifying: 'Decisions đang phân loại yêu cầu…', thinking: 'Đã phân loại. Shadow đang chuẩn bị trả lời…',
+        classifying: 'Đang phân tích yêu cầu…', thinking: 'Shadow đang chuẩn bị trả lời…',
         speaking: 'Shadow đang nói. Bạn có thể nói chen để hỏi tiếp.',
       })[value];
     },

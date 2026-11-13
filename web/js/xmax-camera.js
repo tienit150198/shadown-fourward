@@ -1,6 +1,15 @@
 import { fetchWithAccess } from './api.js';
 import { captureFrame } from './camera.js';
 
+export function tryonErrorMessage(error) {
+  const message = String(error?.message || '');
+  if (error?.name === 'NotAllowedError') return 'Bạn cần cho phép dùng camera để thay đồ.';
+  if (/timed?\s*out|timeout|quá lâu/i.test(message)) return 'Thay đồ mất nhiều thời gian hơn dự kiến. Bạn thử lại nhé.';
+  if (/quota|credit|balance|rate limit|429/i.test(message)) return 'Hiện chưa thể thay đồ. Bạn thử lại sau ít phút nhé.';
+  if (/[À-ỹ]/.test(message) && !/xmax|x2[._\s]?1|api.?key|https?:|(?:uk|tk)-/i.test(message)) return message.slice(0, 220);
+  return 'Chưa thể thay đồ lúc này. Bạn vui lòng thử lại.';
+}
+
 export async function connectXmaxVideo(manager, local, context, view, { check = () => {}, onRetry = () => {} } = {}) {
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
@@ -33,7 +42,7 @@ export async function startSharedXmax(itemIds, stream, container, { signal, onSt
     void ready.catch(() => {});
   };
   resetReady();
-  const cleanMessage = error => (error?.message || 'Chưa kết nối được Xmax X2.1.').replace(/(?:uk|tk)-[a-zA-Z0-9_-]+/g, '[key]').slice(0, 220);
+  const cleanMessage = tryonErrorMessage;
   const closeKey = () => session ? fetch('/api/tryon/xmax/close', {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token: session.token }), keepalive: true,
   }).catch(() => {}) : Promise.resolve();
@@ -51,19 +60,19 @@ export async function startSharedXmax(itemIds, stream, container, { signal, onSt
   const check = () => { if (stopped || signal?.aborted) throw new DOMException('Đã dừng thử đồ.', 'AbortError'); };
   signal?.addEventListener('abort', onAbort, { once: true });
   startupTimer = setTimeout(() => {
-    rejectReady(new Error('Xmax kết nối quá lâu. Hãy thử lại.'));
+    rejectReady(new Error('Thay đồ mất nhiều thời gian hơn dự kiến. Bạn thử lại nhé.'));
     void stop();
   }, 90000);
   try {
     check();
-    onState('Đang tải Xmax X2.1…');
+    onState('Đang chuẩn bị thay đồ cho bạn…');
     const sdk = await import('/vendor/xmax/xmax.js');
     check();
     const response = await fetchImpl('/api/tryon/xmax/session', {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ item_ids: Array.isArray(itemIds) ? itemIds : [itemIds] }), signal,
     });
     session = await response.json();
-    if (!response.ok) throw new Error(session.detail || 'Chưa tạo được phiên Xmax.');
+    if (!response.ok) throw new Error(session.detail || 'Chưa tạo được phiên thay đồ. Bạn thử lại nhé.');
     if (stopped || signal?.aborted) await closeKey();
     check();
     const client = new sdk.XmaxClient(new sdk.XmaxConfiguration({ apiKey: session.token, environment: session.environment }));
@@ -81,7 +90,7 @@ export async function startSharedXmax(itemIds, stream, container, { signal, onSt
     view = new sdk.XmaxRealtimeDualVideoView({ isInteractionEnabled: false });
     Object.assign(view.element.style, { width: '100%', height: '100%' });
     view.attach(container);
-    onState('Đang gửi ảnh trang phục cho Xmax…');
+    onState('Đang chuẩn bị bộ đồ đã chọn…');
     const image = await fetchImpl(session.reference_image_url || session.item.image_url, { signal });
     if (!image.ok) throw new Error('Chưa lấy được ảnh trang phục.');
     const file = await client.createStorageService().uploadImage({ data: await image.blob(), fileName: 'shadow-outfit.jpg', contentType: 'image/jpeg' });
@@ -94,11 +103,11 @@ export async function startSharedXmax(itemIds, stream, container, { signal, onSt
     check();
     view.localTrack = local.videoTrack;
     container.hidden = false;
-    onState('Đang tạo video thử đồ với Xmax X2.1…');
+    onState('Chúng tôi đang thay đồ cho bạn…');
     // Bind the remote placeholder before starting so its first frame has an
     // active renderer, including browsers that defer media without a view.
     await connectXmaxVideo(manager, local, new sdk.RealtimeContext({ prompt: session.prompt, referencePath: file.url }), view, {
-      check, onRetry() { resetReady(); onState('Xmax chưa trả hình. Đang kết nối lại một lần…'); },
+      check, onRetry() { resetReady(); onState('Đang thử kết nối lại, bạn chờ một chút nhé…'); },
     });
     await ready;
     check();

@@ -25,6 +25,8 @@ os.environ["VIDU_API_KEY"] = ""
 os.environ["GEMINI_API_KEY"] = ""
 os.environ["GOOGLE_API_KEY"] = ""
 os.environ["XMAX_API_KEY"] = ""
+os.environ["XMAX_API_KEYS"] = ""
+os.environ["XMAX_KEY_STRATEGY"] = "round_robin"
 # Legacy tests were written for single-frame completion; test_confirm_frames.py covers 2.
 os.environ["COMPLETE_CONFIRM_FRAMES"] = "1"
 # Per-IP rate limits off for functional tests (tests/test_security.py turns them on).

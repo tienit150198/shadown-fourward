@@ -1,6 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { connectXmaxVideo } from '../js/xmax-camera.js';
+import { connectXmaxVideo, tryonErrorMessage } from '../js/xmax-camera.js';
+
+test('provider errors do not reveal service names, addresses or credentials to users', () => {
+  for (const message of ['Xmax X2.1 failed with tk-private', 'Xmax SDK tại https://api.xmax.ai lỗi uk-secret', 'Failed uploading https://xmax.ai/image']) {
+    const displayed = tryonErrorMessage(new Error(message));
+    assert.doesNotMatch(displayed, /xmax|x2\.1|https?:|(?:uk|tk)-/i);
+    assert.ok(displayed.length > 0);
+  }
+  assert.match(tryonErrorMessage(new Error('Xmax connection timed out')), /mất nhiều thời gian/);
+});
 
 test('a first-frame timeout retries once without replacing the manager, camera, or generation context', async () => {
   let connects = 0, generates = 0, disconnects = 0, retries = 0;

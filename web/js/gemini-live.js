@@ -58,7 +58,7 @@ export class GeminiLiveSession {
     this.setState("connecting");
     try {
       if (!navigator.mediaDevices?.getUserMedia || !globalThis.AudioWorkletNode) {
-        throw new Error("Trình duyệt chưa hỗ trợ Gemini Live. Hãy mở bằng Chrome hoặc Safari mới.");
+        throw new Error("Trình duyệt chưa hỗ trợ trò chuyện trực tiếp. Hãy mở bằng Chrome hoặc Safari mới.");
       }
       this.inputContext = new AudioContext({ sampleRate: 16000 });
       this.outputContext = new AudioContext({ sampleRate: 24000 });
@@ -76,13 +76,13 @@ export class GeminiLiveSession {
         signal: AbortSignal.any([this.abort.signal, AbortSignal.timeout(20000)]),
       });
       const session = await response.json();
-      if (!response.ok) throw new Error(session.detail || session.error?.message || "Không tạo được phiên Gemini Live.");
+      if (!response.ok) throw new Error(session.detail || session.error?.message || "Chưa tạo được phiên trò chuyện.");
       if (generation !== this.generation) return;
       const socket = new WebSocket(session.socketUrl + "?access_token=" + encodeURIComponent(session.token));
       this.socket = socket;
       socket.binaryType = "arraybuffer";
       await new Promise((resolve, reject) => {
-        const timeout = setTimeout(() => reject(new Error("Gemini Live chưa kết nối được. Hãy thử lại.")), 15000);
+        const timeout = setTimeout(() => reject(new Error("Chưa kết nối được cuộc trò chuyện. Bạn thử lại nhé.")), 15000);
         this.setupReject = reject;
         socket.onopen = () => this.send({ setup: { model: "models/" + session.model } });
         socket.onmessage = (event) => {
@@ -90,15 +90,15 @@ export class GeminiLiveSession {
           try {
             const message = JSON.parse(typeof event.data === "string" ? event.data : new TextDecoder().decode(event.data));
             if (message.setupComplete) { clearTimeout(timeout); this.setupReject = null; resolve(); }
-            if (message.error) throw new Error("Gemini Live từ chối phiên kết nối. Hãy kiểm tra model và quota.");
+            if (message.error) throw new Error("Trò chuyện trực tiếp tạm chưa sẵn sàng. Bạn thử lại sau nhé.");
             this.handleMessage(message);
           } catch (error) { this.fail(error); }
         };
-        socket.onerror = () => { clearTimeout(timeout); reject(new Error("Kết nối Gemini Live gặp lỗi. Hãy thử lại.")); };
+        socket.onerror = () => { clearTimeout(timeout); reject(new Error("Kết nối trò chuyện gặp lỗi. Bạn thử lại nhé.")); };
         socket.onclose = () => {
           clearTimeout(timeout);
           if (generation !== this.generation) return;
-          reject(new Error("Gemini Live đã ngắt kết nối."));
+          reject(new Error("Cuộc trò chuyện đã ngắt kết nối. Bạn có thể mở lại micro."));
           this.stop("Phiên Live đã đóng. Bấm micro để bắt đầu lại.");
         };
       });
@@ -216,7 +216,7 @@ export class GeminiLiveSession {
         signal: AbortSignal.any([turn.controller.signal, AbortSignal.timeout(35000)]),
       });
       const result = await response.json();
-      if (!response.ok) throw new Error(result.detail || result.error?.message || "Decisions chưa phân loại được yêu cầu.");
+      if (!response.ok) throw new Error(result.detail || result.error?.message || "Chưa phân tích được yêu cầu. Bạn thử lại nhé.");
       if (generation !== this.generation || turn !== this.turn || turn.controller.signal.aborted) return null;
       const execution = await this.callbacks.onClassification?.(result, { request: turn.input || request, signal: turn.controller.signal, itemId, itemIds });
       if (generation !== this.generation || turn !== this.turn || turn.controller.signal.aborted) return null;

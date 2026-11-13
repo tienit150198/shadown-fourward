@@ -1,4 +1,6 @@
+import asyncio
 import json
+import time
 from types import SimpleNamespace
 
 import httpx
@@ -103,3 +105,175 @@ def test_provider_errors_never_echo_a_permanent_key(client, install_xmax, status
     response = client.post('/api/tryon/xmax/session', json={'item_id': 'shirt'})
     assert response.status_code in (429, 502)
     assert 'private-permanent-key' not in response.text
+    assert 'xmax' not in response.json()['detail'].lower()
+    assert 'x2.1' not in response.json()['detail'].lower()
+
+
+@pytest.mark.asyncio
+async def test_pool_rotates_per_session_and_closes_each_token_with_its_issuing_key():
+    calls, counter = [], 0
+    def respond(request):
+        nonlocal counter
+        key = request.headers['X-Api-Key']
+        calls.append((request.method, key, request.url.path))
+        if request.method == 'POST':
+            body = json.loads(request.content)
+            assert body['pointsLimit'] <= 200 and body['temporaryApiKeySessionLimit'] == 1
+            counter += 1
+            return httpx.Response(200, json={'success': True, 'data': {'temporaryApiKey': f'tk-session-{counter}'}})
+        return httpx.Response(200, json={'success': True, 'data': {}})
+    pool = XmaxClient(['first', 'second'], transport=httpx.MockTransport(respond))
+    try:
+        tokens = [(await pool.issue())['temporaryApiKey'] for _ in range(3)]
+        assert [key for method, key, _ in calls if method == 'POST'] == ['first', 'second', 'first']
+        await pool.close_token(tokens[1])
+        assert calls[-1][1:] == ('second', '/open/api/v1/temporary-api-key/tk-session-2/inactive')
+        await pool.close_token('tk-unowned')
+        assert len(calls) == 4
+    finally:
+        await pool.aclose()
+    assert [(key, path) for method, key, path in calls if method == 'PUT'] == [
+        ('second', '/open/api/v1/temporary-api-key/tk-session-2/inactive'),
+        ('first', '/open/api/v1/temporary-api-key/tk-session-1/inactive'),
+        ('first', '/open/api/v1/temporary-api-key/tk-session-3/inactive'),
+    ]
+    assert all(client.is_closed for client in pool.clients)
+
+
+@pytest.mark.asyncio
+async def test_priority_uses_primary_until_it_fails_then_uses_backup():
+    used = []
+    def respond(request):
+        if request.method == 'PUT':
+            return httpx.Response(200, json={'success': True, 'data': {}})
+        key = request.headers['X-Api-Key']; used.append(key)
+        if key == 'primary' and len(used) >= 3:
+            return httpx.Response(429, json={'success': False, 'code': 46003})
+        return httpx.Response(200, json={'success': True, 'data': {'temporaryApiKey': f'tk-priority-{len(used)}'}})
+    pool = XmaxClient(['primary', 'backup'], strategy='priority', transport=httpx.MockTransport(respond))
+    try:
+        for _ in range(4):
+            await pool.issue()
+        assert used == ['primary', 'primary', 'primary', 'backup', 'backup']
+    finally:
+        await pool.aclose()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(('status', 'code'), [(429, 429), (200, 46003), (200, 46032), (401, 401), (403, 403), (503, 503)])
+async def test_unavailable_key_fails_over_and_is_cooled_down(status, code):
+    used = []
+    def respond(request):
+        if request.method == 'PUT':
+            return httpx.Response(200, json={'success': True, 'data': {}})
+        key = request.headers['X-Api-Key']; used.append(key)
+        if key == 'bad':
+            return httpx.Response(status, json={'success': False, 'code': code, 'message': 'Xmax private details'})
+        return httpx.Response(200, json={'success': True, 'data': {'temporaryApiKey': f'tk-ok-{len(used)}'}})
+    pool = XmaxClient(['bad', 'good'], transport=httpx.MockTransport(respond))
+    try:
+        assert (await pool.issue())['temporaryApiKey'].startswith('tk-ok')
+        assert (await pool.issue())['temporaryApiKey'].startswith('tk-ok')
+        assert used == ['bad', 'good', 'good']
+        assert all(owner == 1 for owner in pool.owners.values())
+    finally:
+        await pool.aclose()
+
+
+@pytest.mark.asyncio
+async def test_all_exhausted_keys_stop_requests_until_cooldown_ends():
+    used = []
+    def respond(request):
+        used.append(request.headers['X-Api-Key'])
+        return httpx.Response(429, json={'success': False, 'code': 46003})
+    pool = XmaxClient(['first', 'second'], transport=httpx.MockTransport(respond))
+    try:
+        from fastapi import HTTPException
+        with pytest.raises(HTTPException) as first:
+            await pool.issue()
+        assert first.value.status_code == 429
+        with pytest.raises(HTTPException) as second:
+            await pool.issue()
+        assert second.value.status_code == 429
+        assert int(second.value.headers['Retry-After']) > 0
+        assert used == ['first', 'second']
+    finally:
+        await pool.aclose()
+
+
+@pytest.mark.asyncio
+async def test_invalid_upstream_request_is_not_replayed_across_all_keys():
+    used = []
+    def respond(request):
+        used.append(request.headers['X-Api-Key'])
+        return httpx.Response(400, json={'success': False, 'message': 'invalid arguments'})
+    pool = XmaxClient(['first', 'second'], transport=httpx.MockTransport(respond))
+    try:
+        from fastapi import HTTPException
+        with pytest.raises(HTTPException):
+            await pool.issue()
+        assert used == ['first']
+    finally:
+        await pool.aclose()
+
+
+@pytest.mark.asyncio
+async def test_concurrent_sessions_rotate_and_keep_the_correct_token_owner():
+    used, owners = [], {}
+    async def respond(request):
+        key = request.headers['X-Api-Key']
+        if request.method == 'PUT':
+            token = request.url.path.split('/')[-2]
+            assert owners[token] == key
+            return httpx.Response(200, json={'success': True, 'data': {}})
+        used.append(key); token = f'tk-concurrent-{len(used)}'; owners[token] = key
+        await asyncio.sleep(.001)
+        return httpx.Response(200, json={'success': True, 'data': {'temporaryApiKey': token}})
+    pool = XmaxClient(['first', 'second'], transport=httpx.MockTransport(respond))
+    try:
+        results = await asyncio.gather(*(pool.issue() for _ in range(8)))
+        assert used.count('first') == used.count('second') == 4
+        assert len({row['temporaryApiKey'] for row in results}) == 8
+    finally:
+        await pool.aclose()
+
+
+@pytest.mark.asyncio
+async def test_slow_pool_has_one_total_deadline_instead_of_waiting_for_every_key(monkeypatch):
+    import xmax_live
+    monkeypatch.setattr(xmax_live, 'ISSUE_TIMEOUT', .03)
+    monkeypatch.setattr(xmax_live, 'KEY_ATTEMPT_TIMEOUT', .01)
+    async def respond(request):
+        await asyncio.Future()
+    pool = XmaxClient(['first', 'second', 'third', 'fourth', 'fifth'], transport=httpx.MockTransport(respond))
+    started = time.monotonic()
+    try:
+        from fastapi import HTTPException
+        with pytest.raises(HTTPException) as error:
+            await pool.issue()
+        assert error.value.status_code == 504
+        assert time.monotonic() - started < .3
+    finally:
+        await pool.aclose()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(('raw', 'expected'), [('[" first ", "second", "first"]', ['first', 'second']), ('first,second,first', ['first', 'second']), ('first\nsecond', ['first', 'second']), ('[]', ['legacy']), ('', ['legacy'])])
+async def test_pool_env_supports_lists_deduplicates_and_preserves_legacy_key(monkeypatch, raw, expected):
+    from xmax_live import client_from_env
+    monkeypatch.setenv('XMAX_API_KEYS', raw)
+    monkeypatch.setenv('XMAX_API_KEY', 'legacy')
+    pool = client_from_env()
+    try:
+        assert [value.headers['X-Api-Key'] for value in pool.clients] == expected
+    finally:
+        await pool.aclose()
+
+
+@pytest.mark.parametrize('raw', ['[invalid-private-value', '["first", 123]'])
+def test_malformed_pool_env_does_not_echo_credentials(monkeypatch, raw):
+    from xmax_live import client_from_env
+    monkeypatch.setenv('XMAX_API_KEYS', raw)
+    with pytest.raises(ValueError) as error:
+        client_from_env()
+    assert raw not in str(error.value)

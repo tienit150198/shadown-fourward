@@ -73,13 +73,13 @@ export class CameraTasks {
       const config = await this.arApi.tryonXmaxConfig();
       if (signal?.aborted || revision !== this.revision) return null;
       if (!config.available) {
-        this.update({ mode: 'tryon', status: 'unavailable', title: 'Thử đồ · Xmax X2.1', message: 'Chưa cấu hình XMAX_API_KEY. Camera vẫn dùng để trò chuyện và tư vấn trang phục.', lesson: null, saved_skill: null });
+        this.update({ mode: 'tryon', status: 'unavailable', title: 'Thử đồ trực tiếp', message: 'Chức năng thay đồ tạm chưa sẵn sàng. Bạn vẫn có thể trò chuyện và tư vấn trang phục.', lesson: null, saved_skill: null });
         return this.execution();
       }
       const items = (await this.arApi.listItems()).filter(item => ['top', 'bottom', 'dress', 'outerwear'].includes(item.category));
       if (signal?.aborted || revision !== this.revision) return null;
       this.stopAr();
-      this.update({ mode: 'tryon', status: 'selecting', title: 'Thử đồ · Xmax X2.1', message: plan && plan.status !== 'ready' ? plan.message : items.length ? 'Nói tên, màu hoặc kiểu áo và quần muốn thử. Shadow tự chọn đồ trong tủ và mở video mặc thử; bạn cũng có thể chọn ảnh.' : 'Tủ đồ chưa có ảnh trang phục để thử. Hãy thêm một món vào tủ đồ.', items, selected_ids: (this.state.selected_ids || []).filter(id => items.some(item => item.id === id)), lesson: null, saved_skill: null });
+      this.update({ mode: 'tryon', status: 'selecting', title: 'Thử đồ trực tiếp', message: plan && plan.status !== 'ready' ? plan.message : items.length ? 'Nói tên, màu hoặc kiểu áo và quần muốn thử. Shadow tự chọn đồ trong tủ và mở video mặc thử; bạn cũng có thể chọn ảnh.' : 'Tủ đồ chưa có ảnh trang phục để thử. Hãy thêm một món vào tủ đồ.', items, selected_ids: (this.state.selected_ids || []).filter(id => items.some(item => item.id === id)), lesson: null, saved_skill: null });
       if (requestedIds.length && !requestedIds.every(id => items.some(item => item.id === id))) {
         this.update({ message: 'Một món trong bộ vừa chọn không còn trong tủ đồ. Bạn muốn thay bằng áo hoặc quần nào?' });
         return this.execution();
@@ -121,7 +121,7 @@ export class CameraTasks {
     const revision = ++this.revision;
     const controller = new AbortController();
     this.arAbort = controller;
-    this.update({ status: 'loading', showGarments: false, applied_ids: ids, item_id: ids[0], title: items.map(item => item.name || item.id).join(' + '), message: 'Đang gửi toàn bộ bộ đồ đã chọn cho Xmax X2.1… Để camera thấy cả người khi thử áo và quần.' });
+    this.update({ status: 'loading', showGarments: false, applied_ids: ids, item_id: ids[0], title: items.map(item => item.name || item.id).join(' + '), message: 'Chúng tôi đang thay đồ cho bạn… Để camera thấy cả người khi thử áo và quần.' });
     this.pendingTryon = (async () => {
       try {
         await closing;
@@ -139,7 +139,7 @@ export class CameraTasks {
       } catch (error) {
         if (controller.signal.aborted || revision !== this.revision) return;
         this.arAbort = null;
-        this.update({ status: 'error', message: error.userMessage || error.message || 'Chưa mở được Xmax X2.1.' });
+        this.update({ status: 'error', message: error.userMessage || error.message || 'Chưa thể thay đồ lúc này. Bạn thử lại nhé.' });
         this.notify(this.execution());
       }
     })();
