@@ -1,41 +1,14 @@
 // SHADOW service worker — caches the app shell only.
-// Network-first (so a fresh deploy is picked up immediately), cache fallback when offline.
+// Cached shell renders immediately; refresh it in the background.
 // Never touches /api, /session or /skills-media, and ignores cross-origin requests (CDN, fonts).
-const CACHE = 'shadow-shell-v4';
+const CACHE = 'shadow-shell-v11';
 const SHELL = [
   './',
   'index.html',
   'styles.css',
-  'conversation.css',
   'app.js',
   'manifest.webmanifest',
-  'js/api.js',
-  'js/ws.js',
-  'js/camera.js',
-  'js/speech.js',
-  'js/cloud-voice.js',
-  'js/cv.js',
-  'js/ui.js',
-  'js/store.js',
-  'js/screens/home.js',
-  'js/screens/conversation.js',
-  'js/screens/image-studio.js',
-  'js/screens/teach.js',
-  'js/screens/review.js',
-  'js/screens/guide.js',
-  'js/screens/done.js',
-  'wardrobe.css',
-  'js/wardrobe-api.js',
-  'js/wardrobe-ui.js',
-  'js/screens/wardrobe.js',
-  'js/screens/stylist.js',
-  'js/screens/tryon-photo.js',
-  'js/screens/rules.js',
-  'tryon-live.css',
-  'js/vidu-live.js',
-  'js/tryon-pose.js',
-  'js/screens/tryon-live.js',
-  'js/screens/tryon-ar.js',
+  'js/live-pcm-worklet.js',
   'icons/icon.svg',
   'icons/icon-180.png',
   'icons/icon-192.png',
@@ -75,18 +48,22 @@ self.addEventListener('fetch', (event) => {
   if (isBypassed(url)) return; // let the network handle it, uncached
 
   event.respondWith((async () => {
-    try {
-      const response = await fetch(request);
-      if (response.ok && response.type === 'basic') {
-        const copy = response.clone();
-        caches.open(CACHE).then((cache) => cache.put(request, copy)).catch(() => {});
-      }
+    const cache = await caches.open(CACHE).catch(() => null);
+    if (!cache) return fetch(request);
+    const cached = await cache.match(request);
+    const refresh = fetch(request).then(async response => {
+      if (response.ok && response.type === 'basic') await cache.put(request, response.clone()).catch(() => {});
       return response;
+    });
+    if (cached) {
+      event.waitUntil(refresh.catch(() => {}));
+      return cached;
+    }
+    try {
+      return await refresh;
     } catch (err) {
-      const cached = await caches.match(request, { ignoreSearch: true });
-      if (cached) return cached;
       if (request.mode === 'navigate') {
-        const shell = await caches.match('index.html');
+        const shell = await cache.match('index.html');
         if (shell) return shell;
       }
       throw err;

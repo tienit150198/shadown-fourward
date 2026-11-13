@@ -20,6 +20,8 @@ from fastapi import Body, FastAPI, HTTPException, Request, WebSocket, WebSocketD
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
+from starlette.middleware.gzip import GZipMiddleware
+from web_assets import WebFiles
 
 BACKEND_DIR = Path(__file__).resolve().parent
 PROJECT_DIR = BACKEND_DIR.parent
@@ -53,6 +55,8 @@ from conversation import router as conversation_api  # noqa: E402
 from voice_api import router as voice_api, voice_client_from_env  # noqa: E402
 from qwen_image import router as image_api  # noqa: E402
 from vidu_live import router as vidu_api  # noqa: E402
+from gemini_live import router as gemini_live_api, client_from_env as gemini_live_client_from_env  # noqa: E402
+from xmax_live import router as xmax_api, client_from_env as xmax_client_from_env  # noqa: E402
 import security  # noqa: E402
 
 security.configure_pillow()
@@ -78,6 +82,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     app.state.provider = provider
     app.state.intent_router = IntentRouter.from_env()
     app.state.voice_client = voice_client_from_env()
+    app.state.gemini_live_client = gemini_live_client_from_env()
+    app.state.xmax_client = xmax_client_from_env()
     app.state.skill_store = store
     app.state.manager = manager
     logger.info(
@@ -94,6 +100,10 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         await app.state.intent_router.aclose()
         if app.state.voice_client is not None:
             await app.state.voice_client.aclose()
+        if app.state.gemini_live_client is not None:
+            await app.state.gemini_live_client.aclose()
+        if app.state.xmax_client is not None:
+            await app.state.xmax_client.aclose()
 
 
 app = FastAPI(title="SHADOW", lifespan=lifespan)
@@ -526,13 +536,15 @@ app.include_router(conversation_api)
 app.include_router(voice_api)
 app.include_router(image_api)
 app.include_router(vidu_api)
+app.include_router(gemini_live_api)
+app.include_router(xmax_api)
 
 
 # ---- Static web app (mounted last so it never shadows API routes) -------------
 
 app.mount(
     "/",
-    StaticFiles(directory=WEB_DIR, html=True, check_dir=False),
+    GZipMiddleware(WebFiles(directory=WEB_DIR, html=True, check_dir=False), minimum_size=500),
     name="web",
 )
 

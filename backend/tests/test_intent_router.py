@@ -17,6 +17,10 @@ import pytest
     ("Bạn chỉ tôi cách làm", "guide_skill"),
     ("Thời tiết hôm nay", "weather"),
     ("Xử lý cái áo này giúp tôi", None),
+    ("Tủ đồ của tôi có những gì?", "wardrobe_manage"),
+    ("Trong tủ có áo len không?", "wardrobe_manage"),
+    ("Tôi muốn mặc thử áo trong tủ đồ", "tryon_live"),
+    ("Xem cái tủ trong phòng tôi đang chỉ qua camera", None),
 ])
 def test_intent_without_credentials(client, message, intent):
     response = client.post("/api/intent", json={"text": message})

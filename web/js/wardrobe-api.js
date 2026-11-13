@@ -92,6 +92,7 @@ export const wardrobeApi = {
   suggest: (body, opts = {}) => request('POST', '/api/stylist/suggest', { body, timeoutMs: 150000, ...opts }),
   tryonConfig: () => request('GET', '/api/tryon/config', { timeoutMs: 8000 }),
   tryonArConfig: () => request('GET', '/api/tryon/ar/config', { timeoutMs: 8000 }),
+  tryonXmaxConfig: () => request('GET', '/api/tryon/xmax/config', { timeoutMs: 8000 }),
   /** {person_image, item_ids} → {image_url, provider, seconds, note?} */
   tryonPhoto: (body, opts = {}) => request('POST', '/api/tryon/photo', { body, timeoutMs: 300000, ...opts }),
 };

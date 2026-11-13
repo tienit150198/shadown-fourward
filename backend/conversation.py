@@ -22,6 +22,7 @@ import style_memory
 from stylist import suggest_outfits
 from wardrobe_api import _store as wardrobe_store, _weather
 from wardrobe_store import WardrobeError, decode_image_data_url, jpeg_data_url, to_jpeg
+from wardrobe_context import inventory_context
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -41,6 +42,7 @@ SYSTEM = (
     "Ưu tiên một câu ngắn có ích trước, tối đa ba câu. Không dùng markdown hay biểu tượng. "
     "Khi cần, hỏi một câu để làm rõ. Chỉ mô tả camera nếu có ảnh đính kèm. "
     "Không bịa thời tiết hiện tại, bài đã lưu hay đồ trong tủ. Không nói đã mở màn hình, tạo ảnh hoặc lưu dữ liệu."
+    " 'Tủ đồ', 'trong tủ', 'đồ của tôi' mặc định là tủ đồ trong ứng dụng SHADOW. Dùng dữ liệu hệ thống, không yêu cầu quay camera vào tủ. Chỉ hiểu là tủ vật lý khi người dùng nói rõ tủ trong phòng/ngoài đời/đang chỉ qua camera."
 )
 
 
@@ -158,6 +160,14 @@ async def generate(payload: ConversationRequest, request: Request) -> AsyncItera
     elif intent == "outfit_suggest":
         async for item in outfit_reply(payload, request):
             yield item
+    elif intent == "wardrobe_manage":
+        inventory = inventory_context(wardrobe_store(request), payload.text)
+        names = ', '.join(item['name'] for item in inventory['items'][:6])
+        answer = f"Tủ đồ trong SHADOW hiện có {inventory['total_items']} món."
+        if names:
+            answer += f" Một số món: {names}."
+        yield event("text", text=answer)
+        yield event("action", route="wardrobe", label="Xem tủ đồ trong SHADOW")
     elif intent == "weather":
         city, date = city_and_date(payload)
         answer = CITY_FOLLOWUP

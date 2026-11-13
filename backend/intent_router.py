@@ -15,6 +15,7 @@ from wardrobe_store import fold_vi
 TurnText = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=500)]
 
 CRITERIA = {
+    "wardrobe_manage": "Browse, count, find, view or manage clothes in the SHADOW app wardrobe. Vietnamese 'tủ đồ', 'trong tủ', 'đồ của tôi' default to the app inventory, even while the camera is on. Only treat a wardrobe as physical when explicitly described as a room/cabinet shown on camera. Outfit combinations belong to outfit_suggest; virtual fitting to tryon_live.",
     "wardrobe_add": "User wants to add a garment, shoes, or accessory to their own wardrobe.",
     "outfit_suggest": "User asks for outfit combinations or recommendations on what to wear.",
     "tryon_photo": "User explicitly wants a virtual try-on on a still image or photo.",
@@ -44,6 +45,7 @@ EXPLICIT_COMMANDS = (
     (r"(?:them|luu) .+ (?:vao|trong) tu (?:do|quan ao)\b", "wardrobe_add"),
     (r"(?:mac thu|thu (?:do|ao|quan|trang phuc)) (?:truc tiep|live|qua camera)\b", "tryon_live"),
     (r"(?:mac thu|thu (?:do|ao|quan|trang phuc)) (?:bang|tren|tu) anh\b", "tryon_photo"),
+    (r"(?:mac thu|thu (?:do|ao|quan|trang phuc))\b", "tryon_live"),
     (r"(?:day (?:ban|shadow|ai)|quay (?:bai |video )?huong dan)\b", "teach_skill"),
     (r"(?:huong dan|chi) (?:cho )?(?:toi|minh|em)\b", "guide_skill"),
     (r"(?:phoi do|goi y (?:phoi do|trang phuc)|nen mac gi)\b", "outfit_suggest"),
@@ -73,7 +75,12 @@ def local_intent(text: str) -> str | None:
     if re.match(r"^(?:thoi tiet|du bao thoi tiet)(?: |$)", line) or re.search(r"\b(?:hom nay|ngay mai)\b.*\bco mua\b", line):
         return "weather"
     command = re.sub(r"^(?:(?:minh|toi|em) (?:muon|can)|(?:giup|cho) (?:minh|toi|em)) ", "", line)
-    return next((intent for pattern, intent in EXPLICIT_COMMANDS if re.match(pattern, command)), None)
+    explicit = next((intent for pattern, intent in EXPLICIT_COMMANDS if re.match(pattern, command)), None)
+    if explicit:
+        return explicit
+    if re.search(r"\b(?:tu do|trong tu|do cua toi|do cua minh)\b", line) and not re.search(r"\b(?:trong phong|ngoai doi|dang chi|qua camera|gap|don|sap xep)\b", line):
+        return "wardrobe_manage"
+    return None
 
 
 class IntentRouter:

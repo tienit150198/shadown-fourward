@@ -316,9 +316,10 @@ WEARING_SYSTEM_PROMPT = (
 
 
 def _compact_for_matching(items: list[dict[str, Any]]) -> str:
+    from wardrobe_context import balanced_items
     rows = [
         {"id": it["id"], "name": it.get("name"), "category": it.get("category"), "colors": it.get("colors")}
-        for it in items[:MAX_WARDROBE_FOR_PROMPT]
+        for it in balanced_items(items, MAX_WARDROBE_FOR_PROMPT)
     ]
     return json.dumps(rows, ensure_ascii=False)
 
@@ -627,8 +628,9 @@ def _template_title(outfit: list[dict[str, Any]], event: str, index: int) -> str
 
 
 def _compact_wardrobe(items: list[dict[str, Any]]) -> str:
+    from wardrobe_context import balanced_items
     lines = []
-    for it in items[:MAX_WARDROBE_FOR_PROMPT]:
+    for it in balanced_items(items, MAX_WARDROBE_FOR_PROMPT):
         lines.append(json.dumps({
             "id": it["id"],
             "name": it.get("name"),

@@ -1,6 +1,8 @@
 .venv/
 web-sdk/node_modules/
 web/vendor/snap-camera-kit.js
+web/.build/
+web/vendor/xmax/
 .env
 __pycache__/
 *.pyc

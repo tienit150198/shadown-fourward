@@ -1,0 +1,9 @@
+{
+  "name": "shadow-web",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "node --check app.js && node --check js/gemini-live.js && node --check js/camera-tasks.js && node --check js/xmax-camera.js && node --check js/snap-camera.js && node --check js/live-pcm.js && node --check js/live-pcm-worklet.js && node --check js/screens/conversation.js && node --check js/api.js && node --check sw.js",
+    "test": "node --test tests/*.test.mjs"
+  }
+}

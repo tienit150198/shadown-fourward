@@ -3,7 +3,10 @@ WORKDIR /build/web-sdk
 COPY web-sdk/package.json web-sdk/package-lock.json ./
 RUN npm ci
 COPY web-sdk/camera-kit.js ./
-RUN npm run build
+COPY web-sdk/build-app.mjs ./
+COPY web-sdk/xmax.js ./
+COPY web/ /build/web/
+RUN npm run build:app && npm run build:xmax && npm run build
 
 FROM python:3.12-slim-bookworm
 
@@ -18,6 +21,8 @@ RUN pip install -r requirements.txt \
 COPY --chown=shadowapp:shadowapp backend/ /app/backend/
 COPY --chown=shadowapp:shadowapp web/ /app/web/
 COPY --from=camera-kit --chown=shadowapp:shadowapp /build/web/vendor/snap-camera-kit.js /app/web/vendor/snap-camera-kit.js
+COPY --from=camera-kit --chown=shadowapp:shadowapp /build/web/.build/ /app/web/.build/
+COPY --from=camera-kit --chown=shadowapp:shadowapp /build/web/vendor/xmax/ /app/web/vendor/xmax/
 # Populate new named volumes with writable directories and the bundled sample skill.
 RUN mkdir -p /data/skills /data/wardrobe /data/evals \
     && cp -a /app/backend/skills/. /data/skills/ \

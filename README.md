@@ -91,22 +91,56 @@ mặc thử trực tiếp mặc định giới hạn 120 giây qua `VIDU_MAX_SES
 
 ## Đi một vòng các màn hình
 
-### Thử áo AR với Snap Camera Kit
+### Thử đồ trực tiếp với Xmax X2.1
 
-Mở **Tủ đồ → Thử áo AR** trên web hoặc PWA. Camera Kit chạy Lens trên thiết bị. Màn này mở một Lens mẫu đã cấu hình để thử độ mượt. Các món người dùng tự thêm vẫn có thể thử bằng ảnh.
+Camera chung dùng **Xmax X2.1** cho yêu cầu mặc thử trực tiếp. Đặt `XMAX_API_KEY` trong `.env` và dùng `XMAX_ENVIRONMENT=global` (mặc định). Tạo key tại [Xmax Platform](https://platform.xmax.ai/api-keys). Key lâu dài chỉ nằm ở backend; trình duyệt nhận key tạm có thời hạn 150 giây, tối đa một phiên đồng thời và giới hạn 200 credit. Phiên trên màn hình tự dừng sau tối đa 2 phút. Bấm dừng hoặc rời trang sẽ đóng kết nối SDK và thu hồi key tạm.
 
-1. Tạo app **Camera Kit Web** trong [My Lenses](https://my-lenses.snapchat.com/). Lấy Web Staging API Token để thử nội bộ. Production token cần Snap duyệt.
+Nói **“Chọn một bộ đồ nam và mặc thử luôn”** hoặc **“Mặc áo thun trắng với quần nỉ xám cho tôi”**: backend tìm đồ thật trong tủ và tự mở Xmax, không cần bấm nút mặc thử. Nói **“mặc bộ đó đi”** dùng bộ đã chọn hoặc bộ vừa được gợi ý trong hội thoại; **“đổi sang quần jeans xanh”** giữ áo hiện tại. Nếu chưa tìm được món phù hợp, Shadow hỏi lại bằng giọng nói. Chỉ xem danh sách khi người dùng yêu cầu xem/chọn trước. Các ảnh và nút **Mặc thử bộ đã chọn** vẫn dùng được tùy ý. Nếu chưa có ảnh, dùng **Thêm ảnh trang phục vào bộ**. Backend ghép ảnh của tất cả món đã chọn và yêu cầu Xmax mặc đồng thời trong một phiên. Để camera thấy cả người khi thử áo và quần. SHADOW dùng lại camera đang mở. Trong lúc Xmax tải, vẫn có thể trò chuyện; chỉ báo video đã chạy khi nhận được khung hình kết quả đầu tiên.
+
+Trong hội thoại, **“tủ đồ”, “trong tủ”, “đồ của tôi” mặc định là tủ đồ trong SHADOW**. Decisions và Live nhận cùng quy tắc này, cùng tổng số món, số lượng từng loại và danh sách thật được tìm theo yêu cầu. Chỉ hiểu là tủ vật lý khi người dùng nói rõ tủ trong phòng/ngoài đời/đang chỉ qua camera.
+
+Chạy `npm ci`, `npm run build:xmax` và `npm run build:app` trong `web-sdk/` khi chạy backend trực tiếp bằng `uvicorn`. `./run.sh` và Docker chuẩn bị SDK theo cấu hình. [Web SDK chính thức](https://github.com/Xmax-AI/XmaxSDK-Web).
+
+### Snap Camera Kit (màn kiểm tra riêng)
+
+Màn **Tủ đồ → Thử áo AR** vẫn có thể mở riêng để kiểm tra Snap SDK. Lens là mẫu đã cấu hình trong Snap, không tự biến mọi món đồ trong tủ thành áo AR. Camera chung mặc định dùng Xmax X2.1.
+
+1. Vào [My Lenses → Camera Kit](https://my-lenses.snapchat.com/camera-kit), bật Camera Kit cho tổ chức của chủ dự án, rồi vào **Apps** tạo app Web. Trong trang ứng dụng, lấy **Web Staging API Token** để thử nội bộ. Production token cần Snap duyệt. Xem [Portal and Project Setup](https://developers.snap.com/camera-kit/getting-started/setting-up-accounts).
 2. Dùng [Lens Studio Cloth Simulation Try-On](https://developers.snap.com/lens-studio/features/try-on/cloth-simulation-try-on) để tạo Lens áo, bật Web và thêm Lens vào nhóm của app trong [Lens Scheduler](https://developers.snap.com/camera-kit/ar-content/lens-scheduler). Lens mẫu của Snap cũng dùng được để kiểm tra SDK. Tương tác nắm và kéo vạt áo cần được thiết lập trong chính Lens.
 3. Đặt `SNAP_CAMERA_KIT_API_TOKEN`, `SNAP_CAMERA_KIT_LENS_GROUP_ID` và `SNAP_CAMERA_KIT_LENS_ID` trong `.env`, rồi chạy lại script. Docker tự đóng gói SDK. `./run.sh` cần Node.js và npm khi bật Snap. Nếu chạy `uvicorn` trực tiếp, chạy `npm ci` và `npm run build` trong `web-sdk/` trước.
 4. Mở qua `localhost` hoặc HTTPS. Trong DevTools, `performance.getEntriesByName('shadow:snap-ar-startup')` cho biết thời gian mở phiên. Để đo độ trễ khi kéo áo, quay đồng thời bàn tay thật và màn hình bằng camera tốc độ cao, rồi đếm số khung hình giữa hai chuyển động.
 
 ### Trang chủ
-Mở **Trò chuyện với Shadow** để nói hoặc nhập câu hỏi. Khi bạn bật camera, app gửi một khung hình cùng mỗi câu hỏi. **Tủ đồ** và **Dạy kỹ năng** ở thanh điều hướng.
+Trang mặc định là **một camera chung**. Khi vào trang, SHADOW tự mở camera và Gemini Live nếu đã có cấu hình. Cho phép camera/micro khi trình duyệt hỏi rồi nói nhu cầu tự nhiên. Nếu trình duyệt chặn tự phát âm thanh, chạm **Bật âm thanh** một lần để mở khóa; các lần dừng thủ công vẫn được giữ cho tới khi bạn bật lại hoặc vào lại trang. **Tủ đồ** và **Bài đã học** là tài nguyên phụ ở thanh điều hướng; không cần chọn chế độ trước.
+
+Camera phủ toàn màn hình. Chữ chat hiện trực tiếp trên hình camera, không có nền khung hay bong bóng; chữ có bóng nhẹ để dễ đọc. Ô nhập nằm phía dưới cùng. Bấm **Mở rộng / Thu gọn** để xem lại đoạn chat hoặc dành thêm chỗ nhìn thao tác. Ô nhập tự nâng lên khi bàn phím mở.
+
+Khi có `GEMINI_API_KEY` (hoặc `GOOGLE_API_KEY`) trong `.env`, nút **Live** được chọn sẵn. **Gemini Live nghe → Google Decisions phân loại → camera thực hiện tác vụ → Gemini Live nói lại theo kết quả thật**. Bạn có thể hỏi tiếp, nhập câu hỏi trong cùng phiên hoặc nói chen để ngắt lời. Bấm micro lần nữa để dừng; mỗi phiên tối đa 5 phút. Nhóm nhu cầu và độ tin cậy hiện phía trên cuộc trò chuyện. Nút đổi camera trước/sau nằm ngay trên khung hình.
+
+Ví dụ dùng ngay trong camera:
+
+- **“Hướng dẫn tôi pha cà phê / đóng gói ly / gấp áo.”** Shadow hướng dẫn bằng giọng nói, xem hình ảnh nếu camera mở và ưu tiên bài đã học. Nếu có bài khớp, các bước hiện ngay trên camera; có thể bấm Trước/Tiếp để xem.
+- **“Tôi dạy bạn cách gấp áo để bạn học lại.”** Tự bắt đầu ghi khung hình và lời hướng dẫn từ cùng camera và micro Live. Có thể sửa tên bài ngay trên khung hình. Nói từng bước, rồi nói **“Tôi đã dạy xong toàn bộ bài, lưu lại”**, hoặc bấm **Lưu bài dạy**. Decisions phân biệt kết thúc cả bài với “xong bước một”. SHADOW biên soạn bằng API gốc, lưu thành bài mới với mã riêng, rồi thông báo kết quả. Không tự lưu bản compiler fallback/mock như bài đã học bằng AI.
+- **“Tôi muốn thử áo.”** Hiện các món trong tủ để chọn, rồi tự bật video mặc thử Xmax X2.1 ngay trong camera. Khi thiếu key hoặc dịch vụ báo lỗi, hiện đúng trạng thái; không giả lập kết quả.
+- **“Tư vấn tôi mặc gì đi làm.”** Dùng đồ và quy tắc thực trong tủ để tư vấn bằng giọng nói. Các chức năng phụ như thêm/xóa đồ, tạo ảnh và mặc thử ảnh vẫn có đường dẫn tài nguyên riêng.
+
+Nói **“Hủy bài / dừng thử áo”** để dừng tác vụ hiện tại, hoặc bấm **Dừng tác vụ**. Khi đang ghi bài, muốn chuyển việc cần lưu hoặc hủy bài trước. Đưa ứng dụng vào nền, tắt camera hoặc rời màn hình sẽ dừng tác vụ và hủy bản ghi chưa lưu. Tắt micro dừng ghi bài và thử áo; bài đang biên soạn có thể tiếp tục khi màn hình vẫn mở. Nếu từ chối quyền camera, vẫn có thể trò chuyện qua micro.
+
+### Tải trang nhanh
+
+`npm run build:app` trong `web-sdk/` gom ứng dụng thành một tệp JavaScript và một stylesheet. Backend nén các tài nguyên web bằng gzip; các API giọng nói và luồng NDJSON không đi qua lớp nén này. SDK thử đồ chỉ tải khi cần dùng. Service worker hiển thị bản đã cache ngay và cập nhật ở nền; không cache API, token, ảnh tủ đồ hay mã truy cập. Font tải ở nền để không giữ trang ở màn chờ.
+
+`./run.sh` tự build frontend khi có Node/npm; Docker luôn build. Chạy `uvicorn` trực tiếp vẫn hỗ trợ mã nguồn chưa build; nếu sửa source sau khi build, backend tự bỏ qua bundle cũ để tránh hiện sai phiên bản. Build lại để giữ tốc độ tải tốt nhất. Tunnel miễn phí vẫn có độ trễ và đường dẫn riêng; số đo trên máy và trên mạng có thể khác nhau.
+
+Camera tự mở cùng phiên Live, gửi tối đa khoảng 1 ảnh/giây. Bản ghi bài dạy giữ tối đa 48 khung hình và chỉ lời người dạy, không thu lời Shadow vào bài. Tắt **Live** để dùng chế độ từng câu hiện có; chế độ đó gửi một ảnh camera cùng mỗi câu hỏi. Không có key Gemini thì luồng trò chuyện và giọng nói cũ vẫn dùng được, nhưng không có điều phối tác vụ tự động qua Live.
+
+Backend giữ key lâu dài và cấp token Google dùng một lần, mở kết nối trong 60 giây, hết hạn sau 5 phút. Cấu hình model, công cụ phân loại và hướng dẫn được khóa trong token. Trình duyệt nối trực tiếp đến Google bằng token tạm; không cần chạy server demo Node riêng. Các endpoint mới dùng chung mã truy cập và giới hạn tần suất của SHADOW. Khi chuyển màn hình hoặc đưa trang vào nền, phiên Live giải phóng micro, âm thanh và kết nối.
 
 ### Backend cho app mobile
 
 - `POST /api/conversation` nhận `text`, tối đa 6 lượt `history` gồm `role` và `text`, và `image` tùy chọn dưới dạng data URL JPEG. Backend trả từng dòng NDJSON với `type` là `text`, `action`, `error` hoặc `done`. Phát nội dung ngay khi tích lũy đủ một câu.
 - `POST /api/intent` nhận `text` và trả `intent`, `suggestions` và `source`.
+- `GET /api/live/config` trả trạng thái Gemini Live, model và các nhóm nhu cầu. `POST /api/live/session` nhận tối đa 6 lượt `history` để tiếp tục ngữ cảnh trước đó và trả token tạm. `POST /api/live/classify` nhận `text` (tối đa 12.000 ký tự), `current_task` và `task_title` tùy chọn; gọi `gemini-decision-1` và trả `intent`, `label`, `confidence`, `probabilities`, `camera_command`, ngữ cảnh thật và các action. Khi có tác vụ ghi bài/thử áo, Decisions trả thêm lệnh tiếp tục/kết thúc/hủy/chuyển việc. Trình duyệt bổ sung `context.execution` sau khi thực hiện, trước khi trả tool response cho Live. Model Live dùng `gemini-3.8-live`.
 - `POST /api/voice/transcribe` nhận audio thô với MIME type tương ứng. `POST /api/voice/speech` nhận `text` và trả WAV. Web ưu tiên nhận và phát giọng bằng API trình duyệt để giảm thời gian chờ. Hypertek là đường dự phòng.
 - `POST /api/images/generate` nhận `prompt` và `size` tùy chọn. Tạo ảnh là tác vụ riêng và có thể mất khoảng một phút.
 - `POST /api/tryon/photo` nhận `person_image` và `item_ids`. `POST /api/tryon/live-session` trả thông tin phiên Vidu ngắn hạn để client nối video qua Agora.
@@ -209,11 +243,20 @@ Mac mini và laptop phải **cùng một mạng**. Hướng dẫn từng bước
 ## Kiểm tra (test)
 
 ```bash
-cd backend && ../.venv/bin/python -m pytest -q                         # 115 test, không cần mạng hay key
+cd backend && ../.venv/bin/python -m pytest -q                         # 303 test, không cần mạng hay key
 cd tryon-worker && TRYON_MOCK=1 ../.venv/bin/python -m pytest tests/test_server.py -q   # 25 test, chế độ giả lập
 ```
 
 Các test khác của `tryon-worker` (mask, pipeline) cần PyTorch — chạy trên Mac mini: `TRYON_MOCK=1 .venv/bin/python -m pytest tests -q`.
+
+Kiểm tra JavaScript cho Gemini Live từ thư mục gốc, không cần cài thư viện npm:
+
+```bash
+npm --prefix web run check
+npm --prefix web test     # 8 test: PCM, thứ tự Decisions trước câu trả lời, ngắt lời và hủy request cũ
+```
+
+Đã kiểm tra bằng Chrome với micro/camera giả lập và Google API thật: nhận yêu cầu pha cà phê, phân loại, phát tiếng Việt; gửi câu hỏi tiếp trong cùng Live; mở đúng màn hình tủ đồ; giải phóng micro/camera/âm thanh khi chuyển màn hình; mở lại Live với lịch sử đã có. Quyền và chất lượng thiết bị thật phụ thuộc trình duyệt người dùng.
 
 ---
 
@@ -259,6 +302,8 @@ shadow/
 
 Chi tiết: [NOTICE.md](NOTICE.md), [tryon-worker/README.md](tryon-worker/README.md#giấy-phép--chỉ-dùng-phi-thương-mại),
 [backend/wardrobe_seed/SOURCES.md](backend/wardrobe_seed/SOURCES.md).
+
+Danh mục UNIQLO nam/unisex: 252 mẫu tham chiếu từ các trang công khai, gồm áo khoác/lông vũ, áo len, áo thun, sơ mi, quần, HEATTECH và phụ kiện. [Nguồn và cách nhập lại](backend/wardrobe_seed_uniqlo/SOURCES.md). Đây là phần danh mục truy cập được, chưa xác minh đủ mọi sản phẩm/màu của UNIQLO.
 
 - **GlassKit** (MIT): nền tảng backend được fork; phần dùng lại / làm mới ghi trong NOTICE.md.
 - **DecartAI/tryon-examples** (MIT): tham khảo cách cấp token và cách viết câu lệnh thay đồ. Decart là dịch vụ trả phí.

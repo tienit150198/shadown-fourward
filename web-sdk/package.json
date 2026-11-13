@@ -2,15 +2,21 @@
   "name": "shadow-camera-kit",
   "private": true,
   "scripts": {
+    "build:xmax": "esbuild xmax.js --bundle --minify --format=esm --splitting --target=es2020 --outdir=../web/vendor/xmax && cp node_modules/@xmaxai/web-sdk/LICENSE ../web/vendor/xmax/LICENSE",
+    "build:app": "node build-app.mjs",
     "build": "esbuild camera-kit.js --bundle --minify --format=esm --target=es2020 --outfile=../web/vendor/snap-camera-kit.js"
   },
   "dependencies": {
-    "@snap/camera-kit": "1.23.1"
+    "@snap/camera-kit": "1.23.1",
+    "@xmaxai/web-sdk": "1.1.5"
   },
   "devDependencies": {
     "esbuild": "0.28.2"
   },
   "overrides": {
-    "@snap/camera-kit": { "uuid": "11.1.1" }
+    "@snap/camera-kit": {
+      "uuid": "11.1.1"
+    },
+    "fast-xml-parser": "5.12.0"
   }
 }

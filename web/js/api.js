@@ -113,10 +113,11 @@ const enc = encodeURIComponent;
 export const api = {
   health: () => request('GET', '/api/health', { timeoutMs: 6000 }),
   voiceConfig: (opts = {}) => request('GET', '/api/voice/config', { timeoutMs: 5000, ...opts }),
+  liveConfig: (opts = {}) => request('GET', '/api/live/config', { timeoutMs: 5000, ...opts }),
   generateImage: (body, opts = {}) => request('POST', '/api/images/generate', { body, timeoutMs: 280000, ...opts }),
   listSkills: () => request('GET', '/api/skills'),
   getSkill: (id) => request('GET', `/api/skills/${enc(id)}`),
-  saveSkill: (id, skill) => request('PUT', `/api/skills/${enc(id)}`, { body: skill, timeoutMs: 30000 }),
+  saveSkill: (id, skill, opts = {}) => request('PUT', `/api/skills/${enc(id)}`, { body: skill, timeoutMs: 30000, ...opts }),
   deleteSkill: (id) => request('DELETE', `/api/skills/${enc(id)}`),
   /** body: {title, teacher_name, transcript:[{t0,t1,text}], frames:[{t,image}], notes} → {skill, draft_id} */
   compile: (body, opts = {}) => request('POST', '/api/teach/compile', { body, timeoutMs: 180000, ...opts }),

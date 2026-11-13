@@ -33,16 +33,18 @@ export function mount(el, { query = new URLSearchParams() } = {}) {
   const scope = createScope();
   let items = null; // null = loading
   let rulesCount = null;
+  let searchText = '', visibleLimit = 36;
   let tab = (() => { try { return sessionStorage.getItem(TAB_KEY) || 'all'; } catch { return 'all'; } })();
 
   const itemsCount = h('span', { class: 'wd-hub-count' }, '…');
   const rulesCountEl = h('span', { class: 'wd-hub-count' }, '…');
   const tabs = h('div', { class: 'wd-tabs', role: 'tablist', 'aria-label': 'Loại đồ' });
   const grid = h('div', { class: 'wd-grid' });
+  const search = h('input', { type: 'search', class: 'input', placeholder: 'Tìm trong tủ đồ SHADOW: áo len, UNIQLO…', 'aria-label': 'Tìm trong tủ đồ SHADOW', onInput: event => { searchText = event.target.value; visibleLimit = 36; render(); } });
   const gridSection = h('section', { class: 'wd-closet', id: 'wd-closet' },
     h('div', { class: 'section-head wd-section-head' }, h('h2', null, 'Tủ đồ của bạn'),
       h('button', { class: 'btn btn-ghost btn-sm wd-add-inline', type: 'button', onClick: () => addItemFlow() }, icon('plus', 18), 'Thêm đồ')),
-    tabs, grid);
+    search, tabs, grid);
 
   el.append(
     h('header', { class: 'app-bar' },
@@ -68,6 +70,7 @@ export function mount(el, { query = new URLSearchParams() } = {}) {
 
   function setTab(id) {
     tab = id;
+    visibleLimit = 36;
     try { sessionStorage.setItem(TAB_KEY, id); } catch { /* ignore */ }
     render();
   }
@@ -101,14 +104,18 @@ export function mount(el, { query = new URLSearchParams() } = {}) {
           seedButton('btn btn-ghost'))));
       return;
     }
-    const shown = tab === 'all' ? list : list.filter((it) => it.category === tab);
+    const fold = value => String(value).normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').toLowerCase();
+    const words = fold(searchText).split(/\s+/).filter(Boolean);
+    const shown = list.filter(it => (tab === 'all' || it.category === tab) && words.every(word => fold(`${it.name} ${it.brand || ''} ${(it.seasons || []).join(' ')} ${(it.colors || []).join(' ')}`).includes(word)));
     if (!shown.length) {
       grid.replaceChildren(h('div', { class: 'wd-empty-tab' },
-        h('p', null, `Chưa có ${categoryLabel(tab).toLowerCase()} nào.`),
+        h('p', null, searchText ? 'Không có món nào khớp từ khóa trong tủ đồ SHADOW.' : `Chưa có ${categoryLabel(tab).toLowerCase()} nào.`),
         h('button', { class: 'btn btn-ghost btn-sm', type: 'button', onClick: () => addItemFlow({ category: tab }) }, icon('plus', 18), `Thêm ${categoryLabel(tab).toLowerCase()}`)));
       return;
     }
-    grid.replaceChildren(...shown.map(card), h('div', { class: 'wd-grid-foot' }, seedButton('btn btn-ghost btn-sm', 'Nạp thêm tủ đồ mẫu')));
+    grid.replaceChildren(...shown.slice(0, visibleLimit).map(card), h('div', { class: 'wd-grid-foot' },
+      shown.length > visibleLimit ? h('button', { type: 'button', class: 'btn btn-ghost btn-sm', onClick: () => { visibleLimit += 36; render(); } }, `Xem thêm (${Math.min(visibleLimit, shown.length)}/${shown.length})`) : null,
+      seedButton('btn btn-ghost btn-sm', 'Nạp thêm tủ đồ mẫu')));
   }
 
   function card(it) {

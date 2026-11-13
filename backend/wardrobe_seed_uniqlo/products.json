@@ -1,0 +1,2528 @@
+{
+  "source": "UNIQLO VN public men's category listings (including unisex)",
+  "captured_at": "2026-11-13",
+  "complete": false,
+  "coverage_note": "Publicly visible products; not a verified exhaustive inventory or all color variants.",
+  "products": [
+    {
+      "id": "uq-486116-000-00-69",
+      "name": "Áo Khoác Giả Lông Cừu Cản Gió Kéo Khóa",
+      "category": "outerwear",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E486116-000/00?colorDisplayCode=69",
+      "product_code": "486116",
+      "color_code": "69",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/486116/item/goods_69_486116_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-465203-000-00-57",
+      "name": "DRY-EX Áo Hoodie Chống Tia UV Kéo Khóa",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E465203-000/00?colorDisplayCode=57",
+      "product_code": "465203",
+      "color_code": "57",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/465203/item/goods_57_465203_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-487324-000-00-09",
+      "name": "Áo Khoác Hai Mặt",
+      "category": "outerwear",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E487324-000/00?colorDisplayCode=09",
+      "product_code": "487324",
+      "color_code": "09",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/487324/item/goods_09_487324_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-465203-000-01-01",
+      "name": "DRY-EX Áo Hoodie Chống Tia UV Kéo Khóa",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E465203-000/01?colorDisplayCode=01",
+      "product_code": "465203",
+      "color_code": "01",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/465203/item/goods_01_465203_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-470118-000-00-69",
+      "name": "PUFFTECH Áo Parka Chần Bông",
+      "category": "outerwear",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E470118-000/00?colorDisplayCode=69",
+      "product_code": "470118",
+      "color_code": "69",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/470118/item/goods_69_470118_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-470118-001-00-59",
+      "name": "PUFFTECH Áo Khoác Chần Bông | Có Mũ",
+      "category": "outerwear",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E470118-001/00?colorDisplayCode=59",
+      "product_code": "470118",
+      "color_code": "59",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/470118/item/goods_59_470118_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-484610-000-00-38",
+      "name": "Áo Khoác Harrington",
+      "category": "outerwear",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E484610-000/00?colorDisplayCode=38",
+      "product_code": "484610",
+      "color_code": "38",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/484610/item/goods_38_484610_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-489492-000-00-19",
+      "name": "Áo Khoác Kiểu Sơ Mi Chần Bông",
+      "category": "outerwear",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E489492-000/00?colorDisplayCode=19",
+      "product_code": "489492",
+      "color_code": "19",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/489492/item/goods_19_489492_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-488726-000-00-69",
+      "name": "Áo Khoác Denim Trucker",
+      "category": "outerwear",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E488726-000/00?colorDisplayCode=69",
+      "product_code": "488726",
+      "color_code": "69",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/488726/item/goods_69_488726_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-488828-000-00-09",
+      "name": "Áo Khoác Vải Cotton Canvas",
+      "category": "outerwear",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E488828-000/00?colorDisplayCode=09",
+      "product_code": "488828",
+      "color_code": "09",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/488828/item/goods_09_488828_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-487688-000-00-31",
+      "name": "Áo Khoác Vải Cotton Canvas",
+      "category": "outerwear",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E487688-000/00?colorDisplayCode=31",
+      "product_code": "487688",
+      "color_code": "31",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/487688/item/goods_31_487688_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-486171-000-00-19",
+      "name": "PUFFTECH Áo Khoác Chần Bông",
+      "category": "outerwear",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E486171-000/00?colorDisplayCode=19",
+      "product_code": "486171",
+      "color_code": "19",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/486171/item/goods_19_486171_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-486818-000-00-07",
+      "name": "Áo Khoác Vải Len Pha Dáng Ngắn",
+      "category": "outerwear",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E486818-000/00?colorDisplayCode=07",
+      "product_code": "486818",
+      "color_code": "07",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/486818/item/goods_07_486818_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-488747-000-00-69",
+      "name": "Áo Khoác Blouson Giả Lông Cừu Kéo Khóa",
+      "category": "outerwear",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E488747-000/00?colorDisplayCode=69",
+      "product_code": "488747",
+      "color_code": "69",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/488747/item/goods_69_488747_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-489487-000-00-16",
+      "name": "Áo Khoác Blouson Giả Lông Cừu Kéo Khóa",
+      "category": "outerwear",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E489487-000/00?colorDisplayCode=16",
+      "product_code": "489487",
+      "color_code": "16",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/489487/item/goods_16_489487_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-488773-000-00-09",
+      "name": "Áo Parka Xẻ Tà",
+      "category": "outerwear",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E488773-000/00?colorDisplayCode=09",
+      "product_code": "488773",
+      "color_code": "09",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/488773/item/goods_09_488773_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-469292-000-00-69",
+      "name": "Áo Parka Chống Tia UV Bỏ Túi",
+      "category": "outerwear",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E469292-000/00?colorDisplayCode=69",
+      "product_code": "469292",
+      "color_code": "69",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/469292/item/goods_69_469292_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-483975-000-00-03",
+      "name": "DRY-EX Áo Hoodie Chống Tia UV Kéo Khóa",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E483975-000/00?colorDisplayCode=03",
+      "product_code": "483975",
+      "color_code": "03",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/483975/item/goods_03_483975_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-480045-000-00-09",
+      "name": "Hybrid Down Áo Parka Lông Vũ",
+      "category": "outerwear",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E480045-000/00?colorDisplayCode=09",
+      "product_code": "480045",
+      "color_code": "09",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/480045/item/goods_09_480045_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-486167-000-00-55",
+      "name": "Áo Khoác Blouson Cản Gió Cổ Đứng",
+      "category": "outerwear",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E486167-000/00?colorDisplayCode=55",
+      "product_code": "486167",
+      "color_code": "55",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/486167/item/goods_55_486167_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-486821-000-00-07",
+      "name": "Áo Khoác Blouson Dáng Ngắn",
+      "category": "outerwear",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E486821-000/00?colorDisplayCode=07",
+      "product_code": "486821",
+      "color_code": "07",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/486821/item/goods_07_486821_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-484249-000-00-67",
+      "name": "Áo Khoác Blouson Kéo Khóa",
+      "category": "outerwear",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E484249-000/00?colorDisplayCode=67",
+      "product_code": "484249",
+      "color_code": "67",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/484249/item/goods_67_484249_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-491096-000-00-34",
+      "name": "Áo Khoác Blouson Kéo Khóa",
+      "category": "outerwear",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E491096-000/00?colorDisplayCode=34",
+      "product_code": "491096",
+      "color_code": "34",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/491096/item/goods_34_491096_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-491206-000-00-34",
+      "name": "Áo Khoác Blouson Dáng Ngắn | In Họa Tiết",
+      "category": "outerwear",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E491206-000/00?colorDisplayCode=34",
+      "product_code": "491206",
+      "color_code": "34",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/491206/item/goods_34_491206_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-486986-000-00-09",
+      "name": "Áo Blouson Vải Gân",
+      "category": "outerwear",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E486986-000/00?colorDisplayCode=09",
+      "product_code": "486986",
+      "color_code": "09",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/486986/item/goods_09_486986_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-488599-000-00-09",
+      "name": "Áo Khoác Blouson Khóa Kéo",
+      "category": "outerwear",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E488599-000/00?colorDisplayCode=09",
+      "product_code": "488599",
+      "color_code": "09",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/488599/item/goods_09_488599_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-487689-000-00-09",
+      "name": "Áo Khoác Blouson Chần Bông Dáng Ngắn",
+      "category": "outerwear",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E487689-000/00?colorDisplayCode=09",
+      "product_code": "487689",
+      "color_code": "09",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/487689/item/goods_09_487689_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-486176-000-00-38",
+      "name": "Seamless Down Áo Parka Lông Vũ",
+      "category": "outerwear",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E486176-000/00?colorDisplayCode=38",
+      "product_code": "486176",
+      "color_code": "38",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/486176/item/goods_38_486176_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-478280-000-00-07",
+      "name": "Seamless Down Áo Khoác Lông Vũ Dáng Dài",
+      "category": "outerwear",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E478280-000/00?colorDisplayCode=07",
+      "product_code": "478280",
+      "color_code": "07",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/478280/item/goods_07_478280_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-488774-000-00-36",
+      "name": "Áo Khoác Cản Gió Giả Lông Cừu",
+      "category": "outerwear",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E488774-000/00?colorDisplayCode=36",
+      "product_code": "488774",
+      "color_code": "36",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/488774/item/goods_36_488774_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-487511-000-00-54",
+      "name": "DRY-EX Áo Hoodie Chống Tia UV Kéo Khóa",
+      "category": "outerwear",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E487511-000/00?colorDisplayCode=54",
+      "product_code": "487511",
+      "color_code": "54",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/487511/item/goods_54_487511_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-487328-000-00-07",
+      "name": "Áo Choàng Balmacaan",
+      "category": "outerwear",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E487328-000/00?colorDisplayCode=07",
+      "product_code": "487328",
+      "color_code": "07",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/487328/item/goods_07_487328_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-450195-000-00-08",
+      "name": "Áo Khoác Giả Lông Cừu Kéo Khóa",
+      "category": "outerwear",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E450195-000/00?colorDisplayCode=08",
+      "product_code": "450195",
+      "color_code": "08",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/450195/item/goods_08_450195_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-487487-000-00-09",
+      "name": "Áo Len Vải Merino Pha",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E487487-000/00?colorDisplayCode=09",
+      "product_code": "487487",
+      "color_code": "09",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/487487/item/goods_09_487487_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-450535-000-00-57",
+      "name": "Áo Len Merino Cổ Tròn",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E450535-000/00?colorDisplayCode=57",
+      "product_code": "450535",
+      "color_code": "57",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/450535/item/goods_57_450535_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-450536-000-00-03",
+      "name": "Áo Len Extra Fine Merino Cổ V Dài Tay",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E450536-000/00?colorDisplayCode=03",
+      "product_code": "450536",
+      "color_code": "03",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/450536/item/goods_03_450536_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-491365-000-00-07",
+      "name": "Áo Len Dệt 3D Cổ Lọ",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E491365-000/00?colorDisplayCode=07",
+      "product_code": "491365",
+      "color_code": "07",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/491365/item/goods_07_491365_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-491363-000-00-09",
+      "name": "Áo Len Dệt 3D Cổ Ba Phân",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E491363-000/00?colorDisplayCode=09",
+      "product_code": "491363",
+      "color_code": "09",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/491363/item/goods_09_491363_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-491360-000-00-09",
+      "name": "Áo Polo Len Dệt 3D",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E491360-000/00?colorDisplayCode=09",
+      "product_code": "491360",
+      "color_code": "09",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/491360/item/goods_09_491360_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-486080-000-00-65",
+      "name": "Áo Len Sợi Souffle",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E486080-000/00?colorDisplayCode=65",
+      "product_code": "486080",
+      "color_code": "65",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/486080/item/goods_65_486080_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-492577-000-00-09",
+      "name": "Áo Len Dệt 3D Cổ V | Kẻ Sọc",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E492577-000/00?colorDisplayCode=09",
+      "product_code": "492577",
+      "color_code": "09",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/492577/item/goods_09_492577_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-491361-000-00-09",
+      "name": "Áo Len Dệt 3D Cổ V",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E491361-000/00?colorDisplayCode=09",
+      "product_code": "491361",
+      "color_code": "09",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/491361/item/goods_09_491361_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-491362-000-00-09",
+      "name": "Áo Len Dệt 3D Cổ Thuyền",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E491362-000/00?colorDisplayCode=09",
+      "product_code": "491362",
+      "color_code": "09",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/491362/item/goods_09_491362_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-453754-000-01-19",
+      "name": "Áo Len Milano Vải Gân Có Thể Giặt Máy",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E453754-000/01?colorDisplayCode=19",
+      "product_code": "453754",
+      "color_code": "19",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/453754/item/goods_19_453754_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-481004-000-00-38",
+      "name": "Áo Thun Milano Vải Gân Có Thể Giặt Máy",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E481004-000/00?colorDisplayCode=38",
+      "product_code": "481004",
+      "color_code": "38",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/481004/item/goods_38_481004_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-481004-000-01-61",
+      "name": "Áo Thun Milano Vải Gân Có Thể Giặt Máy",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E481004-000/01?colorDisplayCode=61",
+      "product_code": "481004",
+      "color_code": "61",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/481004/item/goods_61_481004_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-486086-000-00-04",
+      "name": "Áo Len Lông Cừu Cổ V",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E486086-000/00?colorDisplayCode=04",
+      "product_code": "486086",
+      "color_code": "04",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/486086/item/goods_04_486086_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-486087-000-00-09",
+      "name": "Áo Len Lông Cừu",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E486087-000/00?colorDisplayCode=09",
+      "product_code": "486087",
+      "color_code": "09",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/486087/item/goods_09_486087_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-486071-000-00-30",
+      "name": "Áo Len Lông Cừu",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E486071-000/00?colorDisplayCode=30",
+      "product_code": "486071",
+      "color_code": "30",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/486071/item/goods_30_486071_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-488760-000-00-09",
+      "name": "Áo Cardigan Lambswool Cổ V",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E488760-000/00?colorDisplayCode=09",
+      "product_code": "488760",
+      "color_code": "09",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/488760/item/goods_09_488760_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-450543-000-00-01",
+      "name": "Áo Len Cashmere Dài Tay",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E450543-000/00?colorDisplayCode=01",
+      "product_code": "450543",
+      "color_code": "01",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/450543/item/goods_01_450543_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-450544-000-00-03",
+      "name": "Áo Len Cashmere Cổ Lọ",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E450544-000/00?colorDisplayCode=03",
+      "product_code": "450544",
+      "color_code": "03",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/450544/item/goods_03_450544_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-488758-000-00-04",
+      "name": "Áo Len Vải Hai Da",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E488758-000/00?colorDisplayCode=04",
+      "product_code": "488758",
+      "color_code": "04",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/488758/item/goods_04_488758_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-487943-000-00-30",
+      "name": "Áo Len Dệt Bản Dày Vặn Thừng",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E487943-000/00?colorDisplayCode=30",
+      "product_code": "487943",
+      "color_code": "30",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/487943/item/goods_30_487943_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-476997-000-00-30",
+      "name": "Áo Polo Dệt Kim Có Thể Giặt Máy",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E476997-000/00?colorDisplayCode=30",
+      "product_code": "476997",
+      "color_code": "30",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/476997/item/goods_30_476997_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-485684-000-00-35",
+      "name": "Washable Knitted Shirt",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/en/products/E485684-000/00?colorDisplayCode=35",
+      "product_code": "485684",
+      "color_code": "35",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/485684/item/goods_35_485684_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-479791-000-00-01",
+      "name": "Áo Giả Lông Cừu Đan Len Mềm Cổ Tròn",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E479791-000/00?colorDisplayCode=01",
+      "product_code": "479791",
+      "color_code": "01",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/479791/item/goods_01_479791_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-486082-000-00-09",
+      "name": "Áo Len Cổ Ba Phân",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E486082-000/00?colorDisplayCode=09",
+      "product_code": "486082",
+      "color_code": "09",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/486082/item/goods_09_486082_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-482328-000-00-69",
+      "name": "Áo Polo Dệt Kim Cổ Mở Có Thể Giặt Máy",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E482328-000/00?colorDisplayCode=69",
+      "product_code": "482328",
+      "color_code": "69",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/482328/item/goods_69_482328_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-485612-000-00-02",
+      "name": "Áo Polo Dệt Kim Có Thể Giặt Máy | Kẻ Sọc",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E485612-000/00?colorDisplayCode=02",
+      "product_code": "485612",
+      "color_code": "02",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/485612/item/goods_02_485612_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-488839-000-00-08",
+      "name": "Áo Cardigan Len Sợi Souffle Nhẹ Dáng Relax",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E488839-000/00?colorDisplayCode=08",
+      "product_code": "488839",
+      "color_code": "08",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/488839/item/goods_08_488839_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-487005-000-00-09",
+      "name": "Áo Cardigan Vải Cotton Mềm Kéo Khóa",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E487005-000/00?colorDisplayCode=09",
+      "product_code": "487005",
+      "color_code": "09",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/487005/item/goods_09_487005_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-475053-000-00-34",
+      "name": "Áo Len Vải Cotton Mềm",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E475053-000/00?colorDisplayCode=34",
+      "product_code": "475053",
+      "color_code": "34",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/475053/item/goods_34_475053_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-482325-000-00-01",
+      "name": "Áo Len Milano Polo Vải Gân Có Thể Giặt Máy",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E482325-000/00?colorDisplayCode=01",
+      "product_code": "482325",
+      "color_code": "01",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/482325/item/goods_01_482325_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-490457-000-00-07",
+      "name": "Áo Len Cardigan Cổ Tròn",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E490457-000/00?colorDisplayCode=07",
+      "product_code": "490457",
+      "color_code": "07",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/490457/item/goods_07_490457_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-490526-000-00-01",
+      "name": "Áo Len Dệt Kim",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E490526-000/00?colorDisplayCode=01",
+      "product_code": "490526",
+      "color_code": "01",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/490526/item/goods_01_490526_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-491683-000-00-10",
+      "name": "Áo Len Cổ V Dáng Relax",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E491683-000/00?colorDisplayCode=10",
+      "product_code": "491683",
+      "color_code": "10",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/491683/item/goods_10_491683_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-465185-000-00-00",
+      "name": "AIRism Cotton Áo Thun Dáng Rộng | Tay Lỡ",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E465185-000/00?colorDisplayCode=00",
+      "product_code": "465185",
+      "color_code": "00",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/465185/item/goods_00_465185_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-465193-000-00-30",
+      "name": "AIRism Cotton Áo Thun Dài Tay",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E465193-000/00?colorDisplayCode=30",
+      "product_code": "465193",
+      "color_code": "30",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/465193/item/goods_30_465193_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-486103-000-00-76",
+      "name": "AIRism Cotton Áo Thun Dài Tay",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E486103-000/00?colorDisplayCode=76",
+      "product_code": "486103",
+      "color_code": "76",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/486103/item/goods_76_486103_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-422992-000-01-00",
+      "name": "Áo Thun Cổ Tròn",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E422992-000/01?colorDisplayCode=00",
+      "product_code": "422992",
+      "color_code": "00",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/422992/item/goods_00_422992_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-474244-000-00-09",
+      "name": "AIRism Cotton Áo Thun",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E474244-000/00?colorDisplayCode=09",
+      "product_code": "474244",
+      "color_code": "09",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/474244/item/goods_09_474244_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-455365-000-00-31",
+      "name": "SUPIMA COTTON Áo Thun",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E455365-000/00?colorDisplayCode=31",
+      "product_code": "455365",
+      "color_code": "31",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/455365/item/goods_31_455365_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-487962-000-00-08",
+      "name": "Áo Thun Dáng Boxy Ngắn",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E487962-000/00?colorDisplayCode=08",
+      "product_code": "487962",
+      "color_code": "08",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/487962/item/goods_08_487962_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-465187-000-00-16",
+      "name": "Áo Thun Vải Dry Nhiều Màu",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E465187-000/00?colorDisplayCode=16",
+      "product_code": "465187",
+      "color_code": "16",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/465187/item/goods_16_465187_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-465187-000-01-58",
+      "name": "Áo Thun Vải Dry Nhiều Màu",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E465187-000/01?colorDisplayCode=58",
+      "product_code": "465187",
+      "color_code": "58",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/465187/item/goods_58_465187_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-483924-000-00-08",
+      "name": "Áo Thun Vải Dry Waffle Cổ Henley",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E483924-000/00?colorDisplayCode=08",
+      "product_code": "483924",
+      "color_code": "08",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/483924/item/goods_08_483924_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-488751-000-00-01",
+      "name": "Áo Polo Rugger",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E488751-000/00?colorDisplayCode=01",
+      "product_code": "488751",
+      "color_code": "01",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/488751/item/goods_01_488751_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-482766-000-00-08",
+      "name": "Áo Thun Vải Waffle Cổ Henley",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E482766-000/00?colorDisplayCode=08",
+      "product_code": "482766",
+      "color_code": "08",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/482766/item/goods_08_482766_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-482299-000-00-08",
+      "name": "DRY-EX Áo Thun",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E482299-000/00?colorDisplayCode=08",
+      "product_code": "482299",
+      "color_code": "08",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/482299/item/goods_08_482299_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-483970-000-00-68",
+      "name": "DRY-EX Áo Thun",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E483970-000/00?colorDisplayCode=68",
+      "product_code": "483970",
+      "color_code": "68",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/483970/item/goods_68_483970_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-465189-000-00-09",
+      "name": "Áo Ba Lỗ Vải Dry Gân Nhiều Màu",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E465189-000/00?colorDisplayCode=09",
+      "product_code": "465189",
+      "color_code": "09",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/465189/item/goods_09_465189_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-464308-000-00-09",
+      "name": "AIRism Áo Thun Vải Lưới Khử Mùi| Cổ V",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E464308-000/00?colorDisplayCode=09",
+      "product_code": "464308",
+      "color_code": "09",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/464308/item/goods_09_464308_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-461325-000-00-10",
+      "name": "PEACE FOR ALL Áo Thun | Haruka Ayase",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E461325-000/00?colorDisplayCode=10",
+      "product_code": "461325",
+      "color_code": "10",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/461325/item/goods_10_461325_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-487929-000-00-30",
+      "name": "Áo Giả Lông Cừu Chui Đầu Cài Nút",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E487929-000/00?colorDisplayCode=30",
+      "product_code": "487929",
+      "color_code": "30",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/487929/item/goods_30_487929_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-481040-000-00-03",
+      "name": "Áo Nỉ Dáng Rộng",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E481040-000/00?colorDisplayCode=03",
+      "product_code": "481040",
+      "color_code": "03",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/481040/item/goods_03_481040_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-486117-000-00-01",
+      "name": "Áo Nỉ",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E486117-000/00?colorDisplayCode=01",
+      "product_code": "486117",
+      "color_code": "01",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/486117/item/goods_01_486117_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-486296-000-00-09",
+      "name": "KAWS UNIVERSE Áo Nỉ",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E486296-000/00?colorDisplayCode=09",
+      "product_code": "486296",
+      "color_code": "09",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/486296/item/goods_09_486296_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-493506-000-00-02",
+      "name": "KAWS UNIVERSE Áo Nỉ",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E493506-000/00?colorDisplayCode=02",
+      "product_code": "493506",
+      "color_code": "02",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/493506/item/goods_02_493506_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-493507-000-00-07",
+      "name": "KAWS Áo Nỉ",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E493507-000/00?colorDisplayCode=07",
+      "product_code": "493507",
+      "color_code": "07",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/493507/item/goods_07_493507_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-485735-000-00-03",
+      "name": "Áo Hoodie Nỉ Dáng Rộng Kéo Khóa",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E485735-000/00?colorDisplayCode=03",
+      "product_code": "485735",
+      "color_code": "03",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/485735/item/goods_03_485735_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-471808-000-00-31",
+      "name": "Áo Hoodie Nỉ Chui Đầu Dáng Rộng",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E471808-000/00?colorDisplayCode=31",
+      "product_code": "471808",
+      "color_code": "31",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/471808/item/goods_31_471808_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-486119-000-00-01",
+      "name": "Áo Hoodie Nỉ Kéo Khóa",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E486119-000/00?colorDisplayCode=01",
+      "product_code": "486119",
+      "color_code": "01",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/486119/item/goods_01_486119_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-491119-000-00-03",
+      "name": "Áo Nỉ Chui Đầu Cổ Kéo Khóa",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E491119-000/00?colorDisplayCode=03",
+      "product_code": "491119",
+      "color_code": "03",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/491119/item/goods_03_491119_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-471809-000-00-03",
+      "name": "Sweat Wide Pants",
+      "category": "bottom",
+      "product_url": "https://www.uniqlo.com/vn/en/products/E471809-000/00?colorDisplayCode=03",
+      "product_code": "471809",
+      "color_code": "03",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/471809/item/goods_03_471809_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-486120-000-00-04",
+      "name": "Quần Nỉ",
+      "category": "bottom",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E486120-000/00?colorDisplayCode=04",
+      "product_code": "486120",
+      "color_code": "04",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/486120/item/goods_04_486120_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-484855-000-00-59",
+      "name": "Quần Nỉ Ống Suông",
+      "category": "bottom",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E484855-000/00?colorDisplayCode=59",
+      "product_code": "484855",
+      "color_code": "59",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/484855/item/goods_59_484855_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-484875-000-00-34",
+      "name": "Barrel Pants",
+      "category": "bottom",
+      "product_url": "https://www.uniqlo.com/vn/en/products/E484875-000/00?colorDisplayCode=34",
+      "product_code": "484875",
+      "color_code": "34",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/484875/item/goods_34_484875_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-488739-000-00-32",
+      "name": "Quần Easy Co Giãn | Vải Jersey",
+      "category": "bottom",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E488739-000/00?colorDisplayCode=32",
+      "product_code": "488739",
+      "color_code": "32",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/488739/item/goods_32_488739_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-475344-000-01-09",
+      "name": "Jersey Barrel Leg Pants",
+      "category": "bottom",
+      "product_url": "https://www.uniqlo.com/vn/en/products/E475344-000/01?colorDisplayCode=09",
+      "product_code": "475344",
+      "color_code": "09",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/475344/item/goods_09_475344_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-489191-000-00-57",
+      "name": "Brushed Jersey Barrel Leg Pants",
+      "category": "bottom",
+      "product_url": "https://www.uniqlo.com/vn/en/products/E489191-000/00?colorDisplayCode=57",
+      "product_code": "489191",
+      "color_code": "57",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/489191/item/goods_57_489191_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-480740-000-00-68",
+      "name": "Baggy Barrel Leg Jeans",
+      "category": "bottom",
+      "product_url": "https://www.uniqlo.com/vn/en/products/E480740-000/00?colorDisplayCode=68",
+      "product_code": "480740",
+      "color_code": "68",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/480740/item/goods_68_480740_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-487207-000-00-09",
+      "name": "Barrel Jeans | Corduroy",
+      "category": "bottom",
+      "product_url": "https://www.uniqlo.com/vn/en/products/E487207-000/00?colorDisplayCode=09",
+      "product_code": "487207",
+      "color_code": "09",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/487207/item/goods_09_487207_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-488743-000-00-69",
+      "name": "Barrel Jeans",
+      "category": "bottom",
+      "product_url": "https://www.uniqlo.com/vn/en/products/E488743-000/00?colorDisplayCode=69",
+      "product_code": "488743",
+      "color_code": "69",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/488743/item/goods_69_488743_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-488630-000-00-66",
+      "name": "EZY Barrel Jeans",
+      "category": "bottom",
+      "product_url": "https://www.uniqlo.com/vn/en/products/E488630-000/00?colorDisplayCode=66",
+      "product_code": "488630",
+      "color_code": "66",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/488630/item/goods_66_488630_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-455476-000-00-67",
+      "name": "EZY Ultra Stretch Jeans",
+      "category": "bottom",
+      "product_url": "https://www.uniqlo.com/vn/en/products/E455476-000/00?colorDisplayCode=67",
+      "product_code": "455476",
+      "color_code": "67",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/455476/item/goods_67_455476_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-482856-000-00-64",
+      "name": "Slim Straight Jeans",
+      "category": "bottom",
+      "product_url": "https://www.uniqlo.com/vn/en/products/E482856-000/00?colorDisplayCode=64",
+      "product_code": "482856",
+      "color_code": "64",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/482856/item/goods_64_482856_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-488684-000-00-69",
+      "name": "Straight Jeans",
+      "category": "bottom",
+      "product_url": "https://www.uniqlo.com/vn/en/products/E488684-000/00?colorDisplayCode=69",
+      "product_code": "488684",
+      "color_code": "69",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/488684/item/goods_69_488684_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-487206-000-00-67",
+      "name": "Straight Jeans",
+      "category": "bottom",
+      "product_url": "https://www.uniqlo.com/vn/en/products/E487206-000/00?colorDisplayCode=67",
+      "product_code": "487206",
+      "color_code": "67",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/487206/item/goods_67_487206_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-489367-000-00-65",
+      "name": "Straight Jeans",
+      "category": "bottom",
+      "product_url": "https://www.uniqlo.com/vn/en/products/E489367-000/00?colorDisplayCode=65",
+      "product_code": "489367",
+      "color_code": "65",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/489367/item/goods_65_489367_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-479816-000-00-63",
+      "name": "Straight Jeans",
+      "category": "bottom",
+      "product_url": "https://www.uniqlo.com/vn/en/products/E479816-000/00?colorDisplayCode=63",
+      "product_code": "479816",
+      "color_code": "63",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/479816/item/goods_63_479816_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-487742-000-00-68",
+      "name": "Straight Jeans",
+      "category": "bottom",
+      "product_url": "https://www.uniqlo.com/vn/en/products/E487742-000/00?colorDisplayCode=68",
+      "product_code": "487742",
+      "color_code": "68",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/487742/item/goods_68_487742_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-482868-000-00-09",
+      "name": "Baggy Jeans",
+      "category": "bottom",
+      "product_url": "https://www.uniqlo.com/vn/en/products/E482868-000/00?colorDisplayCode=09",
+      "product_code": "482868",
+      "color_code": "09",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/482868/item/goods_09_482868_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-484209-000-00-63",
+      "name": "Jorts",
+      "category": "bottom",
+      "product_url": "https://www.uniqlo.com/vn/en/products/E484209-000/00?colorDisplayCode=63",
+      "product_code": "484209",
+      "color_code": "63",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/484209/item/goods_63_484209_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-488694-000-00-08",
+      "name": "Denim Culottes",
+      "category": "bottom",
+      "product_url": "https://www.uniqlo.com/vn/en/products/E488694-000/00?colorDisplayCode=08",
+      "product_code": "488694",
+      "color_code": "08",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/488694/item/goods_08_488694_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-487220-000-00-38",
+      "name": "Pleated Wide Pants",
+      "category": "bottom",
+      "product_url": "https://www.uniqlo.com/vn/en/products/E487220-000/00?colorDisplayCode=38",
+      "product_code": "487220",
+      "color_code": "38",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/487220/item/goods_38_487220_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-487257-000-00-08",
+      "name": "Brushed Jersey Wide Pants",
+      "category": "bottom",
+      "product_url": "https://www.uniqlo.com/vn/en/products/E487257-000/00?colorDisplayCode=08",
+      "product_code": "487257",
+      "color_code": "08",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/487257/item/goods_08_487257_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-488866-000-00-07",
+      "name": "Smart Easy Pants | Striped",
+      "category": "bottom",
+      "product_url": "https://www.uniqlo.com/vn/en/products/E488866-000/00?colorDisplayCode=07",
+      "product_code": "488866",
+      "color_code": "07",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/488866/item/goods_07_488866_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-487959-000-00-39",
+      "name": "Smart Easy Pants",
+      "category": "bottom",
+      "product_url": "https://www.uniqlo.com/vn/en/products/E487959-000/00?colorDisplayCode=39",
+      "product_code": "487959",
+      "color_code": "39",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/487959/item/goods_39_487959_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-455533-000-00-38",
+      "name": "Stretch Slim Fit Shorts",
+      "category": "bottom",
+      "product_url": "https://www.uniqlo.com/vn/en/products/E455533-000/00?colorDisplayCode=38",
+      "product_code": "455533",
+      "color_code": "38",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/455533/item/goods_38_455533_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-455533-000-01-05",
+      "name": "Stretch Slim Fit Shorts",
+      "category": "bottom",
+      "product_url": "https://www.uniqlo.com/vn/en/products/E455533-000/01?colorDisplayCode=05",
+      "product_code": "455533",
+      "color_code": "05",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/455533/item/goods_05_455533_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-482952-000-00-32",
+      "name": "AirSense Shorts",
+      "category": "bottom",
+      "product_url": "https://www.uniqlo.com/vn/en/products/E482952-000/00?colorDisplayCode=32",
+      "product_code": "482952",
+      "color_code": "32",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/482952/item/goods_32_482952_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-482947-000-00-09",
+      "name": "Stretch Slim Fit Shorts | Printed",
+      "category": "bottom",
+      "product_url": "https://www.uniqlo.com/vn/en/products/E482947-000/00?colorDisplayCode=09",
+      "product_code": "482947",
+      "color_code": "09",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/482947/item/goods_09_482947_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-482950-000-00-09",
+      "name": "AirSense Shorts",
+      "category": "bottom",
+      "product_url": "https://www.uniqlo.com/vn/en/products/E482950-000/00?colorDisplayCode=09",
+      "product_code": "482950",
+      "color_code": "09",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/482950/item/goods_09_482950_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-482951-000-00-05",
+      "name": "AirSense Shorts",
+      "category": "bottom",
+      "product_url": "https://www.uniqlo.com/vn/en/products/E482951-000/00?colorDisplayCode=05",
+      "product_code": "482951",
+      "color_code": "05",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/482951/item/goods_05_482951_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-482260-000-00-37",
+      "name": "Quần Easy Shorts Vải Pha Linen",
+      "category": "bottom",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E482260-000/00?colorDisplayCode=37",
+      "product_code": "482260",
+      "color_code": "37",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/482260/item/goods_37_482260_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-482260-000-01-44",
+      "name": "Quần Easy Shorts Vải Pha Linen",
+      "category": "bottom",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E482260-000/01?colorDisplayCode=44",
+      "product_code": "482260",
+      "color_code": "44",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/482260/item/goods_44_482260_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-475386-000-00-08",
+      "name": "Ultra Stretch Active Shorts",
+      "category": "bottom",
+      "product_url": "https://www.uniqlo.com/vn/en/products/E475386-000/00?colorDisplayCode=08",
+      "product_code": "475386",
+      "color_code": "08",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/475386/item/goods_08_475386_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-484397-000-00-55",
+      "name": "Ultra Stretch Active Shorts",
+      "category": "bottom",
+      "product_url": "https://www.uniqlo.com/vn/en/products/E484397-000/00?colorDisplayCode=55",
+      "product_code": "484397",
+      "color_code": "55",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/484397/item/goods_55_484397_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-488371-000-00-08",
+      "name": "Geared Shorts",
+      "category": "bottom",
+      "product_url": "https://www.uniqlo.com/vn/en/products/E488371-000/00?colorDisplayCode=08",
+      "product_code": "488371",
+      "color_code": "08",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/488371/item/goods_08_488371_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-489563-000-00-06",
+      "name": "Geared Shorts",
+      "category": "bottom",
+      "product_url": "https://www.uniqlo.com/vn/en/products/E489563-000/00?colorDisplayCode=06",
+      "product_code": "489563",
+      "color_code": "06",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/489563/item/goods_06_489563_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-477181-000-00-00",
+      "name": "Cotton Linen Shirt",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/en/products/E477181-000/00?colorDisplayCode=00",
+      "product_code": "477181",
+      "color_code": "00",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/477181/item/goods_00_477181_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-474528-000-00-09",
+      "name": "Cotton Linen Stand Collar Shirt",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/en/products/E474528-000/00?colorDisplayCode=09",
+      "product_code": "474528",
+      "color_code": "09",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/474528/item/goods_09_474528_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-474529-000-00-31",
+      "name": "Cotton Linen Stand Collar Shirt | Striped",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/en/products/E474529-000/00?colorDisplayCode=31",
+      "product_code": "474529",
+      "color_code": "31",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/474529/item/goods_31_474529_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-474528-000-01-50",
+      "name": "Cotton Linen Stand Collar Shirt",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/en/products/E474528-000/01?colorDisplayCode=50",
+      "product_code": "474528",
+      "color_code": "50",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/474528/item/goods_50_474528_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-455957-000-00-69",
+      "name": "Premium Linen Long Sleeve Shirt",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/en/products/E455957-000/00?colorDisplayCode=69",
+      "product_code": "455957",
+      "color_code": "69",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/455957/item/goods_69_455957_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-450260-000-00-00",
+      "name": "Broadcloth Shirt | Button Down",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/en/products/E450260-000/00?colorDisplayCode=00",
+      "product_code": "450260",
+      "color_code": "00",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/450260/item/goods_00_450260_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-486591-000-00-63",
+      "name": "Broadcloth Shirt | Striped",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/en/products/E486591-000/00?colorDisplayCode=63",
+      "product_code": "486591",
+      "color_code": "63",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/486591/item/goods_63_486591_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-486588-000-00-69",
+      "name": "Broadcloth Shirt | Checked",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/en/products/E486588-000/00?colorDisplayCode=69",
+      "product_code": "486588",
+      "color_code": "69",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/486588/item/goods_69_486588_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-482460-000-00-16",
+      "name": "Broadcloth Shirt | Striped",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/en/products/E482460-000/00?colorDisplayCode=16",
+      "product_code": "482460",
+      "color_code": "16",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/482460/item/goods_16_482460_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-486585-000-00-30",
+      "name": "Broadcloth Shirt | Checked",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/en/products/E486585-000/00?colorDisplayCode=30",
+      "product_code": "486585",
+      "color_code": "30",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/486585/item/goods_30_486585_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-480764-000-00-65",
+      "name": "Broadcloth Shirt | Hairline",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/en/products/E480764-000/00?colorDisplayCode=65",
+      "product_code": "480764",
+      "color_code": "65",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/480764/item/goods_65_480764_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-482461-000-00-54",
+      "name": "Broadcloth Shirt | Checked",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/en/products/E482461-000/00?colorDisplayCode=54",
+      "product_code": "482461",
+      "color_code": "54",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/482461/item/goods_54_482461_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-485653-000-00-01",
+      "name": "Broadcloth Shirt | Striped",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/en/products/E485653-000/00?colorDisplayCode=01",
+      "product_code": "485653",
+      "color_code": "01",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/485653/item/goods_01_485653_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-486586-000-00-18",
+      "name": "Broadcloth Shirt | Checked",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/en/products/E486586-000/00?colorDisplayCode=18",
+      "product_code": "486586",
+      "color_code": "18",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/486586/item/goods_18_486586_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-488790-000-00-68",
+      "name": "Broadcloth Shirt | Striped",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/en/products/E488790-000/00?colorDisplayCode=68",
+      "product_code": "488790",
+      "color_code": "68",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/488790/item/goods_68_488790_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-486579-000-00-65",
+      "name": "Oxford Slim Fit Shirt | Striped",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/en/products/E486579-000/00?colorDisplayCode=65",
+      "product_code": "486579",
+      "color_code": "65",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/486579/item/goods_65_486579_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-486612-000-00-08",
+      "name": "Denim Shirt",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/en/products/E486612-000/00?colorDisplayCode=08",
+      "product_code": "486612",
+      "color_code": "08",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/486612/item/goods_08_486612_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-484245-000-00-68",
+      "name": "Denim Shirt",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/en/products/E484245-000/00?colorDisplayCode=68",
+      "product_code": "484245",
+      "color_code": "68",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/484245/item/goods_68_484245_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-481224-000-00-01",
+      "name": "Flannel Shirt | Checked",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/en/products/E481224-000/00?colorDisplayCode=01",
+      "product_code": "481224",
+      "color_code": "01",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/481224/item/goods_01_481224_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-488793-000-00-36",
+      "name": "Easy Care Soft Shirt",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/en/products/E488793-000/00?colorDisplayCode=36",
+      "product_code": "488793",
+      "color_code": "36",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/488793/item/goods_36_488793_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-488793-000-01-19",
+      "name": "Easy Care Soft Shirt",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/en/products/E488793-000/01?colorDisplayCode=19",
+      "product_code": "488793",
+      "color_code": "19",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/488793/item/goods_19_488793_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-470187-000-00-07",
+      "name": "Flannel Shirt | Checked",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/en/products/E470187-000/00?colorDisplayCode=07",
+      "product_code": "470187",
+      "color_code": "07",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/470187/item/goods_07_470187_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-486600-000-00-24",
+      "name": "Flannel Shirt",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/en/products/E486600-000/00?colorDisplayCode=24",
+      "product_code": "486600",
+      "color_code": "24",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/486600/item/goods_24_486600_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-486594-000-00-30",
+      "name": "Flannel Shirt | Checked",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/en/products/E486594-000/00?colorDisplayCode=30",
+      "product_code": "486594",
+      "color_code": "30",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/486594/item/goods_30_486594_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-486596-000-00-26",
+      "name": "Flannel Shirt | Checked",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/en/products/E486596-000/00?colorDisplayCode=26",
+      "product_code": "486596",
+      "color_code": "26",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/486596/item/goods_26_486596_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-486602-000-00-09",
+      "name": "Flannel Shirt | Checked",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/en/products/E486602-000/00?colorDisplayCode=09",
+      "product_code": "486602",
+      "color_code": "09",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/486602/item/goods_09_486602_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-486595-000-00-46",
+      "name": "Flannel Shirt | Checked",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/en/products/E486595-000/00?colorDisplayCode=46",
+      "product_code": "486595",
+      "color_code": "46",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/486595/item/goods_46_486595_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-486598-000-00-58",
+      "name": "Flannel Shirt | Checked",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/en/products/E486598-000/00?colorDisplayCode=58",
+      "product_code": "486598",
+      "color_code": "58",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/486598/item/goods_58_486598_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-470182-000-00-69",
+      "name": "Flannel Shirt",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/en/products/E470182-000/00?colorDisplayCode=69",
+      "product_code": "470182",
+      "color_code": "69",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/470182/item/goods_69_470182_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-486614-000-00-09",
+      "name": "Easy Care Soft Shirt",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/en/products/E486614-000/00?colorDisplayCode=09",
+      "product_code": "486614",
+      "color_code": "09",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/486614/item/goods_09_486614_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-456630-000-00-64",
+      "name": "Oxford Slim Fit Long Sleeve Shirt",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/en/products/E456630-000/00?colorDisplayCode=64",
+      "product_code": "456630",
+      "color_code": "64",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/456630/item/goods_64_456630_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-488796-000-00-00",
+      "name": "Oxford Oversized Shirt",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/en/products/E488796-000/00?colorDisplayCode=00",
+      "product_code": "488796",
+      "color_code": "00",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/488796/item/goods_00_488796_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-487261-000-00-33",
+      "name": "Quần Lót Lông Giữ Ấm",
+      "category": "bottom",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E487261-000/00?colorDisplayCode=33",
+      "product_code": "487261",
+      "color_code": "33",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/487261/item/goods_33_487261_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-479372-000-00-08",
+      "name": "Quần Dài Co Giãn Giữ Ấm",
+      "category": "bottom",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E479372-000/00?colorDisplayCode=08",
+      "product_code": "479372",
+      "color_code": "08",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/479372/item/goods_08_479372_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-493629-000-00-57",
+      "name": "Quần Lót Lông Giữ Ấm",
+      "category": "bottom",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E493629-000/00?colorDisplayCode=57",
+      "product_code": "493629",
+      "color_code": "57",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/493629/item/goods_57_493629_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-491268-000-00-30",
+      "name": "Quần Jogger Giả Lông Cừu",
+      "category": "bottom",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E491268-000/00?colorDisplayCode=30",
+      "product_code": "491268",
+      "color_code": "30",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/491268/item/goods_30_491268_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-486471-000-00-01",
+      "name": "Quần Easy Vải Nhung Gân Dài Đến Mắt Cá",
+      "category": "bottom",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E486471-000/00?colorDisplayCode=01",
+      "product_code": "486471",
+      "color_code": "01",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/486471/item/goods_01_486471_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-479134-000-00-31",
+      "name": "Quần Easy Co Giãn Dài Đến Mắt Cá",
+      "category": "bottom",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E479134-000/00?colorDisplayCode=31",
+      "product_code": "479134",
+      "color_code": "31",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/479134/item/goods_31_479134_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-481582-000-00-09",
+      "name": "Quần Easy Shorts Co Giãn",
+      "category": "bottom",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E481582-000/00?colorDisplayCode=09",
+      "product_code": "481582",
+      "color_code": "09",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/481582/item/goods_09_481582_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-476081-000-01-08",
+      "name": "Quần Easy Shorts Co Giãn",
+      "category": "bottom",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E476081-000/01?colorDisplayCode=08",
+      "product_code": "476081",
+      "color_code": "08",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/476081/item/goods_08_476081_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-476081-000-00-31",
+      "name": "Quần Easy Shorts Co Giãn",
+      "category": "bottom",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E476081-000/00?colorDisplayCode=31",
+      "product_code": "476081",
+      "color_code": "31",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/476081/item/goods_31_476081_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-474123-000-00-08",
+      "name": "Quần Easy Shorts Co Giãn | Vải Sọc Nhăn",
+      "category": "bottom",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E474123-000/00?colorDisplayCode=08",
+      "product_code": "474123",
+      "color_code": "08",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/474123/item/goods_08_474123_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-481583-000-00-08",
+      "name": "Quần Easy Shorts Co Giãn | Vải Denim",
+      "category": "bottom",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E481583-000/00?colorDisplayCode=08",
+      "product_code": "481583",
+      "color_code": "08",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/481583/item/goods_08_481583_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-461003-000-00-69",
+      "name": "HEATTECH Áo Thun",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E461003-000/00?colorDisplayCode=69",
+      "product_code": "461003",
+      "color_code": "69",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/461003/item/goods_69_461003_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-461013-000-00-09",
+      "name": "HEATTECH Quần Tất Giữ Nhiệt",
+      "category": "bottom",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E461013-000/00?colorDisplayCode=09",
+      "product_code": "461013",
+      "color_code": "09",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/461013/item/goods_09_461013_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-481441-000-00-07",
+      "name": "HEATTECH Extra Warm Pha Cashmere Áo Thun",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E481441-000/00?colorDisplayCode=07",
+      "product_code": "481441",
+      "color_code": "07",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/481441/item/goods_07_481441_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-481442-000-00-56",
+      "name": "HEATTECH Extra Warm Áo Thun Pha Cashmere Blend Cổ Lọ",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E481442-000/00?colorDisplayCode=56",
+      "product_code": "481442",
+      "color_code": "56",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/481442/item/goods_56_481442_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-479525-000-00-18",
+      "name": "HEATTECH Ultra Warm Áo Thun Giữ Nhiệt",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E479525-000/00?colorDisplayCode=18",
+      "product_code": "479525",
+      "color_code": "18",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/479525/item/goods_18_479525_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-479538-000-00-08",
+      "name": "HEATTECH Ultra Warm Quần Tất Giữ Nhiệt",
+      "category": "bottom",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E479538-000/00?colorDisplayCode=08",
+      "product_code": "479538",
+      "color_code": "08",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/479538/item/goods_08_479538_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-486957-000-00-03",
+      "name": "HEATTECH Tất Lửng | Chần bông | Soft Fit",
+      "category": "accessory",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E486957-000/00?colorDisplayCode=03",
+      "product_code": "486957",
+      "color_code": "03",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/486957/item/goods_03_486957_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-486942-000-00-04",
+      "name": "HEATTECH Tất Lửng Giữ Nhiệt | 2 Màu",
+      "category": "accessory",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E486942-000/00?colorDisplayCode=04",
+      "product_code": "486942",
+      "color_code": "04",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/486942/item/goods_04_486942_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-462236-000-00-58",
+      "name": "HEATTECH Tất Lửng Giữ Nhiệt | Lót Lông",
+      "category": "accessory",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E462236-000/00?colorDisplayCode=58",
+      "product_code": "462236",
+      "color_code": "58",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/462236/item/goods_58_462236_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-486941-000-00-05",
+      "name": "HEATTECH Tất Lửng Giữ Nhiệt | Kẻ Sọc",
+      "category": "accessory",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E486941-000/00?colorDisplayCode=05",
+      "product_code": "486941",
+      "color_code": "05",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/486941/item/goods_05_486941_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-486948-000-00-06",
+      "name": "HEATTECH Tất Giữ Nhiệt | Fluffy",
+      "category": "accessory",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E486948-000/00?colorDisplayCode=06",
+      "product_code": "486948",
+      "color_code": "06",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/486948/item/goods_06_486948_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-486955-000-00-08",
+      "name": "HEATTECH Tất Giữ Nhiệt | Dáng Ôm Mềm",
+      "category": "accessory",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E486955-000/00?colorDisplayCode=08",
+      "product_code": "486955",
+      "color_code": "08",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/486955/item/goods_08_486955_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-488109-000-00-30",
+      "name": "HEATTECH Tất Giữ Nhiệt | Fair Isle",
+      "category": "accessory",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E488109-000/00?colorDisplayCode=30",
+      "product_code": "488109",
+      "color_code": "30",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/488109/item/goods_30_488109_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-486951-000-00-08",
+      "name": "HEATTECH Tất Giữ Nhiệt | Cao Đến Gối",
+      "category": "accessory",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E486951-000/00?colorDisplayCode=08",
+      "product_code": "486951",
+      "color_code": "08",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/486951/item/goods_08_486951_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-488148-000-00-17",
+      "name": "HEATTECH Tất Giữ Nhiệt | Vặn Thừng",
+      "category": "accessory",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E488148-000/00?colorDisplayCode=17",
+      "product_code": "488148",
+      "color_code": "17",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/488148/item/goods_17_488148_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-488149-000-00-09",
+      "name": "HEATTECH Tất Giữ Nhiệt | Caro",
+      "category": "accessory",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E488149-000/00?colorDisplayCode=09",
+      "product_code": "488149",
+      "color_code": "09",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/488149/item/goods_09_488149_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-486940-000-00-01",
+      "name": "HEATTECH Tất Giữ Nhiệt | Lót Lông",
+      "category": "accessory",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E486940-000/00?colorDisplayCode=01",
+      "product_code": "486940",
+      "color_code": "01",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/486940/item/goods_01_486940_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-486939-000-00-11",
+      "name": "HEATTECH Tất Giữ Nhiệt | Agryle",
+      "category": "accessory",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E486939-000/00?colorDisplayCode=11",
+      "product_code": "486939",
+      "color_code": "11",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/486939/item/goods_11_486939_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-464329-000-00-01",
+      "name": "HEATTECH Tất Giữ Nhiệt | Wide Ribbed",
+      "category": "accessory",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E464329-000/00?colorDisplayCode=01",
+      "product_code": "464329",
+      "color_code": "01",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/464329/item/goods_01_464329_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-462237-000-00-68",
+      "name": "HEATTECH Tất Giữ Nhiệt | Lót Lông",
+      "category": "accessory",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E462237-000/00?colorDisplayCode=68",
+      "product_code": "462237",
+      "color_code": "68",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/462237/item/goods_68_462237_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-492545-000-00-08",
+      "name": "HEATTECH Tất Khử Mùi",
+      "category": "accessory",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E492545-000/00?colorDisplayCode=08",
+      "product_code": "492545",
+      "color_code": "08",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/492545/item/goods_08_492545_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-462244-000-00-04",
+      "name": "HEATTECH Tất Giữ Nhiệt | Lót Lông Màu Loang",
+      "category": "accessory",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E462244-000/00?colorDisplayCode=04",
+      "product_code": "462244",
+      "color_code": "04",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/462244/item/goods_04_462244_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-464310-000-00-09",
+      "name": "AIRism Áo Ba Lỗ Vải Mắt Lưới",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E464310-000/00?colorDisplayCode=09",
+      "product_code": "464310",
+      "color_code": "09",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/464310/item/goods_09_464310_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-482514-000-00-02",
+      "name": "AIRism Áo Thun Cổ Tròn",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E482514-000/00?colorDisplayCode=02",
+      "product_code": "482514",
+      "color_code": "02",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/482514/item/goods_02_482514_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-482522-000-00-00",
+      "name": "AIRism Cotton Áo Thun Cổ Tròn",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E482522-000/00?colorDisplayCode=00",
+      "product_code": "482522",
+      "color_code": "00",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/482522/item/goods_00_482522_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-478814-000-00-09",
+      "name": "AIRism Quần Lót Boxer Briefs | Cạp Thấp | Kẻ Sọc",
+      "category": "bottom",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E478814-000/00?colorDisplayCode=09",
+      "product_code": "478814",
+      "color_code": "09",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/478814/item/goods_09_478814_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-454311-000-00-00",
+      "name": "AIRism Áo Thun | Cổ V",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E454311-000/00?colorDisplayCode=00",
+      "product_code": "454311",
+      "color_code": "00",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/454311/item/goods_00_454311_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-454312-000-00-02",
+      "name": "AIRism Áo Thun | Cổ Tròn",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E454312-000/00?colorDisplayCode=02",
+      "product_code": "454312",
+      "color_code": "02",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/454312/item/goods_02_454312_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-482556-000-00-04",
+      "name": "AIRism Quần Lót Boxer Brief Không Đường May",
+      "category": "bottom",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E482556-000/00?colorDisplayCode=04",
+      "product_code": "482556",
+      "color_code": "04",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/482556/item/goods_04_482556_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-454328-000-00-69",
+      "name": "AIRism Quần Lót Boxer Brief | Cạp Thấp",
+      "category": "bottom",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E454328-000/00?colorDisplayCode=69",
+      "product_code": "454328",
+      "color_code": "69",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/454328/item/goods_69_454328_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-454326-000-00-09",
+      "name": "AIRism Quần Lót Boxer",
+      "category": "bottom",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E454326-000/00?colorDisplayCode=09",
+      "product_code": "454326",
+      "color_code": "09",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/454326/item/goods_09_454326_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-484997-000-00-06",
+      "name": "AIRism Quần Lót Boxer Brief | Cạp Thấp",
+      "category": "bottom",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E484997-000/00?colorDisplayCode=06",
+      "product_code": "484997",
+      "color_code": "06",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/484997/item/goods_06_484997_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-482538-000-00-06",
+      "name": "AIRism Quần Lót Boxer Brief | Heather",
+      "category": "bottom",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E482538-000/00?colorDisplayCode=06",
+      "product_code": "482538",
+      "color_code": "06",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/482538/item/goods_06_482538_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-489058-000-00-59",
+      "name": "AIRism Quần Lót Boxer Briefs | Phối Hai Màu",
+      "category": "bottom",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E489058-000/00?colorDisplayCode=59",
+      "product_code": "489058",
+      "color_code": "59",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/489058/item/goods_59_489058_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-488858-000-00-09",
+      "name": "Balo Đa Năng",
+      "category": "accessory",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E488858-000/00?colorDisplayCode=09",
+      "product_code": "488858",
+      "color_code": "09",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/488858/item/goods_09_488858_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-462191-000-00-01",
+      "name": "Túi Vải Tái Chế (Cotton)",
+      "category": "accessory",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E462191-000/00?colorDisplayCode=01",
+      "product_code": "462191",
+      "color_code": "01",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/462191/item/goods_01_462191_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-481610-000-00-14",
+      "name": "Túi Bán Nguyệt Mini Đeo Chéo",
+      "category": "accessory",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E481610-000/00?colorDisplayCode=14",
+      "product_code": "481610",
+      "color_code": "14",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/481610/item/goods_14_481610_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-488859-000-00-09",
+      "name": "Túi Đeo Chéo Đa Năng",
+      "category": "accessory",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E488859-000/00?colorDisplayCode=09",
+      "product_code": "488859",
+      "color_code": "09",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/488859/item/goods_09_488859_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-488746-000-00-09",
+      "name": "Túi Đựng Áo PUFFTECH",
+      "category": "accessory",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E488746-000/00?colorDisplayCode=09",
+      "product_code": "488746",
+      "color_code": "09",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/488746/item/goods_09_488746_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-486461-000-00-09",
+      "name": "Túi Dây Rút Mềm",
+      "category": "accessory",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E486461-000/00?colorDisplayCode=09",
+      "product_code": "486461",
+      "color_code": "09",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/486461/item/goods_09_486461_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-488141-000-00-06",
+      "name": "Túi Đeo Chéo Vải Cotton",
+      "category": "accessory",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E488141-000/00?colorDisplayCode=06",
+      "product_code": "488141",
+      "color_code": "06",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/488141/item/goods_06_488141_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-486771-000-00-32",
+      "name": "Túi Xách 2 Kiểu Đeo",
+      "category": "accessory",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E486771-000/00?colorDisplayCode=32",
+      "product_code": "486771",
+      "color_code": "32",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/486771/item/goods_32_486771_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-484719-000-00-01",
+      "name": "Túi Quà Tặng",
+      "category": "accessory",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E484719-000/00?colorDisplayCode=01",
+      "product_code": "484719",
+      "color_code": "01",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/484719/item/goods_01_484719_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-487217-000-00-04",
+      "name": "2Way Stretch Smart Pants",
+      "category": "bottom",
+      "product_url": "https://www.uniqlo.com/vn/en/products/E487217-000/00?colorDisplayCode=04",
+      "product_code": "487217",
+      "color_code": "04",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/487217/item/goods_04_487217_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-479360-000-00-58",
+      "name": "Smart Ankle Pants | Cotton",
+      "category": "bottom",
+      "product_url": "https://www.uniqlo.com/vn/en/products/E479360-000/00?colorDisplayCode=58",
+      "product_code": "479360",
+      "color_code": "58",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/479360/item/goods_58_479360_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-490529-000-00-08",
+      "name": "Smart Ankle Pants | Cotton",
+      "category": "bottom",
+      "product_url": "https://www.uniqlo.com/vn/en/products/E490529-000/00?colorDisplayCode=08",
+      "product_code": "490529",
+      "color_code": "08",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/490529/item/goods_08_490529_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-487216-000-00-69",
+      "name": "2Way Stretch Smart Pants",
+      "category": "bottom",
+      "product_url": "https://www.uniqlo.com/vn/en/products/E487216-000/00?colorDisplayCode=69",
+      "product_code": "487216",
+      "color_code": "69",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/487216/item/goods_69_487216_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-475598-000-00-69",
+      "name": "Ultra Stretch Pants",
+      "category": "bottom",
+      "product_url": "https://www.uniqlo.com/vn/en/products/E475598-000/00?colorDisplayCode=69",
+      "product_code": "475598",
+      "color_code": "69",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/475598/item/goods_69_475598_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-486468-000-00-08",
+      "name": "Stretch Easy Ankle Pants | Denim",
+      "category": "bottom",
+      "product_url": "https://www.uniqlo.com/vn/en/products/E486468-000/00?colorDisplayCode=08",
+      "product_code": "486468",
+      "color_code": "08",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/486468/item/goods_08_486468_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-475367-000-00-38",
+      "name": "AIRism Cotton Pique Polo Shirt",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/en/products/E475367-000/00?colorDisplayCode=38",
+      "product_code": "475367",
+      "color_code": "38",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/475367/item/goods_38_475367_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-486202-000-00-01",
+      "name": "HEATTECH Khăn",
+      "category": "accessory",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E486202-000/00?colorDisplayCode=01",
+      "product_code": "486202",
+      "color_code": "01",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/486202/item/goods_01_486202_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-486203-000-00-32",
+      "name": "HEATTECH Khăn",
+      "category": "accessory",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E486203-000/00?colorDisplayCode=32",
+      "product_code": "486203",
+      "color_code": "32",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/486203/item/goods_32_486203_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-489162-000-00-04",
+      "name": "Khăn Len Souffle Dáng Tam Giác",
+      "category": "accessory",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E489162-000/00?colorDisplayCode=04",
+      "product_code": "489162",
+      "color_code": "04",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/489162/item/goods_04_489162_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-488441-000-00-05",
+      "name": "Khăn Len Cashmere",
+      "category": "accessory",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E488441-000/00?colorDisplayCode=05",
+      "product_code": "488441",
+      "color_code": "05",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/488441/item/goods_05_488441_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-486206-000-00-09",
+      "name": "HEATTECH Găng Tay | Lót Lông",
+      "category": "accessory",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E486206-000/00?colorDisplayCode=09",
+      "product_code": "486206",
+      "color_code": "09",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/486206/item/goods_09_486206_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-486205-000-00-09",
+      "name": "HEATTECH Găng Tay | Lót Lông",
+      "category": "accessory",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E486205-000/00?colorDisplayCode=09",
+      "product_code": "486205",
+      "color_code": "09",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/486205/item/goods_09_486205_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-488048-000-00-09",
+      "name": "HEATTECH Găng Tay | Lót Lông",
+      "category": "accessory",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E488048-000/00?colorDisplayCode=09",
+      "product_code": "488048",
+      "color_code": "09",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/488048/item/goods_09_488048_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-486207-000-00-09",
+      "name": "HEATTECH Găng Tay | Lót Lông",
+      "category": "accessory",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E486207-000/00?colorDisplayCode=09",
+      "product_code": "486207",
+      "color_code": "09",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/486207/item/goods_09_486207_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-486597-000-00-19",
+      "name": "Áo Sơ Mi Vải Dạ | Caro",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E486597-000/00?colorDisplayCode=19",
+      "product_code": "486597",
+      "color_code": "19",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/486597/item/goods_19_486597_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-488794-000-00-69",
+      "name": "Áo Sơ Mi Vải Dạ",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E488794-000/00?colorDisplayCode=69",
+      "product_code": "488794",
+      "color_code": "69",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/488794/item/goods_69_488794_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-486615-000-00-57",
+      "name": "Áo Sơ Mi Vải Dạ",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E486615-000/00?colorDisplayCode=57",
+      "product_code": "486615",
+      "color_code": "57",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/486615/item/goods_57_486615_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-488795-000-00-58",
+      "name": "Áo Sơ Mi Vải Dạ",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E488795-000/00?colorDisplayCode=58",
+      "product_code": "488795",
+      "color_code": "58",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/488795/item/goods_58_488795_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-486604-000-00-09",
+      "name": "Áo Sơ Mi Vải Dạ | Caro",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E486604-000/00?colorDisplayCode=09",
+      "product_code": "486604",
+      "color_code": "09",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/486604/item/goods_09_486604_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-478008-000-00-61",
+      "name": "Áo Sơ Mi Không Cần Ủi Dáng Ôm | Caro",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E478008-000/00?colorDisplayCode=61",
+      "product_code": "478008",
+      "color_code": "61",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/478008/item/goods_61_478008_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-478064-000-00-00",
+      "name": "Áo Sơ Mi Co Giãn Không Cần Ủi Dáng Ôm",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E478064-000/00?colorDisplayCode=00",
+      "product_code": "478064",
+      "color_code": "00",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/478064/item/goods_00_478064_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-489447-000-00-67",
+      "name": "Áo Sơ Mi Không Cần Ủi Dáng Ôm | Kẻ Sọc",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E489447-000/00?colorDisplayCode=67",
+      "product_code": "489447",
+      "color_code": "67",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/489447/item/goods_67_489447_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-486557-000-00-02",
+      "name": "Áo Sơ Mi Co Giãn Không Cần Ủi Dáng Ôm | Kẻ Sọc",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E486557-000/00?colorDisplayCode=02",
+      "product_code": "486557",
+      "color_code": "02",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/486557/item/goods_02_486557_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-456589-000-00-60",
+      "name": "Áo Sơ Mi Không Cần Ủi",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E456589-000/00?colorDisplayCode=60",
+      "product_code": "456589",
+      "color_code": "60",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/456589/item/goods_60_456589_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-455951-000-00-64",
+      "name": "Áo Sơ Mi Không Cần Ủi | Button Down",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E455951-000/00?colorDisplayCode=64",
+      "product_code": "455951",
+      "color_code": "64",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/455951/item/goods_64_455951_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-456591-000-00-00",
+      "name": "Áo Sơ Mi Không Cần Ủi | Cổ Bẻ Rộng",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E456591-000/00?colorDisplayCode=00",
+      "product_code": "456591",
+      "color_code": "00",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/456591/item/goods_00_456591_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-462337-000-00-63",
+      "name": "Áo Sơ Mi Không Cần Ủi Dáng Ôm | Kẻ Sọc",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E462337-000/00?colorDisplayCode=63",
+      "product_code": "462337",
+      "color_code": "63",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/462337/item/goods_63_462337_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-486491-000-00-62",
+      "name": "Áo Sơ Mi Không Cần Ủi Dáng Ôm | Kẻ Sọc",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E486491-000/00?colorDisplayCode=62",
+      "product_code": "486491",
+      "color_code": "62",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/486491/item/goods_62_486491_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-478002-000-00-66",
+      "name": "Áo Sơ Mi Không Cần Ủi Dáng Ôm | Kẻ Sọc",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E478002-000/00?colorDisplayCode=66",
+      "product_code": "478002",
+      "color_code": "66",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/478002/item/goods_66_478002_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-475908-000-00-62",
+      "name": "Áo Sơ Mi Không Cần Ủi | Kẻ Sọc",
+      "category": "top",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E475908-000/00?colorDisplayCode=62",
+      "product_code": "475908",
+      "color_code": "62",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/475908/item/goods_62_475908_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-487209-000-00-09",
+      "name": "Quần Chino Dáng ôm",
+      "category": "bottom",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E487209-000/00?colorDisplayCode=09",
+      "product_code": "487209",
+      "color_code": "09",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/487209/item/goods_09_487209_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-447780-000-00-04",
+      "name": "AirSense Quần Dài | Vải Wool",
+      "category": "bottom",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E447780-000/00?colorDisplayCode=04",
+      "product_code": "447780",
+      "color_code": "04",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/447780/item/goods_04_447780_3x4.jpg?width=600",
+      "gender": "men"
+    },
+    {
+      "id": "uq-487957-000-01-09",
+      "name": "Quần Smart Pants Dáng Rộng Ống Suông",
+      "category": "bottom",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E487957-000/01?colorDisplayCode=09",
+      "product_code": "487957",
+      "color_code": "09",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/487957/item/goods_09_487957_3x4.jpg?width=600",
+      "gender": "unisex"
+    },
+    {
+      "id": "uq-489415-000-00-37",
+      "name": "Quần Smart Pants Dáng Rộng Ống Suông",
+      "category": "bottom",
+      "product_url": "https://www.uniqlo.com/vn/vi/products/E489415-000/00?colorDisplayCode=37",
+      "product_code": "489415",
+      "color_code": "37",
+      "image_url": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/489415/item/goods_37_489415_3x4.jpg?width=600",
+      "gender": "unisex"
+    }
+  ]
+}

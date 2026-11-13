@@ -215,7 +215,7 @@ def rate_rule_for(method: str, path: str) -> str | None:
         return "access"
     if path == "/api/ask":
         return "ask"
-    if path in ("/api/conversation", "/api/intent"):
+    if path in ("/api/conversation", "/api/intent", "/api/live/classify"):
         return "conversation"
     if path in ("/api/voice/transcribe", "/api/voice/speech"):
         return "voice"
@@ -235,7 +235,7 @@ def rate_rule_for(method: str, path: str) -> str | None:
         return "weather"
     if path in ("/api/tryon/photo", "/api/images/generate"):
         return "tryon_photo"
-    if path in ("/api/tryon/live-token", "/api/tryon/live-session"):
+    if path in ("/api/tryon/live-token", "/api/tryon/live-session", "/api/live/session", "/api/tryon/xmax/session"):
         return "live_token"
     if path == "/api/eval/capture":
         return "eval"

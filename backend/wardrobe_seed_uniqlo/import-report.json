@@ -1,0 +1,13 @@
+{
+  "processed_this_run": 0,
+  "total_uniqlo": 252,
+  "colors_filled": 252,
+  "failed": [],
+  "categories": {
+    "outerwear": 30,
+    "top": 122,
+    "bottom": 67,
+    "accessory": 33
+  },
+  "complete_catalogue_verified": false
+}

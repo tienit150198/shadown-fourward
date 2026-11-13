@@ -24,10 +24,16 @@ if [ -f .env ]; then
   set +a
 fi
 
+if command -v npm >/dev/null 2>&1; then
+  echo '==> Building compact SHADOW frontend'
+  (cd web-sdk && npm ci && npm run build:app)
+  if [ -n "${XMAX_API_KEY:-}" ]; then (cd web-sdk && npm run build:xmax); fi
+fi
+
 if [ -n "${SNAP_CAMERA_KIT_API_TOKEN:-}" ] && [ -n "${SNAP_CAMERA_KIT_LENS_GROUP_ID:-}" ] && [ -n "${SNAP_CAMERA_KIT_LENS_ID:-}" ]; then
   command -v npm >/dev/null 2>&1 || { echo 'Install Node.js with npm to build Camera Kit.' >&2; exit 1; }
   echo '==> Building Snap Camera Kit'
-  (cd web-sdk && npm ci && npm run build)
+  (cd web-sdk && npm run build)
 fi
 
 NGROK_PID=""
