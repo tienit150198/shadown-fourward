@@ -16,7 +16,7 @@ const STEPS = [
   [70, 'Máy chủ hơi bận, vẫn đang làm…'],
 ];
 const EXPECT = { worker: 'khoảng 20–40 giây', hf_space: 'khoảng 25–60 giây', mock: 'vài giây' };
-const providerLabel = (provider) => provider === 'vidu' ? 'Vidu' : legacyProviderLabel(provider);
+const providerLabel = (provider) => provider === 'openrouter' ? 'Nano Banana' : provider === 'vidu' ? 'Vidu' : legacyProviderLabel(provider);
 function expectText(config) {
   const p = config?.photo?.provider;
   const sec = Number(config?.photo?.expected_seconds);

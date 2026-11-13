@@ -16,7 +16,7 @@ Use `sudo bash deploy/run.sh` if your Docker installation requires elevated perm
 | `OPENROUTER_API_KEY` | Optional: legacy `/api/intent` classifier only; main chat uses Qwen function calls |
 | `VIDU_API_KEY` | Vidu photo try-on and Vidu S2 Editing for live video try-on |
 
-The template selects Hypertek and Qwen models for chat and vision, `SHADOW_INTENT_PROVIDER=local` and `TRYON_PHOTO_PROVIDER=vidu`. Keep `VISION_MODEL` and `COMPILER_MODEL` set to model IDs available through Hypertek. Set `HYPERTEK_API_KEY` if Qwen Image uses a separate key. Vidu defaults to `https://api.vidu.com`. For accounts in the China region, set `VIDU_API_BASE_URL=https://api.vidu.cn`.
+The template selects Hypertek and Qwen models for chat and vision, `SHADOW_INTENT_PROVIDER=local` and `TRYON_PHOTO_PROVIDER=openrouter`. Keep `VISION_MODEL` and `COMPILER_MODEL` set to model IDs available through Hypertek. Set `HYPERTEK_API_KEY` if Qwen Image uses a separate key. Vidu defaults to `https://api.vidu.com`. For accounts in the China region, set `VIDU_API_BASE_URL=https://api.vidu.cn`.
 
 Put the launcher settings in `.env` so Compose passes the same values into the app. If a value contains a literal `$`, enclose it in single quotes. The file is loaded at runtime and excluded from the image.
 
@@ -50,3 +50,9 @@ SHADOW ends browser try-on sessions after 120 seconds by default. The provider a
 For an offline demo, copy `.env.example` to `.env` if needed, leave `LLM_API_KEY` empty and set `SHADOW_MODE=mock` and `TRYON_PHOTO_PROVIDER=mock`. Start the loopback stack directly with `docker compose up -d --build --wait`.
 
 For an existing CatVTON worker, start Compose directly with `TRYON_PHOTO_PROVIDER=worker` and a private VPN address for `TRYON_WORKER_URL`. Configure `TRYON_TOKEN` on both ends if the worker requires it.
+
+### Nano Banana photo try-on
+
+Set `TRYON_PHOTO_PROVIDER=openrouter` and `OPENROUTER_API_KEY` in `.env`, then rebuild/recreate the app. Photo try-on uses `google/gemini-nano-banana-2.1` through OpenRouter's `/api/v1/images` API: one 1K output per click, with the person photo followed by every selected garment in order (the app accepts up to 8 selected items; the provider supports 13). Multiple tops are preserved as intentional layers. The API key stays on the backend. Live video continues to use Vidu.
+
+Requests are not automatically retried or replaced with demo images on failure. Check your OpenRouter balance and model permissions if generation fails; image generation is billed by OpenRouter. To switch photo generation back, set `TRYON_PHOTO_PROVIDER=vidu`.

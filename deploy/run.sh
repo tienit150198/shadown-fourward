@@ -56,7 +56,11 @@ fi
 [[ ${settings[LLM_BASE_URL]%/} == https://llm.hypertek.vn/v1 ]] || fail 'Set LLM_BASE_URL=https://llm.hypertek.vn/v1 in .env.'
 mode=${settings[SHADOW_MODE]:-auto}
 [[ $mode == ai || $mode == auto ]] || fail 'Set SHADOW_MODE=ai or SHADOW_MODE=auto in .env.'
-[[ ${settings[TRYON_PHOTO_PROVIDER]} == vidu ]] || fail 'Set TRYON_PHOTO_PROVIDER=vidu in .env.'
+case "${settings[TRYON_PHOTO_PROVIDER]}" in
+    openrouter) [[ -n ${settings[OPENROUTER_API_KEY]:-} ]] || fail 'Set OPENROUTER_API_KEY in .env.' ;;
+    vidu) ;;
+    *) fail 'Set TRYON_PHOTO_PROVIDER to openrouter or vidu in .env.' ;;
+esac
 image_url=${settings[QWEN_IMAGE_BASE_URL]:-https://llm.hypertek.vn/v1}
 [[ ${image_url%/} == https://llm.hypertek.vn/v1 ]] || fail 'Set QWEN_IMAGE_BASE_URL to the Hypertek endpoint or leave it empty.'
 vidu_url=${settings[VIDU_API_BASE_URL]:-https://api.vidu.com}
