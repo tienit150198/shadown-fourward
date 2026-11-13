@@ -175,7 +175,23 @@ class WeatherService:
         return place
 
     # ---- forecast ------------------------------------------------------------
-    async def get(
+    async def get(self, *, city=None, lat=None, lon=None, date=None):
+        from service_status import record_failure, record_success
+        result = await self._get(city=city, lat=lat, lon=lon, date=date)
+        if result.get('available'):
+            record_success('weather')
+        else:
+            # Invalid date/coordinates or an unknown city are client input, not an outage.
+            try:
+                parse_target_date(date)
+                valid = lat is None or lon is None or (-90 <= lat <= 90 and -180 <= lon <= 180)
+            except ValueError:
+                valid = False
+            if valid and 'Không tìm thấy thành phố' not in result.get('message', ''):
+                record_failure('weather', 'provider_unavailable', '', True)
+        return result
+
+    async def _get(
         self,
         *,
         city: str | None = None,

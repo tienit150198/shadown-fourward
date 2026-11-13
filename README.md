@@ -137,8 +137,7 @@ Khi bật cổng truy cập demo, client native gửi mã qua header `X-Shadow-A
    ô **🎓 Dạy trợ lý** (số quy tắc).
 2. **Tủ đồ**: lưới ảnh chia theo loại (áo, quần, váy, áo khoác, giày…). **"Thêm đồ"** → chụp ảnh hoặc chọn ảnh có sẵn →
    AI tự nhận diện loại, màu, phong cách, độ ấm, dịp mặc (2–4 giây) → sửa nếu chưa đúng → Lưu.
-   Nút **"Nạp tủ đồ mẫu"** cho chọn: **16 món đồ nam mùa hè của shop YaMe** (mặc định, `SHADOW_DEMO_SEED=shop`) hoặc bộ mẫu cơ bản 10 món.
-   Ảnh YaMe không nằm trong git — nếu thiếu, chạy `cd backend && ../.venv/bin/python wardrobe_seed_shop/build_seed_shop.py` để tải lại.
+   Dữ liệu mẫu chỉ được nạp thủ công bằng [script seed](docs/WARDROBE_SEED.md), không có nút hoặc API nạp dữ liệu.
 3. **Phối đồ**: chọn **"Bạn sắp đi đâu?"** (chip: Đi làm, Đi chơi, Hẹn hò, Đám cưới, Phỏng vấn, Thể thao, Du lịch, Ở nhà;
    hoặc gõ / nói), **"Khi nào?"** (Hôm nay / Ngày mai / Chọn ngày). Thời tiết tự lấy theo thành phố hoặc 📍 vị trí.
    Tuỳ chọn: **📷 "Chụp đồ đang mặc"** (trợ lý nhìn bạn đang mặc gì và phối quanh món đó) hoặc **📌 "Giữ món này"**.
@@ -270,3 +269,7 @@ Chi tiết: [NOTICE.md](NOTICE.md), [tryon-worker/README.md](tryon-worker/README
   - **CatVTON** trên Mac mini — CC BY-NC-SA 4.0.
   - **Ảnh đồ nam YaMe** (`wardrobe_seed_shop/`) — © YaMe (yame.vn), chỉ dùng demo nội bộ, không phân phối lại.
   - **Ảnh tủ đồ mẫu cơ bản** — ảnh áo lấy từ ví dụ của IDM-VTON (bộ VITON-HD) và Kolors; quần, chân váy, giày là hình tự vẽ.
+
+## Native mobile API
+
+See [mobile integration and transport guide](docs/MOBILE_API.md), [generated OpenAPI](docs/api/openapi.json), [HTTP endpoint reference](docs/api/REFERENCE.md), and [API/tool review](docs/api/REVIEW.md). Regenerate contracts with `python scripts/export_api.py`; use `--check` to detect stale artifacts. Chat uses NDJSON and requires a native streaming adapter in addition to generated HTTP clients.

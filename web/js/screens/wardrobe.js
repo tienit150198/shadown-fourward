@@ -95,10 +95,9 @@ export function mount(el, { query = new URLSearchParams() } = {}) {
       grid.replaceChildren(h('div', { class: 'empty wd-empty' },
         h('div', { class: 'empty-icon' }, h('span', { style: { fontSize: '30px' } }, '🧺')),
         h('p', { class: 'empty-title' }, 'Tủ đồ còn trống'),
-        h('p', null, 'Chụp từng món đồ — AI tự nhận diện loại, màu và dịp mặc. Hoặc nạp tủ đồ mẫu để thử ngay.'),
+        h('p', null, 'Chụp từng món đồ — AI tự nhận diện loại, màu và dịp mặc.'),
         h('div', { class: 'wd-empty-actions' },
-          h('button', { class: 'btn btn-primary', type: 'button', onClick: () => addItemFlow() }, icon('camera', 20), 'Chụp đồ'),
-          seedButton('btn btn-ghost'))));
+          h('button', { class: 'btn btn-primary', type: 'button', onClick: () => addItemFlow() }, icon('camera', 20), 'Chụp đồ'))));
       return;
     }
     const shown = tab === 'all' ? list : list.filter((it) => it.category === tab);
@@ -108,7 +107,7 @@ export function mount(el, { query = new URLSearchParams() } = {}) {
         h('button', { class: 'btn btn-ghost btn-sm', type: 'button', onClick: () => addItemFlow({ category: tab }) }, icon('plus', 18), `Thêm ${categoryLabel(tab).toLowerCase()}`)));
       return;
     }
-    grid.replaceChildren(...shown.map(card), h('div', { class: 'wd-grid-foot' }, seedButton('btn btn-ghost btn-sm', 'Nạp thêm tủ đồ mẫu')));
+    grid.replaceChildren(...shown.map(card));
   }
 
   function card(it) {
@@ -119,35 +118,6 @@ export function mount(el, { query = new URLSearchParams() } = {}) {
       h('span', { class: 'wd-card-body' },
         h('span', { class: 'wd-card-name' }, it.name || categoryLabel(it.category)),
         h('span', { class: 'wd-card-meta' }, colorDots(it.colors), h('span', { class: 'wd-card-cat' }, itemKindLabel(it)))));
-  }
-
-  function seedButton(cls, label = 'Nạp tủ đồ mẫu') {
-    const btn = h('button', { class: cls, type: 'button' }, icon('sparkle', 18), label);
-    btn.addEventListener('click', () => {
-      if (btn.disabled) return;
-      actionSheet('Chọn tủ đồ mẫu', [
-        { label: 'Đồ nam mùa hè (shop YaMe)', icon: 'sparkle', onSelect: () => runSeed(btn, 'shop') },
-        { label: 'Bộ mẫu cơ bản', icon: 'image', onSelect: () => runSeed(btn, 'default') },
-      ]);
-    });
-    return btn;
-  }
-
-  async function runSeed(btn, set) {
-    btn.disabled = true;
-    btn.classList.add('loading');
-    try {
-      const res = await wardrobeApi.seedDemo(set);
-      const added = res?.added ?? res?.count ?? (Array.isArray(res?.items) ? res.items.length : Array.isArray(res) ? res.length : null);
-      toast(added ? `Đã nạp ${added} món đồ mẫu` : 'Tủ đồ mẫu đã có sẵn', { kind: 'ok' });
-      if (res?.warning) toast(res.warning, { kind: 'error', ms: 6000 });
-      await loadItems();
-    } catch (err) {
-      errorToast(err, 'Không nạp được tủ đồ mẫu');
-    } finally {
-      btn.disabled = false;
-      btn.classList.remove('loading');
-    }
   }
 
   async function loadItems() {

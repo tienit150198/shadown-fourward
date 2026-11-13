@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from wardrobe_testlib import seed_test_wardrobe
+
 import asyncio
 import time
 
@@ -237,7 +239,7 @@ def test_rule_adjustments_hook_shape():
 
 
 def test_rules_api_returns_interpretation_and_put_edits(wclient):
-    wclient.post("/api/wardrobe/seed-demo")
+    seed_test_wardrobe()
     rule_ = wclient.post("/api/wardrobe/rules", json={"text": "Đi đám cưới không mặc quần short và dép",
                                                       "taught_by": "Chị Lan", "taught_via": "voice"}).json()
     assert rule_["constraint"]["avoid"] == [{"kinds": ["quần short"]}, {"kinds": ["dép"]}]
@@ -257,7 +259,7 @@ def test_rules_api_returns_interpretation_and_put_edits(wclient):
 
 
 def test_feedback_profile_examples_api_and_suggest_credits(wclient):
-    items = wclient.post("/api/wardrobe/seed-demo").json()["items"]
+    items = seed_test_wardrobe()["items"]
     ids = [it["id"] for it in items]
     tops = [it["id"] for it in items if it["category"] == "top"]
     bottoms = [it["id"] for it in items if it["category"] == "bottom"]

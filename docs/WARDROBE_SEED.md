@@ -21,7 +21,7 @@ docker compose exec app python /app/backend/wardrobe_seed_comprehensive/build_se
 docker compose exec app python /app/backend/wardrobe_seed_comprehensive/build_seed.py --seed
 ```
 
-Use `--root /path/to/wardrobe` to select a different store. `--dry-run` reports existing IDs and missing photos without networking or writing. `--download-only` validates and caches every photo without touching wardrobe data. `--seed` downloads any missing photos, validates the full pending set, then calls `WardrobeStore.create_item` for missing stable IDs. `build_seed.py` with no mode defaults to `--download-only`, so the existing seed-demo error hint can fetch assets without mutating the wardrobe.
+Use `--root /path/to/wardrobe` to select a different store. `--dry-run` reports existing IDs and missing photos without networking or writing. `--download-only` validates and caches every photo without touching wardrobe data. `--seed` downloads any missing photos, validates the full pending set, then calls `WardrobeStore.create_item` for missing stable IDs. `build_seed.py` with no mode defaults to `--download-only`, without mutating the wardrobe.
 
 Existing items with the same stable ID are skipped, including user-edited items. The script does not delete wardrobe items or overwrite their images. It downloads sequentially, makes at most three attempts for transient network failures, limits response size to 12 MiB, checks that the image decodes, requires a minimum 160-pixel side, and normalizes it to a JPEG up to 1024 pixels. New cache assets are written atomically under `backend/wardrobe_seed_comprehensive/images/`; this directory is ignored by Git. The script makes no AI or paid-service calls.
 
@@ -35,6 +35,6 @@ The six local photos are copied into the package cache as needed. If those sourc
 
 ## Manual use only
 
-This seed is not exposed through the frontend or `/api/wardrobe/seed-demo`.
+Seeding is not exposed through any frontend or HTTP API. The legacy demo-seeding endpoint has been removed.
 Run the script explicitly when you want to populate the configured wardrobe.
 It never runs automatically during startup or deployment.

@@ -1,3 +1,4 @@
+from wardrobe_testlib import seed_test_wardrobe
 import json
 
 from wardrobe_testlib import wclient, wardrobe_dir  # noqa: F401
@@ -13,7 +14,7 @@ def test_optional_profile_reaches_model_without_filtering_the_inventory(wclient,
         return {'outfits': [], 'rules_used': [], 'source': 'ai'}
 
     monkeypatch.setattr(wardrobe_api, 'suggest_outfits', suggest)
-    assert wclient.post('/api/wardrobe/seed-demo').is_success
+    assert seed_test_wardrobe()['added'] == 10
     response = wclient.post('/api/stylist/suggest', json={
         'event': 'Đi chơi', 'clothing_preferences': 'unisex', 'gender': 'không chia sẻ',
         'age_range': '25-34', 'fit_preferences': 'rộng thoải mái',

@@ -29,7 +29,6 @@ os.environ["COMPLETE_CONFIRM_FRAMES"] = "1"
 os.environ["SHADOW_RATE_LIMIT"] = "off"
 os.environ["SHADOW_ACCESS_CODE"] = ""
 os.environ["SHADOW_TEACH_VERIFY"] = "off"  # tests/test_skill_verify.py turns the teach self-check on
-os.environ["SHADOW_DEMO_SEED"] = "default"  # seed-demo default set (a developer .env may say "shop")
 
 BACKEND_DIR = Path(__file__).resolve().parent.parent
 if str(BACKEND_DIR) not in sys.path:

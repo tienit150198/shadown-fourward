@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from wardrobe_testlib import seed_test_wardrobe
+
 import asyncio
 import base64
 
@@ -85,12 +87,14 @@ def test_live_token_upstream_errors(monkeypatch):
     for response in (httpx.Response(401, text="bad key"), httpx.Response(200, json={"nope": 1})):
         with pytest.raises(TryOnError) as info:
             run(create_live_token(transport=httpx.MockTransport(lambda r, resp=response: resp)))
-        assert info.value.status == 502
+        assert info.value.status == (503 if response.status_code == 401 else 502)
+        assert info.value.code == ("provider_auth_failed" if response.status_code == 401 else "invalid_provider_response")
+        assert info.value.service == "live_tryon"
 
 
 def test_live_token_route_503(wclient):
     response = wclient.post("/api/tryon/live-token")
-    assert response.status_code == 503 and "DECART_API_KEY" in response.json()["detail"]
+    assert response.status_code == 503 and "DECART_API_KEY" in response.json()["message"]
 
 
 # ---- photo providers ---------------------------------------------------------------------------
@@ -222,7 +226,7 @@ def test_tryon_routes(wclient):
     assert config["live"]["model"] == "vidu-s2-editing"
     assert config["photo"]["provider"] == "mock"
 
-    wclient.post("/api/wardrobe/seed-demo")
+    seed_test_wardrobe()
     ids = ["demo-ao-polo-hong", "demo-quan-jean-xanh"]
     response = wclient.post("/api/tryon/photo", json={"person_image": person(), "item_ids": ids})
     assert response.status_code == 200, response.text
@@ -246,7 +250,7 @@ def test_tryon_routes(wclient):
 def test_photo_route_with_injected_hf(wclient, monkeypatch):
     monkeypatch.setenv("TRYON_PHOTO_PROVIDER", "hf_space")
     wclient.app.state.wardrobe_tryon = TryOnService(hf_runner=hf_runner([]))
-    wclient.post("/api/wardrobe/seed-demo")
+    seed_test_wardrobe()
     body = wclient.post("/api/tryon/photo", json={
         "person_image": person(), "item_ids": ["demo-ao-polo-hong", "demo-quan-jean-xanh"],
     }).json()

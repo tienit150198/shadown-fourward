@@ -41,7 +41,7 @@ async function request(method, path, { body, timeoutMs = 20000, signal } = {}) {
     try { data = JSON.parse(text); } catch { data = text; }
   }
   if (!res.ok) {
-    const detail = detailToText(data && typeof data === 'object' ? (data.detail ?? data.error ?? data.message) : data);
+    const detail = detailToText(data && typeof data === 'object' ? (data.message ?? data.detail ?? data.error) : data);
     throw new ApiError(`${method} ${path} → ${res.status} ${detail}`, {
       status: res.status,
       userMessage: statusMessage(res.status, detail) || (detail ? `Lỗi ${res.status}: ${detail}` : `Lỗi máy chủ (${res.status})`),
@@ -77,8 +77,6 @@ export const wardrobeApi = {
   addItem: async (body, opts = {}) => asItem(await request('POST', '/api/wardrobe/items', { body, timeoutMs: 90000, ...opts })),
   updateItem: async (id, item) => asItem(await request('PUT', `/api/wardrobe/items/${enc(id)}`, { body: item, timeoutMs: 20000 })),
   deleteItem: (id) => request('DELETE', `/api/wardrobe/items/${enc(id)}`),
-  /** set: 'shop' (đồ nam mùa hè, YaMe) | 'default' (bộ mẫu cơ bản) | undefined (server default) */
-  seedDemo: (set) => request('POST', `/api/wardrobe/seed-demo${set ? `?set=${enc(set)}` : ''}`, { body: {}, timeoutMs: 60000 }),
   listRules: async () => asList(await request('GET', '/api/wardrobe/rules'), 'rules'),
   /** {text, taught_by} → rule */
   addRule: async (body) => {

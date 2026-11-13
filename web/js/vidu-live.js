@@ -56,8 +56,8 @@ export async function requestViduSession(referenceImage, signal) {
   const data = await response.json().catch(() => null);
   if (!response.ok) {
     const detail = data?.detail;
-    const message = typeof detail === 'string' ? detail : detail?.message;
-    throw liveError(statusMessage(response.status, message) || message || 'Máy chủ không mở được phiên Vidu.', detail?.code);
+    const message = data?.message || (typeof detail === 'string' ? detail : detail?.message);
+    throw liveError(statusMessage(response.status, message) || message || 'Máy chủ không mở được phiên Vidu.', data?.code || detail?.code);
   }
   if (!data?.live_id || !data.ws_url || !data.client_secret || !data.render_uid || data.rtc?.provider !== 'agora') {
     throw liveError('Máy chủ trả thông tin phiên Vidu không đầy đủ.');

@@ -43,8 +43,8 @@ curl -s http://localhost:8000/api/health
 curl -s http://localhost:8000/api/skills | grep -o lap-gia-do-dien-thoai
 #   phải in ra: lap-gia-do-dien-thoai  (kỹ năng dự phòng)
 
-curl -s -X POST http://localhost:8000/api/wardrobe/seed-demo | head -c 120; echo
-#   nạp tủ đồ mẫu: "added":10 lần đầu, "added":0 nếu đã có — đều được
+python backend/wardrobe_seed_comprehensive/seed.py --seed
+#   nạp thủ công; xem docs/WARDROBE_SEED.md cho Docker
 
 curl -s "http://localhost:8000/api/weather?city=Ha%20Noi&date=2026-11-14"; echo
 #   có nhiệt độ t_min / t_max → thời tiết OK

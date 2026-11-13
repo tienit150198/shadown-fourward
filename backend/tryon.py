@@ -81,9 +81,13 @@ def hf_quota_message(error_text: str) -> str:
 
 
 class TryOnError(RuntimeError):
-    def __init__(self, message: str, status: int = 502) -> None:
+    def __init__(self, message: str, status: int = 502, *, code: str | None = None,
+                 service: str = "photo_tryon", retryable: bool | None = None) -> None:
         super().__init__(message)
         self.status = status
+        self.code = code or {422: "invalid_request", 429: "rate_limited", 504: "provider_timeout"}.get(status, "provider_unavailable")
+        self.service = service
+        self.retryable = (self.code in {"rate_limited", "provider_timeout", "provider_unavailable"}) if retryable is None else retryable
 
 
 def _env(name: str, default: str = "") -> str:
@@ -103,7 +107,7 @@ def _env_int(name: str, default: int) -> int:
 async def create_live_token(*, transport: httpx.AsyncBaseTransport | None = None) -> dict[str, Any]:
     api_key = _env("DECART_API_KEY")
     if not api_key:
-        raise TryOnError("Chưa cấu hình DECART_API_KEY nên chưa mặc thử trực tiếp được.", status=503)
+        raise TryOnError("Chưa cấu hình DECART_API_KEY nên chưa mặc thử trực tiếp được.", status=503, code="missing_api_key", service="live_tryon")
     base_url = _env("DECART_BASE_URL", DEFAULT_DECART_BASE_URL).rstrip("/")
     body: dict[str, Any] = {
         "expiresIn": max(1, min(3600, _env_int("DECART_TOKEN_TTL_S", DEFAULT_DECART_TOKEN_TTL_S))),
@@ -117,18 +121,22 @@ async def create_live_token(*, transport: httpx.AsyncBaseTransport | None = None
     try:
         async with httpx.AsyncClient(timeout=15.0, transport=transport) as client:
             response = await client.post(f"{base_url}/v1/client/tokens", json=body, headers=headers)
-    except httpx.HTTPError as error:
-        logger.warning("decart token request failed: %r", error)
-        raise TryOnError("Không kết nối được Decart để lấy token.", status=502) from None
+    except httpx.TimeoutException:
+        raise TryOnError("Decart phản hồi quá lâu khi lấy token.", status=504, service="live_tryon") from None
+    except httpx.HTTPError:
+        logger.warning("decart token connection failed")
+        raise TryOnError("Không kết nối được Decart để lấy token.", status=502, service="live_tryon") from None
     if not response.is_success:
-        logger.warning("decart token HTTP %s: %s", response.status_code, response.text[:200])
-        raise TryOnError(f"Decart từ chối tạo token (HTTP {response.status_code}).", status=502)
+        logger.warning("decart token HTTP %s", response.status_code)
+        code = {401: "provider_auth_failed", 403: "provider_auth_failed", 402: "insufficient_credits", 429: "rate_limited"}.get(response.status_code, "provider_unavailable")
+        status = 429 if response.status_code == 429 else (503 if response.status_code in (401, 402, 403) else 502)
+        raise TryOnError(f"Decart từ chối tạo token (HTTP {response.status_code}).", status=status, code=code, service="live_tryon")
     try:
         data = response.json()
     except ValueError:
-        raise TryOnError("Decart trả về dữ liệu token không hợp lệ.", status=502) from None
+        raise TryOnError("Decart trả về dữ liệu token không hợp lệ.", status=502, code="invalid_provider_response", service="live_tryon") from None
     if not isinstance(data, dict) or not isinstance(data.get("apiKey"), str):
-        raise TryOnError("Decart trả về dữ liệu token không hợp lệ.", status=502)
+        raise TryOnError("Decart trả về dữ liệu token không hợp lệ.", status=502, code="invalid_provider_response", service="live_tryon")
     return {
         "apiKey": data["apiKey"],
         "token": data.get("token"),
@@ -459,7 +467,7 @@ class TryOnService:
                     [person_jpeg, *(garment_jpegs[item_id] for item_id in rendered)],
                 )
             except OpenRouterImageError as error:
-                raise TryOnError(str(error), error.status) from None
+                raise TryOnError(str(error), error.status, code=error.code, service=error.service, retryable=error.retryable) from None
             return {"jpeg": jpeg, "provider": "openrouter",
                     "seconds": round(time.monotonic() - started, 1),
                     "rendered_item_ids": rendered,
@@ -508,7 +516,7 @@ class TryOnService:
         try:
             jpeg = await self._vidu_image.edit(_outfit_tryon_prompt(selected), images)
         except ViduImageError as error:
-            raise TryOnError(str(error), error.status) from None
+            raise TryOnError(str(error), error.status, code=error.code, service=error.service, retryable=error.retryable) from None
         return {
             "jpeg": jpeg,
             "rendered_item_ids": rendered,
@@ -542,7 +550,7 @@ class TryOnService:
     async def _run_worker(self, person_jpeg, passes, garment_jpegs) -> dict[str, Any]:
         url = self.worker_url()
         if not url:
-            raise TryOnError("Chưa cấu hình TRYON_WORKER_URL.", status=503)
+            raise TryOnError("Chưa cấu hình TRYON_WORKER_URL.", status=503, code="invalid_configuration")
         current = jpeg_data_url(person_jpeg)
         rendered = []
         async with httpx.AsyncClient(timeout=WORKER_TIMEOUT_S, transport=self._worker_transport, headers=worker_headers()) as client:
@@ -568,7 +576,7 @@ class TryOnService:
                     raw = decode_image_data_url(image)
                 except (ValueError, AttributeError, WardrobeError) as error:
                     logger.warning("try-on worker returned a bad image: %s", error)
-                    raise TryOnError("Máy mặc thử trả ảnh không hợp lệ.") from None
+                    raise TryOnError("Máy mặc thử trả ảnh không hợp lệ.", code="invalid_provider_response") from None
                 current = jpeg_data_url(to_jpeg(raw, max_side=1024, quality=90))
                 rendered.append(item["id"])
         final = base64.b64decode(current.split(",", 1)[1])
@@ -634,7 +642,7 @@ class TryOnService:
                     raise
                 except asyncio.TimeoutError:
                     cancel.set()
-                    raise TryOnError(f"Hugging Face Space quá {HF_TIMEOUT_S:.0f}s chưa trả kết quả.") from None
+                    raise TryOnError(f"Hugging Face Space quá {HF_TIMEOUT_S:.0f}s chưa trả kết quả.", status=504) from None
                 except TryOnError:
                     raise
                 except Exception as error:
@@ -644,7 +652,7 @@ class TryOnService:
                     if quota:
                         self._hf_blocked_until = time.monotonic() + HF_QUOTA_BACKOFF_S
                         self._hf_blocked_reason = quota
-                        raise TryOnError(quota, status=503) from error
+                        raise TryOnError(quota, status=503, code="rate_limited") from error
                     raise TryOnError("Hugging Face Space đang lỗi hoặc quá tải.") from error
                 jpeg = await asyncio.to_thread(_result_to_jpeg, output)
         note = ""

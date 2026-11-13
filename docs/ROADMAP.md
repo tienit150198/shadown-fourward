@@ -207,7 +207,6 @@ khi `confirming=true` gửi frame kế tiếp ngay (chuyển bước nhanh hơn 
 | `COMPLETE_CONFIRM_FRAMES` | Số frame liên tiếp phải báo xong mới chuyển bước (mặc định 2) |
 | `VISION_FAST_CONFIRM`, `VISION_IMAGE_MAX_SIDE`, `VISION_REFERENCE_MODE`, `VISION_DECISION` | Tinh chỉnh tốc độ/độ chính xác Guide (mặc định đã chọn theo số liệu đo) |
 | `HF_TOKEN`, `TRYON_WORKER_URL`, `TRYON_TOKEN`, `DECART_API_KEY` | Các cách mặc thử |
-| `SHADOW_DEMO_SEED` | Tủ đồ mẫu mặc định (`shop` = đồ nam YaMe) |
 | `SHADOW_ACCESS_CODE` | Mã truy cập khi demo công khai |
 
 ### Test

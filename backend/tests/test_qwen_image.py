@@ -59,7 +59,7 @@ def test_shared_key_requires_matching_base_url(monkeypatch):
 @pytest.mark.parametrize("provider_response,status", [
     (httpx.Response(200, json={"data": [{"b64_json": "bad"}]}), 502),
     (httpx.Response(429, text="upstream private error"), 429),
-    (httpx.Response(401, text="upstream private error"), 502),
+    (httpx.Response(401, text="upstream private error"), 503),
 ])
 def test_cloud_errors_do_not_expose_provider_response(provider_response, status):
     image = qwen_image.QwenImage(transport=httpx.MockTransport(lambda _: provider_response))

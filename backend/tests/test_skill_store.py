@@ -108,7 +108,7 @@ def test_rest_skill_crud(client, skills_dir):
 
     bad = dict(full, start_step_id="nope")
     res = client.put("/api/skills/bad", json=bad)
-    assert res.status_code == 422 and "không hợp lệ" in res.json()["detail"]
+    assert res.status_code == 422 and "không hợp lệ" in res.json()["message"]
 
     assert client.delete("/api/skills/ban-sua").json() == {"ok": True}
     assert client.delete("/api/skills/ban-sua").status_code == 404

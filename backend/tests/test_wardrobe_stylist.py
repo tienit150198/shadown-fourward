@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from wardrobe_testlib import seed_test_wardrobe
+
 import asyncio
 
 from wardrobe_testlib import (  # noqa: F401
@@ -229,7 +231,7 @@ def test_suggest_with_worn_top_keeps_it():
 
 def test_suggest_route_mock(wclient):
     assert wclient.post("/api/stylist/suggest", json={"event": "đi làm"}).status_code == 409
-    assert wclient.post("/api/wardrobe/seed-demo").json()["added"] == 10
+    assert seed_test_wardrobe()["added"] == 10
     response = wclient.post("/api/stylist/suggest", json={"event": "đi làm", "city": "Hà Nội"})
     assert response.status_code == 200
     body = response.json()
@@ -247,7 +249,7 @@ def test_suggest_route_mock(wclient):
 
 
 def test_suggest_route_ai_with_current_image(wclient):
-    wclient.post("/api/wardrobe/seed-demo")
+    seed_test_wardrobe()
     provider = FakeProvider(
         {"wearing": "áo sơ mi không tay hồng nhạt, quần đen",
          "garments": [{"category": "top", "colors": ["hồng nhạt"], "description": "áo sơ mi không tay hồng nhạt"}],

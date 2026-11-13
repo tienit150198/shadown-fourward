@@ -1,4 +1,4 @@
-"""Men's SUMMER demo wardrobe from a real shop (YaMe.vn) — `POST /api/wardrobe/seed-demo?set=shop`.
+"""Men's SUMMER demo wardrobe from a real shop (YaMe.vn) — offline asset builder.
 
     cd backend/wardrobe_seed_shop && ../../.venv/bin/python build_seed_shop.py            # tải lại ảnh còn thiếu
     cd backend/wardrobe_seed_shop && ../../.venv/bin/python build_seed_shop.py --refresh  # tải lại ảnh + gắn nhãn

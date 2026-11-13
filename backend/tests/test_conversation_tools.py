@@ -351,3 +351,65 @@ def test_showcase_requires_real_recent_suggestions(client, setup_chat):
     result = post(client)
     assert not [r for r in result if r['type'] in ('outfits', 'action', 'tool_status')]
     assert 'No matching recent suggestions' in results(provider)[0]['error']
+
+
+def test_empty_wardrobe_invalidates_previous_suggestions(client, setup_chat, monkeypatch):
+    import conversation_tools
+
+    async def suggest(provider, items, **kwargs):
+        return {'outfits': [{'title': 'Bộ cũ', 'reason': '', 'item_ids': ['t1', 'b2']}], 'source': 'ai'}
+
+    monkeypatch.setattr(conversation_tools, 'suggest_outfits', suggest)
+    provider = setup_chat(
+        tools(call('suggest_outfits')), tools(call('showcase_outfits', {'introduction': 'Bộ này nhé.'})),
+        tools(call('suggest_outfits')), tools(call('showcase_outfits', {'introduction': 'Bộ cũ nhé.'})), answer('Tủ đồ đang trống.'),
+    )
+    first = post(client)
+    store = conversation_tools._store(None)
+    store.list_items = lambda: []
+    rows = post(client, conversation_id=first[-1]['conversation_id'])
+    assert not [r for r in rows if r['type'] == 'outfits']
+    assert 'No matching recent suggestions' in results(provider)[-1]['error']
+    context = client.app.state.conversations.sessions[first[-1]['conversation_id']].context
+    assert context['outfits'] == [] and context['showcased_outfits'] == []
+
+
+def test_open_screen_tool_rejects_more_items_than_tryon_api(client, setup_chat):
+    provider = setup_chat(tools(call('open_screen', {'screen': 'tryon-photo', 'item_ids': [f'item-{i}' for i in range(9)]})), answer())
+    rows = post(client)
+    assert not [r for r in rows if r['type'] in ('outfits', 'action')]
+    assert results(provider)[0]['error'] == 'Invalid tool arguments'
+    from conversation_tools import OpenArgs
+    assert OpenArgs.model_json_schema()['properties']['item_ids']['maxItems'] == 8
+
+
+def test_stream_errors_have_machine_readable_codes(client, setup_chat):
+    from providers import ProviderError
+    setup_chat(ProviderError('offline'))
+    rows = post(client)
+    assert rows[-1]['type'] == 'error'
+    assert rows[-1]['code'] == 'conversation_unavailable'
+    assert rows[-1]['retryable'] is True
+    assert not any(row['type'] == 'done' for row in rows)
+
+
+def test_openapi_documents_ndjson_event_union(client):
+    schema = client.app.openapi()
+    response = schema['paths']['/api/conversation']['post']['responses']['200']
+    assert set(response['content']) == {'application/x-ndjson'}
+    event_schema = response['content']['application/x-ndjson']['schema']
+    assert len(event_schema['oneOf']) == 6
+    assert event_schema['discriminator']['propertyName'] == 'type'
+    assert set(event_schema['discriminator']['mapping']) == {'text', 'tool_status', 'outfits', 'action', 'done', 'error'}
+    assert 'ConversationOutfit' in schema['components']['schemas']
+
+
+def test_chat_explains_provider_auth_failure_without_retry(client, setup_chat):
+    from providers import ProviderError
+    setup_chat(ProviderError('redacted', code='provider_auth_failed', retryable=False))
+    rows = post(client)
+    assert rows[-1]['code'] == 'conversation_unavailable'
+    assert rows[-1]['service'] == 'chat'
+    assert rows[-1]['reason_code'] == 'provider_auth_failed'
+    assert rows[-1]['retryable'] is False
+    assert 'khóa API' in rows[-1]['text']

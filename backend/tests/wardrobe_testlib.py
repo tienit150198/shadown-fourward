@@ -153,3 +153,20 @@ __all__ = [
     "FakeProvider", "make_jpeg", "data_url", "weather_transport", "wardrobe_dir", "wclient",
     "item", "sample_wardrobe", "weather", "json_body", "timedelta",
 ]
+
+
+def seed_test_wardrobe():
+    """Populate isolated test storage directly; production has no seeding HTTP API."""
+    from pathlib import Path
+    from wardrobe_store import WardrobeStore, wardrobe_root
+    seed_dir = Path(__file__).resolve().parents[1] / 'wardrobe_seed'
+    store = WardrobeStore(wardrobe_root())
+    added = []
+    existing = {item['id'] for item in store.list_items()}
+    for row in json.loads((seed_dir / 'items.json').read_text()):
+        if row['id'] in existing:
+            continue
+        fields = {key: value for key, value in row.items() if key not in ('id', 'image', 'image_url', 'created_at')}
+        store.create_item(fields, (seed_dir / 'images' / (row['id'] + '.jpg')).read_bytes(), item_id=row['id'], extra={'demo':True, 'tag_source':'seed'})
+        added.append(row['id'])
+    return {'added':len(added), 'added_ids':added, 'items':store.list_items()}

@@ -15,6 +15,7 @@ import httpx
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, StringConstraints, field_validator
 
+from service_status import record_success
 from wardrobe_store import MAX_IMAGE_BYTES, WardrobeError, jpeg_data_url, to_jpeg
 
 DEFAULT_BASE_URL = "https://llm.hypertek.vn/v1"
@@ -32,9 +33,13 @@ def _env(name: str, default: str = "") -> str:
 
 
 class QwenImageError(RuntimeError):
-    def __init__(self, message: str, status: int = 502) -> None:
+    def __init__(self, message: str, status: int = 502, *, code: str | None = None,
+                 service: str = "image_generation", retryable: bool | None = None) -> None:
         super().__init__(message)
         self.status = status
+        self.code = code or {422: "invalid_request", 429: "rate_limited", 504: "provider_timeout"}.get(status, "provider_unavailable")
+        self.service = service
+        self.retryable = (self.code in {"rate_limited", "provider_timeout", "provider_unavailable"}) if retryable is None else retryable
 
 
 class QwenImage:
@@ -61,7 +66,7 @@ class QwenImage:
     async def generate(self, prompt: str, size: str = DEFAULT_SIZE) -> bytes:
         key = self._key()
         if not key:
-            raise QwenImageError("Chưa cấu hình khóa API cho Qwen Image.", 503)
+            raise QwenImageError("Chưa cấu hình khóa API cho Qwen Image.", 503, code="missing_api_key")
         try:
             timeout = int(_env("QWEN_IMAGE_TIMEOUT_S", str(DEFAULT_TIMEOUT_S)))
         except ValueError:
@@ -82,6 +87,10 @@ class QwenImage:
             raise QwenImageError("Không kết nối được với Qwen Image.") from None
         if not response.is_success:
             logger.warning("Qwen Image generation HTTP %s", response.status_code)
+            if response.status_code in (401, 403):
+                raise QwenImageError("Qwen Image từ chối khóa API hoặc quyền mô hình. Kiểm tra cấu hình máy chủ.", 503, code="provider_auth_failed")
+            if response.status_code == 402:
+                raise QwenImageError("Tài khoản Qwen Image không đủ credit. Hãy nạp credit rồi thử lại.", 503, code="insufficient_credits")
             if response.status_code == 429:
                 raise QwenImageError("Qwen Image đã đạt giới hạn lượt gọi. Vui lòng thử lại sau.", 429)
             raise QwenImageError(f"Qwen Image xử lý ảnh thất bại (HTTP {response.status_code}).")
@@ -94,7 +103,7 @@ class QwenImage:
                 raise ValueError("image too large")
             return await asyncio.to_thread(to_jpeg, raw, max_side=1024, quality=90)
         except (KeyError, IndexError, TypeError, ValueError, WardrobeError):
-            raise QwenImageError("Qwen Image trả về ảnh không hợp lệ.") from None
+            raise QwenImageError("Qwen Image trả về ảnh không hợp lệ.", code="invalid_provider_response") from None
 
 
 class ImageRequest(BaseModel):
@@ -132,8 +141,9 @@ async def generate_image(payload: ImageRequest, request: Request) -> dict[str, s
             if not task.done() and await request.is_disconnected():
                 raise HTTPException(status_code=499, detail="Đã huỷ tạo ảnh.")
         jpeg = task.result()
+        record_success("image_generation")
     except QwenImageError as error:
-        raise HTTPException(status_code=error.status, detail=str(error)) from None
+        raise HTTPException(status_code=error.status, detail=str(error), headers={"X-Shadow-Error-Code": error.code, "X-Shadow-Service": error.service, "X-Shadow-Retryable": str(error.retryable).lower()}) from None
     finally:
         if not task.done():
             task.cancel()

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from wardrobe_testlib import seed_test_wardrobe
+
 import asyncio
 
 from wardrobe_testlib import FakeProvider, item, sample_wardrobe, wardrobe_dir, wclient, weather  # noqa: F401
@@ -162,7 +164,7 @@ def test_suggest_preserves_ai_outfits_with_advisory_scores():
 
 
 def test_suggest_route_returns_scores(wclient):
-    wclient.post("/api/wardrobe/seed-demo")
+    seed_test_wardrobe()
     body = wclient.post("/api/stylist/suggest", json={"event": "đi làm", "city": "Hà Nội"}).json()
     assert body["dropped_outfits"] == []
     for outfit in body["outfits"]:

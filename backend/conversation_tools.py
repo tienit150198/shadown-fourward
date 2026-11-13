@@ -1,4 +1,4 @@
-"""Validated, read-only tools and UI actions for the conversation coordinator."""
+"""Validated conversation-scoped tools and user-confirmed UI actions."""
 from __future__ import annotations
 
 import asyncio
@@ -61,7 +61,7 @@ class StyleProfileArgs(Arguments):
 
 class OpenArgs(Arguments):
     screen: Literal['wardrobe', 'teach', 'home', 'stylist', 'image-studio', 'tryon-photo', 'tryon-live', 'guide'] = Field(description='Use tryon-live for video/live camera; tryon-photo is still-photo generation. Match the user request exactly.')
-    item_ids: list[str] = Field(default_factory=list, max_length=20)
+    item_ids: list[str] = Field(default_factory=list, max_length=8)
     skill_id: str | None = Field(default=None, max_length=64)
     prompt: str = Field(default='', max_length=500)
 
@@ -125,6 +125,9 @@ async def execute(name, raw_args, *, request, context, image):
     if name == 'suggest_outfits':
         items = await asyncio.to_thread(store.list_items)
         if not items:
+            # Inventory may have been cleared since the previous turn. Never showcase stale items.
+            context['outfits'] = []
+            context['showcased_outfits'] = []
             return {'outfits': [], 'message': 'Wardrobe is empty. Offer wardrobe capture.'}, None
         if args.anchor_item_id and args.anchor_item_id not in {it['id'] for it in items}:
             return {'error': 'Unknown anchor item ID. Read the wardrobe first.'}, None

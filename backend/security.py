@@ -305,6 +305,7 @@ def access_state(scope: Scope) -> tuple[bool, bool]:
 
 
 async def _send_json(send: Send, status: int, payload: dict[str, Any], extra: list | None = None) -> None:
+    payload = {**{key: value for key, value in payload.items() if key != "detail"}, "message": payload.get("detail", "Yêu cầu không thành công."), "retryable": status in (429, 502, 503, 504)}
     body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
     headers = [
         (b"content-type", b"application/json; charset=utf-8"),

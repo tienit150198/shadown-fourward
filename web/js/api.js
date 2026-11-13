@@ -99,7 +99,7 @@ async function request(method, path, { body, timeoutMs = 20000, signal } = {}) {
     try { data = JSON.parse(text); } catch { data = text; }
   }
   if (!res.ok) {
-    const detail = detailToText(data && typeof data === 'object' ? (data.detail ?? data.error ?? data.message) : data);
+    const detail = detailToText(data && typeof data === 'object' ? (data.message ?? data.detail ?? data.error) : data);
     throw new ApiError(`${method} ${path} → ${res.status} ${detail}`, {
       status: res.status,
       userMessage: statusMessage(res.status, detail) || (detail ? `Lỗi ${res.status}: ${detail}` : `Lỗi máy chủ (${res.status})`),

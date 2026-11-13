@@ -314,7 +314,7 @@ export function mount(el) {
     }
     if (!outfits.length) {
       nodes.push(h('div', { class: 'empty' }, h('p', { class: 'empty-title' }, 'Chưa phối được bộ nào'),
-        h('p', null, res?.message || 'Tủ đồ có thể còn ít món. Thêm vài áo, quần hoặc nạp tủ đồ mẫu rồi thử lại.'),
+        h('p', null, res?.message || 'Tủ đồ có thể còn ít món. Thêm vài áo, quần rồi thử lại.'),
         h('a', { class: 'btn btn-ghost', href: '#/wardrobe' }, 'Mở tủ đồ')));
     }
     outfits.forEach((o, idx) => {

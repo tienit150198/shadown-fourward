@@ -1,0 +1,365 @@
+[
+  {
+    "function": {
+      "description": "Read the clothing preferences, optional self-described gender, age range and fit preferences supplied by this user in this conversation. Missing fields are unknown, not inferred.",
+      "name": "get_style_profile",
+      "parameters": {
+        "additionalProperties": false,
+        "properties": {},
+        "title": "Empty",
+        "type": "object"
+      }
+    },
+    "type": "function"
+  },
+  {
+    "function": {
+      "description": "Save only preferences the user explicitly stated, or their decision to skip a question (clothing_preferences=[\"no preference\"]). Never infer gender or age from camera, name or garments. Empty strings/lists clear a field. Stored only in this conversation.",
+      "name": "update_style_profile",
+      "parameters": {
+        "additionalProperties": false,
+        "properties": {
+          "age_range": {
+            "anyOf": [
+              {
+                "maxLength": 40,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Age Range"
+          },
+          "clothing_preferences": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 8,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Clothing Preferences"
+          },
+          "fit_preferences": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Fit Preferences"
+          },
+          "gender": {
+            "anyOf": [
+              {
+                "maxLength": 60,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Gender"
+          }
+        },
+        "title": "StyleProfileArgs",
+        "type": "object"
+      }
+    },
+    "type": "function"
+  },
+  {
+    "function": {
+      "description": "Read the current wardrobe inventory and taught styling rules, optionally filtered by category. Paginated: use next_offset if has_more. Use actual item IDs, never invent garments.",
+      "name": "list_wardrobe",
+      "parameters": {
+        "additionalProperties": false,
+        "properties": {
+          "category": {
+            "anyOf": [
+              {
+                "enum": [
+                  "top",
+                  "bottom",
+                  "dress",
+                  "outerwear",
+                  "shoes",
+                  "accessory"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Category"
+          },
+          "limit": {
+            "default": 50,
+            "maximum": 50,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "default": 0,
+            "maximum": 10000,
+            "minimum": 0,
+            "title": "Offset",
+            "type": "integer"
+          }
+        },
+        "title": "InventoryArgs",
+        "type": "object"
+      }
+    },
+    "type": "function"
+  },
+  {
+    "function": {
+      "description": "Fetch weather for a city and optional ISO date. Omit city to use the app-configured city. Ask only if no city is configured or stated. The result is retained; reuse it for suggestions.",
+      "name": "get_weather",
+      "parameters": {
+        "additionalProperties": false,
+        "properties": {
+          "city": {
+            "anyOf": [
+              {
+                "maxLength": 80,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "City"
+          },
+          "date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Date"
+          }
+        },
+        "title": "WeatherArgs",
+        "type": "object"
+      }
+    },
+    "type": "function"
+  },
+  {
+    "function": {
+      "description": "Display selected recent outfit suggestions in chat, with your short introduction before their photos. Cards already include photo/live try-on buttons. Call this after suggest_outfits as the final tool of the turn. Its introduction and cards complete the response; no confirmation text, open_screen or extra try-on button is needed.",
+      "name": "showcase_outfits",
+      "parameters": {
+        "additionalProperties": false,
+        "properties": {
+          "introduction": {
+            "description": "A short natural introduction/reason to show BEFORE the outfit cards. Do not repeat full garment lists or button instructions.",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Introduction",
+            "type": "string"
+          },
+          "outfit_numbers": {
+            "description": "One-based numbers of the most recent suggestions to show; empty means all.",
+            "items": {
+              "maximum": 3,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "maxItems": 3,
+            "title": "Outfit Numbers",
+            "type": "array"
+          }
+        },
+        "required": [
+          "introduction"
+        ],
+        "title": "ShowcaseArgs",
+        "type": "object"
+      }
+    },
+    "type": "function"
+  },
+  {
+    "function": {
+      "description": "Compute outfit suggestions without displaying cards yet. After reading the results, use showcase_outfits to introduce and display them. This tool already reads the full wardrobe internally; inventory pagination is unnecessary for suggestions. Suggest outfits from the actual wardrobe, using the retained weather result and preferences. Call get_weather first if weather matters and is unknown. For revisions, describe previous outfit and requested changes in notes.",
+      "name": "suggest_outfits",
+      "parameters": {
+        "additionalProperties": false,
+        "properties": {
+          "anchor_item_id": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Anchor Item Id"
+          },
+          "event": {
+            "default": "",
+            "maxLength": 200,
+            "title": "Event",
+            "type": "string"
+          },
+          "notes": {
+            "default": "",
+            "maxLength": 300,
+            "title": "Notes",
+            "type": "string"
+          }
+        },
+        "title": "SuggestArgs",
+        "type": "object"
+      }
+    },
+    "type": "function"
+  },
+  {
+    "function": {
+      "description": "List learned skills with their exact IDs and names.",
+      "name": "list_skills",
+      "parameters": {
+        "additionalProperties": false,
+        "properties": {},
+        "title": "Empty",
+        "type": "object"
+      }
+    },
+    "type": "function"
+  },
+  {
+    "function": {
+      "description": "Read steps of an existing learned skill by its exact ID.",
+      "name": "get_skill",
+      "parameters": {
+        "additionalProperties": false,
+        "properties": {
+          "skill_id": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Skill Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "skill_id"
+        ],
+        "title": "SkillArgs",
+        "type": "object"
+      }
+    },
+    "type": "function"
+  },
+  {
+    "function": {
+      "description": "Ask the vision model a question about the camera image attached to THIS message. Cannot access the camera without an attached image.",
+      "name": "inspect_image",
+      "parameters": {
+        "additionalProperties": false,
+        "properties": {
+          "question": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Question",
+            "type": "string"
+          }
+        },
+        "required": [
+          "question"
+        ],
+        "title": "InspectArgs",
+        "type": "object"
+      }
+    },
+    "type": "function"
+  },
+  {
+    "function": {
+      "description": "Offer a user-clickable app action. This does NOT start a camera, spend credits, or generate images. For try-on pass exact wardrobe item IDs in layer order; for guide pass skill_id; for image-studio pass prompt.",
+      "name": "open_screen",
+      "parameters": {
+        "additionalProperties": false,
+        "properties": {
+          "item_ids": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 8,
+            "title": "Item Ids",
+            "type": "array"
+          },
+          "prompt": {
+            "default": "",
+            "maxLength": 500,
+            "title": "Prompt",
+            "type": "string"
+          },
+          "screen": {
+            "description": "Use tryon-live for video/live camera; tryon-photo is still-photo generation. Match the user request exactly.",
+            "enum": [
+              "wardrobe",
+              "teach",
+              "home",
+              "stylist",
+              "image-studio",
+              "tryon-photo",
+              "tryon-live",
+              "guide"
+            ],
+            "title": "Screen",
+            "type": "string"
+          },
+          "skill_id": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Skill Id"
+          }
+        },
+        "required": [
+          "screen"
+        ],
+        "title": "OpenArgs",
+        "type": "object"
+      }
+    },
+    "type": "function"
+  }
+]

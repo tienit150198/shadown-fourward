@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from wardrobe_testlib import seed_test_wardrobe
+
 import asyncio
 import io
 
@@ -48,7 +50,7 @@ def test_photo_route_sends_references_in_order_and_saves_image(wclient, monkeypa
     wclient.app.state.wardrobe_tryon = TryOnService(vidu_image=vidu_image.ViduImage(transport=httpx.MockTransport(provider)))
     config = wclient.get("/api/tryon/config").json()
     assert config["photo"]["provider"] == "vidu" and config["photo"]["renders_bottoms"]
-    assert wclient.post("/api/wardrobe/seed-demo").is_success
+    assert seed_test_wardrobe()['added'] == 10
     ids = ["demo-ao-polo-hong", "demo-quan-jean-xanh", "demo-giay-sneaker-trang"]
     response = wclient.post("/api/tryon/photo", json={"person_image": data_url(make_jpeg()), "item_ids": ids})
     assert response.is_success, response.text

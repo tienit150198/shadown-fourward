@@ -97,9 +97,19 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             await app.state.voice_client.aclose()
 
 
-app = FastAPI(title="SHADOW", lifespan=lifespan)
+app = FastAPI(
+    title="SHADOW API", lifespan=lifespan,
+    docs_url="/docs", redoc_url="/redoc", openapi_url="/openapi.json",
+    swagger_ui_parameters={
+        "filter": True, "displayRequestDuration": True,
+        "persistAuthorization": False, "defaultModelsExpandDepth": 1,
+        "tagsSorter": "alpha", "operationsSorter": "alpha",
+    },
+)
 # Access gate, body-size cap, per-IP rate limits, try-on concurrency, WS limits (see security.py).
 app.add_middleware(security.SecurityMiddleware)
+from api_errors import install_error_handlers
+install_error_handlers(app)
 
 
 def _provider(request: Request) -> LLMProvider:
@@ -137,7 +147,7 @@ async def access(payload: AccessRequest, request: Request) -> JSONResponse:
     """Exchange the demo access code (SHADOW_ACCESS_CODE) for an HttpOnly cookie."""
     code = security.access_code()
     if code and not security.check_access_code(payload.code.strip()):
-        raise HTTPException(status_code=401, detail="Mã truy cập không đúng.")
+        raise HTTPException(status_code=401, detail="Mã truy cập không đúng.", headers={"X-Shadow-Error-Code": "invalid_access_code", "X-Shadow-Retryable": "false"})
     response = JSONResponse({"ok": True, "access_required": bool(code)})
     if code:
         cookie = security.access_cookie_header(code, secure=request.url.scheme == "https")
@@ -521,12 +531,18 @@ async def session_control(websocket: WebSocket) -> None:
 
 from wardrobe_api import router as wardrobe_router  # noqa: E402
 
+from service_status import router as service_status_router
+app.include_router(service_status_router)
 app.include_router(wardrobe_router)
 app.include_router(intent_api)
 app.include_router(conversation_api)
 app.include_router(voice_api)
 app.include_router(image_api)
 app.include_router(vidu_api)
+
+from api_schema import install_openapi  # noqa: E402
+
+install_openapi(app)
 
 
 # ---- Static web app (mounted last so it never shadows API routes) -------------

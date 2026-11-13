@@ -85,6 +85,8 @@ def test_upstream_errors_do_not_reflect_provider_body(monkeypatch, status, body,
 
 def test_route_rejects_external_reference_and_reports_unconfigured_key(monkeypatch):
     app = FastAPI()
+    from api_errors import install_error_handlers
+    install_error_handlers(app)
     app.include_router(vidu_live.router)
     client = TestClient(app)
     path = "/api/tryon/live-session"
@@ -93,7 +95,7 @@ def test_route_rejects_external_reference_and_reports_unconfigured_key(monkeypat
     assert vidu_live.live_config()["available"] is False
     result = client.post(path, json={"reference_image": reference_image()})
     assert result.status_code == 503
-    assert result.json()["detail"]["code"] == "NO_VIDU_KEY"
+    assert result.json()["code"] == "missing_api_key"
 
     monkeypatch.setenv("VIDU_API_KEY", "backend-only")
     monkeypatch.delenv("VIDU_API_BASE_URL", raising=False)
@@ -109,6 +111,8 @@ def test_route_marks_session_credentials_no_store(monkeypatch):
 
     monkeypatch.setattr(vidu_live, "create_live_session", fake_session)
     app = FastAPI()
+    from api_errors import install_error_handlers
+    install_error_handlers(app)
     app.include_router(vidu_live.router)
     result = TestClient(app).post("/api/tryon/live-session", json={"reference_image": reference_image()})
     assert result.status_code == 200

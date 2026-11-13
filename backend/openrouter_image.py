@@ -18,9 +18,13 @@ MAX_REFERENCES = 14
 
 
 class OpenRouterImageError(RuntimeError):
-    def __init__(self, message: str, status: int = 502) -> None:
+    def __init__(self, message: str, status: int = 502, *, code: str | None = None,
+                 service: str = "photo_tryon", retryable: bool | None = None) -> None:
         super().__init__(message)
         self.status = status
+        self.code = code or {422: "invalid_request", 429: "rate_limited", 504: "provider_timeout"}.get(status, "provider_unavailable")
+        self.service = service
+        self.retryable = (self.code in {"rate_limited", "provider_timeout", "provider_unavailable"}) if retryable is None else retryable
 
 
 class OpenRouterImage:
@@ -34,7 +38,7 @@ class OpenRouterImage:
     async def edit(self, prompt: str, images: list[bytes]) -> bytes:
         key = os.getenv("OPENROUTER_API_KEY", "").strip()
         if not key:
-            raise OpenRouterImageError("Chưa cấu hình OPENROUTER_API_KEY để mặc thử bằng Nano Banana.", 503)
+            raise OpenRouterImageError("Chưa cấu hình OPENROUTER_API_KEY để mặc thử bằng Nano Banana.", 503, code="missing_api_key")
         if not 2 <= len(images) <= MAX_REFERENCES:
             raise OpenRouterImageError("Nano Banana cần ảnh người và từ một đến 13 ảnh đồ.", 422)
         with Image.open(io.BytesIO(images[0])) as person:
@@ -55,9 +59,9 @@ class OpenRouterImage:
                     if not response.is_success:
                         status = response.status_code
                         if status == 402:
-                            raise OpenRouterImageError("OpenRouter không đủ credit. Hãy nạp credit rồi thử lại.", 503)
+                            raise OpenRouterImageError("OpenRouter không đủ credit. Hãy nạp credit rồi thử lại.", 503, code="insufficient_credits")
                         if status in (401, 403):
-                            raise OpenRouterImageError("OpenRouter từ chối quyền tạo ảnh. Kiểm tra khóa API và quyền mô hình.", 503)
+                            raise OpenRouterImageError("OpenRouter từ chối quyền tạo ảnh. Kiểm tra khóa API và quyền mô hình.", 503, code="provider_auth_failed")
                         if status == 429:
                             raise OpenRouterImageError("OpenRouter đang giới hạn lượt gọi. Vui lòng thử lại sau.", 429)
                         raise OpenRouterImageError(f"Nano Banana xử lý ảnh thất bại (HTTP {status}).")
@@ -65,7 +69,7 @@ class OpenRouterImage:
                     async for chunk in response.aiter_bytes():
                         raw.extend(chunk)
                         if len(raw) > MAX_IMAGE_BYTES * 4 // 3 + 256 * 1024:
-                            raise OpenRouterImageError("Ảnh Nano Banana trả về quá lớn.")
+                            raise OpenRouterImageError("Ảnh Nano Banana trả về quá lớn.", code="invalid_provider_response")
             data = json.loads(raw)
             encoded = data["data"][0]["b64_json"]
             if not isinstance(encoded, str):
@@ -79,4 +83,4 @@ class OpenRouterImage:
         except httpx.HTTPError:
             raise OpenRouterImageError("Không kết nối được OpenRouter để mặc thử.") from None
         except (ValueError, KeyError, IndexError, TypeError, binascii.Error, WardrobeError):
-            raise OpenRouterImageError("Nano Banana trả về ảnh mặc thử không hợp lệ.") from None
+            raise OpenRouterImageError("Nano Banana trả về ảnh mặc thử không hợp lệ.", code="invalid_provider_response") from None

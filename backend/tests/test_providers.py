@@ -106,3 +106,60 @@ async def test_mock_provider_has_mode():
     assert provider.mode == "mock"
     with pytest.raises(NotImplementedError):
         await provider.chat_json(model="m", system="s", content=[])
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('status,code,retryable', [
+    (401, 'provider_auth_failed', False),
+    (403, 'provider_auth_failed', False),
+    (402, 'insufficient_credits', False),
+    (429, 'rate_limited', True),
+    (503, 'provider_unavailable', True),
+])
+async def test_provider_errors_are_structured_and_redacted(status, code, retryable, monkeypatch):
+    import service_status
+    observations = []
+    monkeypatch.setattr(service_status, 'record_failure', lambda *args: observations.append(args))
+    provider = OpenAICompatibleProvider(
+        base_url='https://provider.example/v1', api_key='SECRET_KEY',
+        transport=httpx.MockTransport(lambda request: httpx.Response(status, text='SECRET_KEY private upstream body')),
+    )
+    try:
+        with pytest.raises(ProviderError) as error:
+            await provider.chat_json(model='m', system='s', content=[])
+        assert error.value.code == code and error.value.retryable == retryable
+        assert 'SECRET' not in str(error.value) and 'private' not in str(error.value)
+        assert observations[-1][0:2] == ('llm', code)
+        assert 'SECRET' not in str(observations)
+        with pytest.raises(ProviderError) as streamed:
+            async for _ in provider.stream_chat(model='m', messages=[], tools=[]):
+                pass
+        assert streamed.value.code == code and streamed.value.retryable == retryable
+    finally:
+        await provider.aclose()
+
+
+@pytest.mark.asyncio
+async def test_provider_timeout_status_and_success_reset(monkeypatch):
+    import service_status
+    observed = []
+    monkeypatch.setattr(service_status, 'record_failure', lambda *args: observed.append(args))
+    monkeypatch.setattr(service_status, 'record_success', lambda *args: observed.append(args))
+    def failed(request):
+        raise httpx.ReadTimeout('SECRET_URL', request=request)
+    provider = OpenAICompatibleProvider(base_url='https://provider.example', api_key='k', transport=httpx.MockTransport(failed))
+    try:
+        with pytest.raises(ProviderError) as error:
+            await provider.chat_json(model='m', system='s', content=[])
+        assert error.value.code == 'provider_timeout'
+        assert 'SECRET' not in str(error.value)
+    finally:
+        await provider.aclose()
+    provider = OpenAICompatibleProvider(base_url='https://provider.example', api_key='k', transport=httpx.MockTransport(
+        lambda request: httpx.Response(200, json={'choices':[{'message':{'content':'{"ok":true}'}}]})
+    ))
+    try:
+        assert await provider.chat_json(model='m', system='s', content=[]) == {'ok': True}
+        assert observed[-1] == ('llm',)
+    finally:
+        await provider.aclose()

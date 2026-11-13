@@ -13,6 +13,7 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
+from service_status import record_success
 from wardrobe_store import WardrobeError, decode_image_data_url, jpeg_data_url, to_jpeg
 
 router = APIRouter()
@@ -175,10 +176,16 @@ async def tryon_live_session(payload: LiveSessionRequest, request: Request) -> J
                 raise HTTPException(status_code=499, detail="Đã hủy mở phiên mặc thử.")
         session = task.result()
     except ViduLiveError as error:
-        raise HTTPException(status_code=error.status, detail={"code": error.code, "message": str(error)}) from None
+        code = {"VIDU_AUTH": "provider_auth_failed", "VIDU_CREDITS": "insufficient_credits", "VIDU_BUSY": "rate_limited", "VIDU_UNAVAILABLE": "provider_unavailable", "VIDU_NOT_CONFIGURED": "missing_api_key", "VIDU_TIMEOUT": "provider_timeout", "VIDU_INVALID_SESSION": "invalid_provider_response", "VIDU_INVALID_REFERENCE": "invalid_request"}.get(error.code, "provider_unavailable")
+        if not _api_key():
+            code = "missing_api_key"
+        elif _base_url() not in BASE_URLS:
+            code = "invalid_configuration"
+        raise HTTPException(status_code=error.status, detail={"code": error.code, "message": str(error)}, headers={"X-Shadow-Error-Code": code, "X-Shadow-Service": "live_tryon", "X-Shadow-Retryable": str(code in ("rate_limited", "provider_timeout", "provider_unavailable")).lower()}) from None
     finally:
         if not task.done():
             task.cancel()
             with suppress(asyncio.CancelledError):
                 await task
+    record_success("live_tryon")
     return JSONResponse(session, headers={"Cache-Control": "no-store"})

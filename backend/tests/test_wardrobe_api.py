@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from wardrobe_testlib import seed_test_wardrobe
+
 import json
 from collections import Counter
 from pathlib import Path
@@ -54,19 +56,9 @@ def test_create_item_with_ai_tagging(wclient):
     assert provider.calls[0]["model"] == "google/gemini-2.5-flash"  # VISION_MODEL from conftest
 
 
-def test_seed_demo_is_idempotent_and_complete(wclient, wardrobe_dir):
-    first = wclient.post("/api/wardrobe/seed-demo").json()
-    assert first["added"] == 10
-    counts = Counter(item["category"] for item in first["items"])
-    assert counts == {"top": 4, "bottom": 3, "dress": 1, "outerwear": 1, "shoes": 1}
-    for item in first["items"]:
-        assert item["demo"] is True and item["tag_source"] == "seed"
-        assert (wardrobe_dir / item["image"]).is_file()
-        assert item["colors"] and 1 <= item["warmth"] <= 5 and item["description_en"]
-    assert wclient.post("/api/wardrobe/seed-demo").json()["added"] == 0
-    wclient.delete("/api/wardrobe/items/demo-quan-au-den")
-    assert wclient.post("/api/wardrobe/seed-demo").json()["added_ids"] == ["demo-quan-au-den"]
-    assert wclient.post("/api/wardrobe/seed-demo?replace=true").json()["added"] == 10
+def test_seeding_is_not_an_http_api(wclient):
+    assert '/api/wardrobe/seed-demo' not in wclient.get('/openapi.json').json()['paths']
+    assert wclient.post('/api/wardrobe/seed-demo').status_code in (404, 405)
 
 
 def test_seed_files_are_consistent():
@@ -88,7 +80,7 @@ def test_rules_routes(wclient):
 
 
 def test_media_route_is_path_safe(wclient):
-    wclient.post("/api/wardrobe/seed-demo")
+    seed_test_wardrobe()
     assert wclient.get("/wardrobe-media/items.json").status_code == 404
     assert wclient.get("/wardrobe-media/../main.py").status_code == 404
     assert wclient.get("/wardrobe-media/images/%2e%2e/items.json").status_code == 404

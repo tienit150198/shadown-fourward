@@ -144,5 +144,5 @@ def test_import_route_creates_tagged_item(wclient, monkeypatch):
 
 def test_import_route_rejects_bad_hosts(wclient):
     res = wclient.post("/api/wardrobe/import", json={"url": "https://evil.com/products/x"})
-    assert res.status_code == 422 and res.json()["detail"]["code"] == "host_not_allowed"
-    assert "yame.vn" in res.json()["detail"]["message"]
+    assert res.status_code == 422 and res.json()["code"] == "host_not_allowed"
+    assert "yame.vn" in res.json()["message"]

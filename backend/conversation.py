@@ -14,11 +14,11 @@ import re
 from collections.abc import AsyncIterator
 from contextlib import aclosing
 from datetime import datetime, timedelta, timezone
-from typing import Literal
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from intent_router import IntentResult, TurnText, local_intent, normalize
 from providers import ProviderError, conversation_model
@@ -57,10 +57,80 @@ class ConversationTurn(BaseModel):
 
 class ConversationRequest(BaseModel):
     text: TurnText
-    conversation_id: UUID | None = None
-    configured_city: str | None = Field(default=None, max_length=80)
-    history: list[ConversationTurn] = Field(default_factory=list, max_length=6)
-    image: str | None = Field(None, max_length=500_000)
+    conversation_id: UUID | None = Field(default=None, description="Reuse the ID from a successful done event; omit to start a new conversation. Sessions expire and do not survive server restarts.")
+    configured_city: str | None = Field(default=None, max_length=80, description="App-selected city, not GPS. Omit to retain it; null clears it.")
+    history: list[ConversationTurn] = Field(default_factory=list, max_length=6, description="Optional text bootstrap for a new or expired session. Ignored when the server already has conversation history.")
+    image: str | None = Field(None, max_length=500_000, description="Optional base64 image data URL for this turn only. Used by inspect_image when the model needs vision.")
+
+
+class ConversationTextEvent(BaseModel):
+    type: Literal["text"]
+    text: str = Field(description="Append this chunk to the assistant text at this position in the timeline.")
+
+
+class ConversationToolStatusEvent(BaseModel):
+    type: Literal["tool_status"]
+    id: str = Field(description="Tool call ID. Update the existing timeline row with this ID.")
+    state: Literal["running", "done", "error"]
+    label: str
+
+
+class ConversationGarment(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    id: str
+    name: str | None = None
+    category: str | None = None
+    image_url: str | None = Field(default=None, description="Relative media URL; resolve against the API origin and send access credentials.")
+
+
+class ConversationOutfit(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    title: str
+    item_ids: list[str] = Field(description="Ordered garment IDs; preserve intentional layers, including multiple tops.")
+    items: list[ConversationGarment]
+    reason: str | None = None
+
+
+class ConversationOutfitsEvent(BaseModel):
+    type: Literal["outfits"]
+    outfits: list[ConversationOutfit] = Field(max_length=3)
+
+
+class ConversationActionEvent(BaseModel):
+    type: Literal["action"]
+    route: Literal["wardrobe", "teach", "home", "stylist", "image-studio", "tryon-photo", "tryon-live", "guide"]
+    label: str
+    items: list[str] | None = None
+    id: str | None = Field(default=None, description="Skill ID for guide actions.")
+    prompt: str | None = None
+
+
+class ConversationDoneEvent(BaseModel):
+    type: Literal["done"]
+    conversation_id: UUID | None = Field(default=None, description="Save for follow-up turns in AI mode. Mock mode does not issue a session ID.")
+    source: str
+    intent: str | None = None
+    suggestions: list[str] = Field(default_factory=list)
+
+
+class ConversationErrorEvent(BaseModel):
+    type: Literal["error"]
+    text: str
+    code: Literal["conversation_capacity", "conversation_busy", "conversation_unavailable"]
+    service: str | None = Field(default=None, description="Affected backend feature, such as chat.")
+    reason_code: str | None = Field(default=None, description="Underlying provider failure category when available.")
+    retryable: bool = Field(description="The user may explicitly retry. Do not automatically replay UI actions or paid requests.")
+
+
+ConversationEvent = Annotated[
+    ConversationTextEvent | ConversationToolStatusEvent | ConversationOutfitsEvent |
+    ConversationActionEvent | ConversationDoneEvent | ConversationErrorEvent,
+    Field(discriminator="type"),
+]
+
+
+class ConversationStreamResponse(StreamingResponse):
+    media_type = "application/x-ndjson"
 
 
 def event(kind: str, **data: object) -> str:
@@ -281,10 +351,10 @@ async def generate(payload: ConversationRequest, request: Request) -> AsyncItera
     try:
         conversation_id, session = conversation_store(request).get(payload.conversation_id)
     except ProviderError:
-        yield event('error', text='Máy chủ đang có nhiều cuộc trò chuyện. Bạn thử lại sau nhé.')
+        yield event('error', code='conversation_capacity', retryable=True, text='Máy chủ đang có nhiều cuộc trò chuyện. Bạn thử lại sau nhé.')
         return
     if session.lock.locked():
-        yield event('error', text='Shadow đang trả lời tin trước. Đợi một chút rồi gửi lại nhé.')
+        yield event('error', code='conversation_busy', retryable=True, text='Shadow đang trả lời tin trước. Đợi một chút rồi gửi lại nhé.')
         return
     async with session.lock:
         try:
@@ -333,6 +403,8 @@ async def generate(payload: ConversationRequest, request: Request) -> AsyncItera
                         if not terminal.get('content'):
                             raise ProviderError('Empty assistant response')
                         commit_turn(session, context, messages, start)
+                        from service_status import record_success
+                        record_success('chat')
                         yield event('done', conversation_id=conversation_id, source='tools', suggestions=[])
                         return
                     calls_used += len(calls)
@@ -376,17 +448,45 @@ async def generate(payload: ConversationRequest, request: Request) -> AsyncItera
                         # Showing the cards is the response: avoid another model round just to acknowledge it.
                         messages.append({'role': 'assistant', 'content': showcased_intro})
                         commit_turn(session, context, messages, start)
+                        from service_status import record_success
+                        record_success('chat')
                         yield event('done', conversation_id=conversation_id, source='tools', suggestions=[])
                         return
                 raise ProviderError('Tool round budget exceeded')
-        except (ProviderError, asyncio.TimeoutError):
+        except (ProviderError, asyncio.TimeoutError) as error:
             logger.info('Conversation model/tool loop failed')
-            yield event('error', text='Kết nối AI bị gián đoạn hoặc yêu cầu mất quá lâu. Bạn thử lại nhé.')
+            reason_code = getattr(error, 'code', 'provider_timeout')
+            retryable = getattr(error, 'retryable', True)
+            message = {
+                'provider_auth_failed': 'Dịch vụ AI từ chối khóa API. Quản trị viên cần kiểm tra cấu hình.',
+                'insufficient_credits': 'Dịch vụ AI không đủ credit. Quản trị viên cần nạp credit.',
+                'rate_limited': 'Dịch vụ AI đang giới hạn lượt gọi. Vui lòng thử lại sau.',
+                'provider_timeout': 'Dịch vụ AI phản hồi quá lâu. Bạn có thể thử lại.',
+                'provider_request_rejected': 'Dịch vụ AI từ chối yêu cầu. Quản trị viên cần kiểm tra mô hình và cấu hình.',
+            }.get(reason_code, 'Kết nối AI bị gián đoạn. Bạn có thể thử lại.')
+            from service_status import record_failure
+            record_failure('chat', reason_code, '', retryable)
+            yield event('error', code='conversation_unavailable', service='chat', reason_code=reason_code,
+                        retryable=retryable, text=message)
 
 
-@router.post("/api/conversation")
+@router.post(
+    "/api/conversation", summary="Stream a conversation turn", tags=["Conversation"],
+    response_class=ConversationStreamResponse, response_model=None,
+    responses={200: {"model": ConversationEvent, "description": "UTF-8 NDJSON stream. Each line is one event from this union, not a JSON array. Ends with done or error; HTTP 200 alone does not mean the turn succeeded."}},
+)
 async def converse(payload: ConversationRequest, request: Request) -> StreamingResponse:
-    return StreamingResponse(
+    """Stream UTF-8 newline-delimited JSON, one complete object per line.
+
+    Append text chunks, update tool status by ID, render outfit cards and offer
+    action routes without automatically launching cameras or paid generation.
+    Only `done` confirms success: save its conversation_id for the next turn.
+    An `error` is terminal even when HTTP status is 200; EOF without either is
+    an interrupted turn. Error codes are stable machine-readable categories;
+    `retryable` permits an explicit retry, not automatic replay of actions.
+    Sessions are ephemeral server memory; omitting the ID starts a new session.
+    """
+    return ConversationStreamResponse(
         generate(payload, request),
         media_type="application/x-ndjson",
         headers={"Cache-Control": "no-store", "X-Accel-Buffering": "no"},

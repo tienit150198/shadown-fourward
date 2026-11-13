@@ -1,4 +1,4 @@
-"""Compatibility entry point used by the wardrobe seed-demo loader.
+"""Compatibility entry point for manual wardrobe seed commands.
 
 With no flag this only fetches and validates missing photos, matching the other
 build_seed scripts. Pass --seed explicitly to write items to WardrobeStore.

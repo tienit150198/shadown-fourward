@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, Body, HTTPException, Query, Request
+from service_status import error_headers, record_success
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, Field
 
@@ -30,7 +31,6 @@ from wardrobe_store import (
     WardrobeError,
     WardrobeStore,
     decode_image_data_url,
-    is_safe_id,
     jpeg_data_url,
     now_iso,
     to_jpeg,
@@ -41,15 +41,6 @@ from weather import WeatherService
 logger = logging.getLogger("uvicorn.error")
 
 DISCONNECT_POLL_S = 1.0
-
-SEED_DIR = Path(__file__).resolve().parent / "wardrobe_seed"
-# Demo wardrobe sets for POST /api/wardrobe/seed-demo?set=…: name → (dir, build script that re-creates images).
-SEED_SETS: dict[str, tuple[Path, str]] = {
-    "default": (SEED_DIR, "build_seed.py"),
-    "shop": (SEED_DIR.parent / "wardrobe_seed_shop", "build_seed_shop.py"),  # đồ nam mùa hè (YaMe)
-}
-# Product fields of shop seed items kept as-is on the stored item (shown in the web editor).
-SEED_EXTRA_FIELDS = {"brand": 40, "product_name": 200, "product_url": 300, "product_code": 40}
 
 router = APIRouter()
 
@@ -159,74 +150,6 @@ async def delete_item(item_id: str, request: Request) -> dict[str, Any]:
     return {"ok": True}
 
 
-def _seed_extra(row: dict[str, Any]) -> dict[str, Any]:
-    extra: dict[str, Any] = {"tag_source": "seed", "demo": True}
-    for key, max_len in SEED_EXTRA_FIELDS.items():
-        value = row.get(key)
-        if isinstance(value, str) and value.strip():
-            extra[key] = value.strip()[:max_len]
-    if not str(extra.get("product_url", "")).startswith("https://"):
-        extra.pop("product_url", None)
-    price = row.get("price_vnd")
-    if isinstance(price, (int, float)) and not isinstance(price, bool) and 0 < price < 1e9:
-        extra["price_vnd"] = int(price)
-    return extra
-
-
-@router.post("/api/wardrobe/seed-demo")
-async def seed_demo(
-    request: Request,
-    replace: bool = Query(False),
-    set_name: str | None = Query(None, alias="set", max_length=20),
-) -> dict[str, Any]:
-    """Load a demo wardrobe (pre-tagged offline, see wardrobe_seed*/SOURCES.md). Idempotent.
-
-    `set`: "default" (bộ mẫu cơ bản) | "shop" (đồ nam mùa hè từ shop thật). Without it the
-    SHADOW_DEMO_SEED env var decides (default "default").
-    """
-    name = (set_name or os.getenv("SHADOW_DEMO_SEED") or "default").strip().lower()
-    if name not in SEED_SETS:
-        raise HTTPException(status_code=422, detail=f"Bộ tủ đồ mẫu không hợp lệ: chọn {', '.join(SEED_SETS)}.")
-    seed_dir, script = SEED_SETS[name]
-    store = _store(request)
-    try:
-        seed = json.loads((seed_dir / "items.json").read_text(encoding="utf-8"))
-    except (OSError, ValueError) as error:
-        raise HTTPException(status_code=500, detail=f"Thiếu bộ tủ đồ mẫu: {error}")
-    seed = [row for row in seed if isinstance(row, dict) and is_safe_id(row.get("id"))]
-    rerun_hint = f"cd backend/{seed_dir.name} && ../../.venv/bin/python {script}"
-    missing = [row["id"] for row in seed if not (seed_dir / "images" / f"{row['id']}.jpg").is_file()]
-    if missing and len(missing) == len(seed):
-        # Images are git-ignored for the shop set: say exactly how to get them back.
-        raise HTTPException(
-            status_code=503,
-            detail=f"Bộ tủ đồ mẫu “{name}” chưa có ảnh. Chạy: {rerun_hint} để tải ảnh rồi thử lại.",
-        )
-    if replace:
-        for row in seed:
-            store.delete_item(row["id"])
-    existing = store.has_items(row["id"] for row in seed)
-    added: list[str] = []
-    for row in seed:
-        item_id = row["id"]
-        if item_id in existing or item_id in missing:
-            continue
-        jpeg = (seed_dir / "images" / f"{item_id}.jpg").read_bytes()
-        fields = {k: v for k, v in row.items() if k not in ("id", "image", "image_url", "created_at")}
-        try:
-            store.create_item(fields, jpeg, item_id=item_id, extra=_seed_extra(row))
-        except WardrobeError as error:
-            logger.warning("seed item %s skipped: %s", item_id, error)
-            continue
-        added.append(item_id)
-    result: dict[str, Any] = {"added": len(added), "added_ids": added, "set": name, "items": store.list_items()}
-    if missing:
-        logger.warning("seed set %s: %d image(s) missing", name, len(missing))
-        result["missing_images"] = missing
-        result["warning"] = f"Thiếu {len(missing)} ảnh của bộ mẫu “{name}”. Chạy: {rerun_hint} để tải lại."
-    return result
-
-
 # ---- rules ---------------------------------------------------------------------------
 
 
@@ -302,7 +225,7 @@ async def stylist_suggest(payload: SuggestRequest, request: Request) -> dict[str
     provider = _provider(request)
     items = store.list_items()
     if not items:
-        raise HTTPException(status_code=409, detail="Tủ đồ đang trống — hãy thêm đồ hoặc nạp tủ đồ mẫu.")
+        raise HTTPException(status_code=409, detail="Tủ đồ đang trống — hãy thêm đồ trước.")
     anchor_id = payload.anchor_item_id or None
     if anchor_id and anchor_id not in {it["id"] for it in items}:
         raise HTTPException(status_code=404, detail="Không tìm thấy món đồ cần giữ.")
@@ -400,9 +323,11 @@ async def tryon_ar_config() -> JSONResponse:
 @router.post("/api/tryon/live-token")
 async def tryon_live_token() -> dict[str, Any]:
     try:
-        return await create_live_token()
+        result = await create_live_token()
+        record_success("legacy_live_tryon")
+        return result
     except TryOnError as error:
-        raise HTTPException(status_code=error.status, detail=str(error))
+        raise HTTPException(status_code=error.status, detail=str(error), headers=error_headers(error, "legacy_live_tryon"))
 
 
 class LivePromptRequest(BaseModel):
@@ -457,10 +382,11 @@ async def tryon_photo(payload: PhotoTryOnRequest, request: Request) -> dict[str,
     except WardrobeError as error:
         raise HTTPException(status_code=422, detail=str(error))
     except TryOnError as error:
-        raise HTTPException(status_code=error.status, detail=str(error))
+        raise HTTPException(status_code=error.status, detail=str(error), headers=error_headers(error, "photo_tryon"))
     finally:
         if not task.done():
             task.cancel()
+    record_success("photo_tryon")
     rel = store.save_tryon(result.pop("jpeg"))
     return {"image_url": f"/wardrobe-media/{rel}", **result}
 

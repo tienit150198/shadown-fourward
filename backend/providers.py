@@ -132,6 +132,41 @@ VISION_MIN_INTERVAL_MS = vision_min_interval_ms()
 class ProviderError(RuntimeError):
     """Raised when the upstream LLM call fails or returns unusable output."""
 
+    def __init__(self, message: str, *, code: str = "invalid_provider_response", retryable: bool = True) -> None:
+        super().__init__(message)
+        self.code = code
+        self.retryable = retryable
+
+
+def _record_success() -> None:
+    from service_status import record_success
+    record_success("llm")
+
+
+def _failure(message: str, *, code: str = "invalid_provider_response", retryable: bool = True) -> ProviderError:
+    from service_status import record_failure
+    # Status messages are deliberately fixed: upstream bodies can contain user data or credentials.
+    record_failure("llm", code, "Dịch vụ AI chưa hoàn tất yêu cầu.", retryable)
+    return ProviderError(message, code=code, retryable=retryable)
+
+
+def _http_failure(status: int) -> ProviderError:
+    code, retryable = {
+        401: ("provider_auth_failed", False), 403: ("provider_auth_failed", False),
+        402: ("insufficient_credits", False), 429: ("rate_limited", True),
+    }.get(status, ("provider_unavailable", True) if status >= 500 else ("provider_request_rejected", False))
+    return _failure(f"LLM HTTP {status}", code=code, retryable=retryable)
+
+
+def _transport_failure(error: Exception) -> ProviderError:
+    if isinstance(error, httpx.HTTPStatusError):
+        return _http_failure(error.response.status_code)
+    if isinstance(error, httpx.TimeoutException):
+        return _failure("LLM request timed out", code="provider_timeout")
+    if isinstance(error, httpx.HTTPError):
+        return _failure("LLM connection failed", code="provider_unavailable")
+    return _failure("LLM returned invalid data")
+
 
 class LogprobsUnsupported(ProviderError):
     """The provider/gateway does not return token logprobs (caller falls back to JSON mode)."""
@@ -206,7 +241,7 @@ def extract_json_object(text: str) -> dict[str, Any]:
                 continue
             if isinstance(data, dict):
                 return data
-    raise ProviderError(f"no JSON object in model reply: {text[:200]!r}")
+    raise ProviderError("no JSON object in model reply")
 
 
 def _message_text(message: Any) -> str:
@@ -328,7 +363,7 @@ class OpenAICompatibleProvider(LLMProvider):
         try:
             return await self._client.post(f"{self.base_url}/chat/completions", json=body)
         except httpx.HTTPError as error:
-            raise ProviderError(f"LLM request failed: {error!r}") from error
+            raise _transport_failure(error) from None
 
     async def stream_text(
         self, *, model: str, messages: list[dict[str, Any]], max_tokens: int = 180
@@ -349,10 +384,11 @@ class OpenAICompatibleProvider(LLMProvider):
                         continue
                     event = line[5:].strip()
                     if event == "[DONE]":
+                        _record_success()
                         return
                     chunk = json.loads(event)
                     if chunk.get("error"):
-                        raise ProviderError("LLM returned a stream error")
+                        raise _failure("LLM returned a stream error")
                     choices = chunk.get("choices") or []
                     if choices:
                         choice = choices[0]
@@ -360,10 +396,11 @@ class OpenAICompatibleProvider(LLMProvider):
                         if delta:
                             yield delta
                         if choice.get("finish_reason"):
+                            _record_success()
                             return
-                raise ProviderError("LLM stream closed before its terminal event")
+                raise _failure("LLM stream closed before its terminal event")
         except (httpx.HTTPError, ValueError, AttributeError, TypeError) as error:
-            raise ProviderError("LLM streaming request failed") from error
+            raise _transport_failure(error) from None
 
     async def stream_chat(
         self, *, model: str, messages: list[dict[str, Any]],
@@ -384,83 +421,84 @@ class OpenAICompatibleProvider(LLMProvider):
                         continue
                     event = line[5:].strip()
                     if len(event) > 262144:
-                        raise ProviderError("LLM stream event exceeds limit")
+                        raise _failure("LLM stream event exceeds limit")
                     if event == "[DONE]":
                         terminal = True
                         break
                     chunk = json.loads(event)
                     if not isinstance(chunk, dict) or chunk.get("error"):
-                        raise ProviderError("LLM returned a stream error")
+                        raise _failure("LLM returned a stream error")
                     choices = chunk.get("choices", [])
                     if not isinstance(choices, list) or len(choices) > 1:
-                        raise ProviderError("invalid stream choices")
+                        raise _failure("invalid stream choices")
                     if not choices:
                         continue
                     choice = choices[0]
                     if not isinstance(choice, dict) or choice.get("index", 0) != 0:
-                        raise ProviderError("invalid stream choice")
+                        raise _failure("invalid stream choice")
                     delta = choice.get("delta", {})
                     if not isinstance(delta, dict) or delta.get("role", "assistant") != "assistant":
-                        raise ProviderError("invalid assistant delta")
+                        raise _failure("invalid assistant delta")
                     text = delta.get("content")
                     if text is not None and not isinstance(text, str):
-                        raise ProviderError("invalid assistant content")
+                        raise _failure("invalid assistant content")
                     fragments = delta.get("tool_calls", [])
                     if not isinstance(fragments, list):
-                        raise ProviderError("invalid tool-call deltas")
+                        raise _failure("invalid tool-call deltas")
                     for fragment in fragments:
                         if not isinstance(fragment, dict):
-                            raise ProviderError("invalid tool-call delta")
+                            raise _failure("invalid tool-call delta")
                         index = fragment.get("index")
                         if type(index) is not int or not 0 <= index < 32:
-                            raise ProviderError("invalid tool-call index")
+                            raise _failure("invalid tool-call index")
                         if fragment.get("type", "function") != "function":
-                            raise ProviderError("unsupported tool-call type")
+                            raise _failure("unsupported tool-call type")
                         call = calls.setdefault(index, {"id": "", "type": "function",
                                                        "function": {"name": "", "arguments": ""}})
                         function = fragment.get("function", {})
                         if not isinstance(function, dict):
-                            raise ProviderError("invalid tool-call function")
+                            raise _failure("invalid tool-call function")
                         for source, key, target in ((fragment, "id", call), (function, "name", call["function"]),
                                                     (function, "arguments", call["function"])):
                             value = source.get(key, "")
                             if not isinstance(value, str):
-                                raise ProviderError("invalid tool-call field")
+                                raise _failure("invalid tool-call field")
                             size += len(value)
                             target[key] += value
                     if text:
                         size += len(text)
                         content += text
                     if size > 131072:
-                        raise ProviderError("LLM stream output exceeds limit")
+                        raise _failure("LLM stream output exceeds limit")
                     if text:
                         yield {"type": "text", "text": text}
                     reason = choice.get("finish_reason")
                     if reason is not None:
                         if reason not in {"stop", "tool_calls"}:
-                            raise ProviderError("LLM stream truncated or rejected")
+                            raise _failure("LLM stream truncated or rejected")
                         if reason == "tool_calls" and not calls:
-                            raise ProviderError("missing tool calls")
+                            raise _failure("missing tool calls")
                         terminal = True
                         break
             if not terminal:
-                raise ProviderError("LLM stream closed before its terminal event")
+                raise _failure("LLM stream closed before its terminal event")
             if sorted(calls) != list(range(len(calls))):
-                raise ProviderError("noncontiguous tool-call indices")
+                raise _failure("noncontiguous tool-call indices")
             ordered = [calls[index] for index in sorted(calls)]
             ids: set[str] = set()
             for call in ordered:
                 if not call["id"] or call["id"] in ids or not call["function"]["name"]:
-                    raise ProviderError("incomplete tool call")
+                    raise _failure("incomplete tool call")
                 ids.add(call["id"])
                 if not isinstance(json.loads(call["function"]["arguments"]), dict):
-                    raise ProviderError("tool-call arguments must be an object")
+                    raise _failure("tool-call arguments must be an object")
             message: dict[str, Any] = {"role": "assistant", "content": content or None}
             if ordered:
                 message["tool_calls"] = ordered
+            _record_success()
             yield {"type": "message", "message": message}
         except (httpx.HTTPError, ValueError, AttributeError, TypeError) as error:
-            raise ProviderError("LLM streaming request failed") from error
+            raise _transport_failure(error) from None
 
     async def chat_json(
         self,
@@ -489,14 +527,12 @@ class OpenAICompatibleProvider(LLMProvider):
             body.pop("response_format", None)
             response = await self._post(body)
         if not response.is_success:
-            raise ProviderError(
-                f"LLM HTTP {response.status_code}: {response.text[:300]}"
-            )
+            raise _http_failure(response.status_code)
         try:
             data = response.json()
             choice = data["choices"][0]
         except (ValueError, KeyError, IndexError, TypeError) as error:
-            raise ProviderError(f"malformed LLM response: {response.text[:300]}") from error
+            raise _failure("malformed LLM response") from None
 
         text = _message_text(choice.get("message"))
         if not text.strip() and choice.get("finish_reason") == "length":
@@ -504,14 +540,17 @@ class OpenAICompatibleProvider(LLMProvider):
             body["max_tokens"] = max_tokens * 4
             response = await self._post(body)
             if not response.is_success:
-                raise ProviderError(
-                    f"LLM HTTP {response.status_code}: {response.text[:300]}"
-                )
+                raise _http_failure(response.status_code)
             try:
                 text = _message_text(response.json()["choices"][0].get("message"))
             except (ValueError, KeyError, IndexError, TypeError) as error:
-                raise ProviderError("malformed LLM response on retry") from error
-        return extract_json_object(text)
+                raise _failure("malformed LLM response on retry") from error
+        try:
+            result = extract_json_object(text)
+        except ProviderError:
+            raise _failure("LLM returned invalid JSON") from None
+        _record_success()
+        return result
 
     async def chat_choice_probs(
         self,
@@ -536,13 +575,13 @@ class OpenAICompatibleProvider(LLMProvider):
         }
         response = await self._post(body)
         if response.status_code == 400 and "logprobs" in response.text.lower():
-            raise LogprobsUnsupported(f"LLM rejected logprobs: {response.text[:200]}")
+            raise LogprobsUnsupported("LLM rejected logprobs")
         if not response.is_success:
-            raise ProviderError(f"LLM HTTP {response.status_code}: {response.text[:300]}")
+            raise _http_failure(response.status_code)
         try:
             choice = response.json()["choices"][0]
         except (ValueError, KeyError, IndexError, TypeError) as error:
-            raise ProviderError(f"malformed LLM response: {response.text[:300]}") from error
+            raise _failure("malformed LLM response") from None
         logprobs = choice.get("logprobs") if isinstance(choice, dict) else None
         tokens = logprobs.get("content") if isinstance(logprobs, dict) else None
         if not isinstance(tokens, list) or not tokens or not isinstance(tokens[0], dict):
@@ -554,7 +593,9 @@ class OpenAICompatibleProvider(LLMProvider):
             # the sampled token itself (top_logprobs may be capped below it)
             if not any(isinstance(c, dict) and c.get("token") == first["token"] for c in candidates):
                 candidates.append({"token": first["token"], "logprob": first["logprob"]})
-        return aggregate_choice_probs(candidates, choices)
+        result = aggregate_choice_probs(candidates, choices)
+        _record_success()
+        return result
 
 
 def resolve_mode() -> str:
