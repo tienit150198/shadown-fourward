@@ -50,3 +50,17 @@ SHADOW ends browser try-on sessions after 120 seconds by default. The provider a
 For an offline demo, copy `.env.example` to `.env` if needed, leave `LLM_API_KEY` empty and set `SHADOW_MODE=mock` and `TRYON_PHOTO_PROVIDER=mock`. Start the loopback stack directly with `docker compose up -d --build --wait`.
 
 For an existing CatVTON worker, start Compose directly with `TRYON_PHOTO_PROVIDER=worker` and a private VPN address for `TRYON_WORKER_URL`. Configure `TRYON_TOKEN` on both ends if the worker requires it.
+
+## CI and owner-controlled deployment
+
+[The CI and deployment workflow](../.github/workflows/ci.yml) runs backend tests
+for pull requests and pushes to `main`. Deployment is manual: open **Actions →
+CI and deployment → Run workflow**, select `main` and your deployment environment.
+After tests pass, it builds a Linux ARM64 image and deploys through the restricted
+rootless SSH account. Any environment approval rules apply before deployment.
+Pushes and pull requests never receive deployment credentials or deploy automatically.
+
+For the current production server, follow [rootless CI setup and operations](ROOTLESS_CI.md).
+The rootful Docker daemon is disabled; use those operations commands instead of
+this document's generic `deploy/run.sh` instructions on the migrated server.
+Do not register production as a self-hosted runner for the shared repository.
