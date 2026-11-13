@@ -47,8 +47,9 @@ def test_mint_does_not_read_wardrobe_and_setup_is_not_classifier_gated(client,mo
         assert result.status_code==200
         setup=seen[0]['bidiGenerateContentSetup']
         names={item['name'] for item in setup['tools'][0]['functionDeclarations']}
-        assert {'list_wardrobe','get_weather','suggest_outfits','showcase_outfits','camera_task'} <= names
+        assert {'list_wardrobe','get_weather','showcase_outfits','camera_task'} <= names
         assert 'classify_request' not in names
+        assert 'suggest_outfits' not in names
         assert 'Hồ Chí Minh' in setup['systemInstruction']['parts'][0]['text']
         assert 'SHADOW_SYSTEM_WARDROBE' not in json.dumps(setup)
     finally:
@@ -85,17 +86,13 @@ def test_weather_and_preferences_are_reused_by_stylist_and_cards(client,tool_ses
         weather_calls.append(kwargs)
         return {'available':True,'city':'Hà Nội','t_min':20,'t_max':25}
     monkeypatch.setattr(conversation_tools,'_weather',lambda r:SimpleNamespace(get=forecast))
-    async def suggest(provider,items,**kwargs):
-        assert kwargs['weather']['city']=='Hà Nội'
-        assert 'loose' in kwargs['notes']
-        return {'outfits':[{'title':'Bộ thử','item_ids':['item-0','item-1'],'reason':'Layers'}],'source':'ai'}
-    monkeypatch.setattr(conversation_tools,'suggest_outfits',suggest)
     assert invoke(client,key,'get_weather',call='weather').json()['result']['available']
     invoke(client,key,'update_style_profile',{'fit_preferences':'loose'},call='profile')
-    assert invoke(client,key,'suggest_outfits',call='suggest').status_code==200
-    result=invoke(client,key,'showcase_outfits',{'introduction':'Bộ này phù hợp.'},call='show').json()
+    result=invoke(client,key,'showcase_outfits',{'introduction':'Bộ này phù hợp.','outfits':[{'title':'Bộ thử','item_ids':['item-0','item-1'],'reason':'Layers'}]},call='show').json()
     assert [event['type'] for event in result['events']]==['text','outfits']
     assert result['events'][1]['outfits'][0]['items'][0]['image_url']
+    assert result['events'][1]['outfits'][0]['item_ids']==['item-0','item-1']
+    assert invoke(client,key,'get_style_profile',call='read-profile').json()['result']['profile']['fit_preferences']=='loose'
     assert len(weather_calls)==1 and weather_calls[0]['city']=='Hà Nội'
 
 

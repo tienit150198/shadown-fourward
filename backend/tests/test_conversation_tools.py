@@ -96,33 +96,21 @@ def test_inventory_results_are_grounded_and_followup_retains_tool_ids(client, se
 
 def test_weather_persists_into_later_outfit_request(client, setup_chat, monkeypatch):
     import conversation_tools
-    forecasts, suggestions = [], []
-    weather = {'city': 'Hà Nội', 't_min': 18, 't_max': 24, 'rain_prob': 70}
-
+    forecasts = []
+    weather = {'city': 'Hà Nội', 't_min': 18, 't_max': 24}
     async def forecast(**kwargs):
         forecasts.append(kwargs)
         return weather
-
-    async def suggest(provider, items, **kwargs):
-        suggestions.append(kwargs)
-        return {'outfits': [{'title': 'Đi làm', 'reason': 'Phù hợp trời mát', 'item_ids': ['t2', 'b2', 'o2', 's1']}], 'source': 'ai'}
-
     monkeypatch.setattr(conversation_tools, '_weather', lambda request: SimpleNamespace(get=forecast))
-    monkeypatch.setattr(conversation_tools, 'suggest_outfits', suggest)
-    provider = setup_chat(tools(call('get_weather', {'city': 'Hà Nội'})), answer(), tools(call('suggest_outfits', {'event': 'đi làm'}, id='outfit')), tools(call('showcase_outfits', {'introduction': 'Bộ này hợp trời mát.'}, id='show')), answer())
-    first = post(client)
+    provider = setup_chat(tools(call('get_weather')), answer(), tools(call('showcase_outfits', {'introduction': 'Hợp trời mát.', 'outfits': [{'title': 'Đi làm', 'reason': 'Phù hợp trời mát', 'item_ids': ['t2','b2','o2','s1']}]})))
+    first = post(client, configured_city='Hà Nội')
     second = post(client, conversation_id=first[-1]['conversation_id'], text='Vậy mặc gì đi làm?')
-    cards = [r for r in second if r['type'] == 'outfits']
-    assert len(cards) == 1
-    assert cards[0]['outfits'][0]['title'] == 'Đi làm'
-    assert cards[0]['outfits'][0]['reason'] == 'Phù hợp trời mát'
-    assert [i['id'] for i in cards[0]['outfits'][0]['items']] == ['t2', 'b2', 'o2', 's1']
-    assert all(i['image_url'] == f"/api/wardrobe/items/{i['id']}/image" for i in cards[0]['outfits'][0]['items'])
-    assert forecasts == [{'city': 'Hà Nội', 'date': None}]
-    assert suggestions[0]['weather'] == weather
-    assert suggestions[0]['event'] == 'đi làm'
-    assert results(provider)[-1]['outfits'][0]['item_ids'] == ['t2', 'b2', 'o2', 's1']
-    assert [i['id'] for i in results(provider)[-1]['outfits'][0]['items']] == ['t2', 'b2', 'o2', 's1']
+    cards = next(r['outfits'] for r in second if r['type']=='outfits')
+    assert cards[0]['item_ids'] == ['t2','b2','o2','s1']
+    assert all(i['image_url'] for i in cards[0]['items'])
+    assert forecasts == [{'city':'Hà Nội','date':None}]
+    assert any(m.get('role')=='tool' and 'Hà Nội' in m.get('content','') for m in provider.calls[-1]['messages'])
+    assert len(provider.calls)==3
 
 
 def test_camera_uses_conversation_coordinator_and_explicit_vision_tool(client, setup_chat, monkeypatch):
@@ -280,18 +268,12 @@ def test_changed_configured_city_clears_previous_forecast_before_suggestions(cli
         forecasts.append(kwargs)
         return {'city': kwargs['city'], 't_max': 27}
 
-    async def suggest(provider, items, **kwargs):
-        suggested_weather.append(kwargs['weather'])
-        return {'outfits': [], 'source': 'ai'}
-
     monkeypatch.setattr(conversation_tools, '_weather', lambda request: SimpleNamespace(get=forecast))
-    monkeypatch.setattr(conversation_tools, 'suggest_outfits', suggest)
-    setup_chat(tools(call('get_weather')), answer(), tools(call('suggest_outfits')), answer(), tools(call('get_weather')), answer())
+    setup_chat(tools(call('get_weather')), answer(), answer(), tools(call('get_weather')), answer())
     first = post(client, configured_city='Hà Nội')
     cid = first[-1]['conversation_id']
     assert client.app.state.conversations.sessions[cid].context['weather']['city'] == 'Hà Nội'
     post(client, conversation_id=cid, configured_city='Huế')
-    assert suggested_weather == [None]
     assert not client.app.state.conversations.sessions[cid].context.get('weather')
     post(client, conversation_id=cid)
     assert forecasts == [{'city': 'Hà Nội', 'date': None}, {'city': 'Huế', 'date': None}]
@@ -321,19 +303,14 @@ def test_configured_city_length_is_validated_before_model(client, setup_chat):
 def test_showcase_introduces_cards_and_redundant_tryon_adds_no_ui(client, setup_chat, monkeypatch):
     import conversation_tools
 
-    async def suggest(provider, items, **kwargs):
-        return {'outfits': [{'title': 'Hai lớp áo', 'reason': 'Hợp trời mát', 'item_ids': ['t1', 't2', 'b2']}], 'source': 'ai'}
-
-    monkeypatch.setattr(conversation_tools, 'suggest_outfits', suggest)
     provider = setup_chat(
-        tools(call('suggest_outfits', id='compute')),
-        tools(call('showcase_outfits', {'introduction': 'Mình chọn bộ hai lớp cho trời mát.', 'outfit_numbers': [1]}, id='show')),
+        tools(call('showcase_outfits', {'introduction': 'Mình chọn bộ hai lớp cho trời mát.', 'outfits': [{'title':'Hai lớp áo','reason':'Hợp trời mát','item_ids':['t1','t2','b2']}]}, id='show')),
         tools(call('open_screen', {'screen': 'tryon-live', 'item_ids': ['t1', 't2', 'b2']}, id='duplicate')),
         answer('Bạn thích bộ này không?'),
     )
     first = post(client)
     assert first[-1]['type'] == 'done'
-    assert len(provider.calls) == 2  # Showcase completes the turn without an acknowledgement round.
+    assert len(provider.calls) == 1  # Showcase completes the turn without an acknowledgement round.
     second = post(client, text='Cho tôi thử trực tiếp', conversation_id=first[-1]['conversation_id'])
     result = first + second
     visible = [r['type'] for r in result if r['type'] not in ('tool_status', 'done')]
@@ -341,13 +318,19 @@ def test_showcase_introduces_cards_and_redundant_tryon_adds_no_ui(client, setup_
     assert next(r for r in result if r['type'] == 'text')['text'] == 'Mình chọn bộ hai lớp cho trời mát.'
     cards = next(r for r in result if r['type'] == 'outfits')['outfits']
     assert cards[0]['item_ids'] == ['t1', 't2', 'b2']
-    assert [r['id'] for r in result if r['type'] == 'tool_status'] == ['compute', 'compute']
+    assert [r['id'] for r in result if r['type'] == 'tool_status'] == []
     assert not [r for r in result if r['type'] == 'action']
     assert results(provider)[-1]['status'] == 'already_available_on_outfit_card'
 
 
-def test_showcase_requires_real_recent_suggestions(client, setup_chat):
-    provider = setup_chat(tools(call('showcase_outfits', {'introduction': 'Bộ này nhé.'})), answer('Bạn cần phối đồ trước nhé.'))
+@pytest.mark.parametrize('ids', [['missing'], ['t1','t1']])
+def test_showcase_rejects_invalid_ids_without_cards(client, setup_chat, ids):
+    provider = setup_chat(tools(call('showcase_outfits', {'introduction':'Bộ này nhé.', 'outfits':[{'title':'Bộ thử','item_ids':ids}]})), answer('Mình cần kiểm tra lại tủ đồ.'))
     result = post(client)
-    assert not [r for r in result if r['type'] in ('outfits', 'action', 'tool_status')]
-    assert 'No matching recent suggestions' in results(provider)[0]['error']
+    assert not [r for r in result if r['type'] in ('outfits','action')]
+    assert 'error' in results(provider)[0]
+
+
+def test_chat_has_no_separate_stylist_tool():
+    from conversation_tools import tool_schemas
+    assert 'suggest_outfits' not in {t['function']['name'] for t in tool_schemas()}

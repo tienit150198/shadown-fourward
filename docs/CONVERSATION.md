@@ -13,10 +13,10 @@ tool calling. No camera image is automatically sent to the chat model.
 
 The selected city is injected as app configuration, not inferred GPS location.
 The weather tool uses it when no explicit city is supplied. Changing the configured
-city invalidates the retained forecast. Weather tool results are retained and passed directly into `suggest_outfits`.
+city invalidates the retained forecast. Weather tool results are retained for the coordinator to use when choosing outfits.
 The model can request a new forecast when location/date changes. Outfit IDs,
 layer order, tool results and assistant messages remain available on follow-up
-turns. The tool delegates outfit generation to main’s existing stylist implementation, including its current rule review and ranking. The coordinator validates IDs and tool arguments; it does not copy the entire wardrobe into every conversation prompt.
+turns. The coordinator chooses outfits directly; chat never invokes the standalone stylist model, rule picker, scoring or reranking. The coordinator validates IDs and tool arguments; it does not copy the entire wardrobe into every conversation prompt.
 
 Clothing preferences, optional self-described gender, age range and fit
 preferences are supplied by the user. The assistant asks for relevant missing
@@ -57,10 +57,7 @@ tool calls because its tool parser is disabled. Forced-call completion reasons
 were inconsistent, so the harness uses assembled `tool_calls`, validates complete
 arguments, and rejects truncated replies rather than trusting only a finish label.
 
-Outfit computation and presentation are separate: `suggest_outfits` retains results without
-rendering them; `showcase_outfits` emits a short model-written introduction followed by
-the selected cards. Cards include try-on buttons. Presentation tools have no progress
-labels, and repeat try-on actions for displayed outfits do not add standalone buttons.
+The coordinator reads `list_wardrobe` (50 items per page, follow `next_offset` as needed), then selects outfits using actual IDs and the conversation, weather and preferences. It calls `showcase_outfits` with `{introduction,outfits:[{title,item_ids,reason,tips}]}`. The backend validates bounded arguments, unique IDs per outfit and current inventory membership, attaches authoritative item metadata/images, and preserves all chosen layers and their order. Invalid/deleted IDs reject the whole call so the model can refresh inventory and retry; no partial rewritten outfit is shown. Multiple tops are allowed. There is no `suggest_outfits` chat tool or second stylist model request. Cards include try-on buttons; repeated actions do not add standalone buttons.
 
 A successful final `showcase_outfits` call completes the turn after displaying its
 introduction and cards, without another model request just to acknowledge the UI.
@@ -79,7 +76,7 @@ Live preserves the teammate’s direct Gemini connection, server-minted constrai
 
 Tool sessions are opaque UUID capabilities, process-local, capped at 128 and expire after five minutes. Each session serializes calls and permits at most sixty unique IDs. Duplicate IDs with identical arguments reuse the result; changed arguments return 409. Unknown/expired sessions return 410; exhausted call budgets return 429. The client also bounds calls per turn and suppresses results/events after cancellation or switching turns. Protected endpoints retain the shared access gate and existing rate limits; these are not per-user accounts.
 
-`list_wardrobe` reads at most fifty actual items per page plus taught rules. `suggest_outfits` reads the full wardrobe internally for the stylist model; `showcase_outfits` sends grounded images to chat cards. Weather and style preferences are retained in the active tool session rather than fetched again for every suggestion. The existing standalone stylist scoring and Xmax garment/category limits remain main’s implementation. Live state is connection-scoped; only the recent visible text/cards are retained in browser session storage.
+`list_wardrobe` reads at most fifty actual items per page plus taught rules. `showcase_outfits` accepts the coordinator’s own selections and sends grounded images to chat cards. The coordinator reads additional inventory pages when needed; no 80-item stylist prompt is involved. Weather and style preferences are retained in the active tool session rather than fetched again for every suggestion. The existing standalone stylist scoring and Xmax garment/category limits remain main’s implementation. Live state is connection-scoped; only the recent visible text/cards are retained in browser session storage.
 
 ### What upstream main did before this port
 

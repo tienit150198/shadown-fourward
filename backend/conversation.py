@@ -202,9 +202,9 @@ async def mock_generate(payload: ConversationRequest, request: Request) -> Async
 TOOL_SYSTEM = SYSTEM + (
     " Bạn có các công cụ để đọc tủ đồ, thời tiết, bài đã học và phân tích ảnh. "
     "Tự chọn công cụ dựa trên toàn bộ cuộc trò chuyện, không cần phân loại ý định riêng. "
-    "Dùng list_wardrobe khi cần biết đồ người dùng sở hữu; dùng suggest_outfits để phối đồ, giữ các lớp AI đề xuất. "
+    "Dùng list_wardrobe khi cần biết đồ người dùng sở hữu; tự phối đồ từ dữ liệu thật, giữ các lớp bạn chọn. "
     "Dùng get_weather khi cần thời tiết thật, tái sử dụng kết quả đã có nếu không đổi nơi/ngày. "
-    "Sau khi suggest_outfits trả kết quả, dùng showcase_outfits với introduction ngắn để giới thiệu rồi hiển thị các bộ. Đặt lời giới thiệu vào introduction, không nói lặp lại trước hoặc sau công cụ. Thẻ đã có ảnh và nút thử đồ; không gọi open_screen cho cùng bộ và không nhắc lại cách bấm nút. "
+    "Tự chọn các bộ từ list_wardrobe và ngữ cảnh hội thoại, rồi gọi showcase_outfits với outfits gồm item_ids, title, reason, tips và introduction ngắn. Không có công cụ phối đồ hay mô hình stylist riêng. Dùng get_weather nếu thời tiết cần thiết mà chưa biết; tái sử dụng kết quả đã có. Đặt lời giới thiệu vào introduction, không nói lặp lại trước hoặc sau công cụ. Thẻ đã có ảnh và nút thử đồ; không gọi open_screen cho cùng bộ và không nhắc lại cách bấm nút. "
     "Khi sửa bộ vừa gợi ý, dùng item IDs và ngữ cảnh bộ trước; đừng coi là cuộc trò chuyện mới. "
     "Ảnh camera không gửi trực tiếp cho bạn: dùng inspect_image khi cần nhìn ảnh đính kèm. "
     "Trước khi phối đồ lần đầu, nếu chưa biết sở thích, hỏi ngắn gọn người dùng muốn phong cách/đồ nam, nữ, unisex hay không giới hạn. "
@@ -221,7 +221,6 @@ MAX_TOOL_RESULT = 24000
 TOOL_LABELS = {
     'list_wardrobe': ('Đang xem tủ đồ…', 'Đã xem tủ đồ'),
     'get_weather': ('Đang xem thời tiết…', 'Đã xem thời tiết'),
-    'suggest_outfits': ('Đang phối đồ…', 'Đã xem các bộ phối'),
     'list_skills': ('Đang tìm bài đã học…', 'Đã xem các bài đã học'),
     'get_skill': ('Đang đọc bài hướng dẫn…', 'Đã đọc bài hướng dẫn'),
     'inspect_image': ('Đang xem ảnh…', 'Đã xem ảnh'),

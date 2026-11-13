@@ -8,9 +8,7 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-import style_memory
 from providers import vision_model
-from stylist import suggest_outfits
 from wardrobe_api import _store, _weather
 
 
@@ -33,15 +31,16 @@ class WeatherArgs(Arguments):
     date: Date | None = None
 
 
-class SuggestArgs(Arguments):
-    event: str = Field(default='', max_length=200)
-    notes: str = Field(default='', max_length=300)
-    anchor_item_id: str | None = Field(default=None, max_length=64)
+class OutfitArgs(Arguments):
+    title: str = Field(min_length=1, max_length=80)
+    item_ids: list[Annotated[str, Field(min_length=1, max_length=100)]] = Field(min_length=1, max_length=20, description='Existing wardrobe IDs in your chosen layer order. Multiple items of the same category are allowed.')
+    reason: str = Field(default='', max_length=500)
+    tips: str = Field(default='', max_length=300)
 
 
 class ShowcaseArgs(Arguments):
-    introduction: str = Field(min_length=1, max_length=500, description='A short natural introduction/reason to show BEFORE the outfit cards. Do not repeat full garment lists or button instructions.')
-    outfit_numbers: list[Annotated[int, Field(ge=1, le=3)]] = Field(default_factory=list, max_length=3, description='One-based numbers of the most recent suggestions to show; empty means all.')
+    introduction: str = Field(min_length=1, max_length=500, description='Short introduction displayed before the outfit cards. Do not repeat button instructions.')
+    outfits: list[OutfitArgs] = Field(min_length=1, max_length=3, description='Outfits YOU selected from actual wardrobe tool results, including titles, explanations and exact item IDs.')
 
 
 class SkillArgs(Arguments):
@@ -71,8 +70,7 @@ DEFINITIONS = {
     'update_style_profile': (StyleProfileArgs, 'Save only preferences the user explicitly stated, or their decision to skip a question (clothing_preferences=["no preference"]). Never infer gender or age from camera, name or garments. Empty strings/lists clear a field. Stored only in this conversation.'),
     'list_wardrobe': (InventoryArgs, 'Read the current wardrobe inventory and taught styling rules, optionally filtered by category. Paginated: use next_offset if has_more. Use actual item IDs, never invent garments.'),
     'get_weather': (WeatherArgs, 'Fetch weather for a city and optional ISO date. Omit city to use the app-configured city. Ask only if no city is configured or stated. The result is retained; reuse it for suggestions.'),
-    'showcase_outfits': (ShowcaseArgs, 'Display selected recent outfit suggestions in chat, with your short introduction before their photos. Cards already include photo/live try-on buttons. Call this after suggest_outfits as the final tool of the turn. Its introduction and cards complete the response; no confirmation text, open_screen or extra try-on button is needed.'),
-    'suggest_outfits': (SuggestArgs, 'Compute outfit suggestions without displaying cards yet. After reading the results, use showcase_outfits to introduce and display them. This tool already reads the full wardrobe internally; inventory pagination is unnecessary for suggestions. Suggest outfits from the actual wardrobe, using the retained weather result and preferences. Call get_weather first if weather matters and is unknown. For revisions, describe previous outfit and requested changes in notes.'),
+    'showcase_outfits': (ShowcaseArgs, 'Display outfits YOU choose directly from list_wardrobe results. Consider the user request, retained weather, explicitly stated preferences and taught rules. Pass exact item IDs in layer order, titles and explanations. No separate stylist model or scoring is used. Cards include images and photo/live try-on buttons. Use as the final tool of the turn; its introduction and cards complete the text response. Do not add duplicate actions or button instructions.'),
     'list_skills': (Empty, 'List learned skills with their exact IDs and names.'),
     'get_skill': (SkillArgs, 'Read steps of an existing learned skill by its exact ID.'),
     'inspect_image': (InspectArgs, 'Ask the vision model a question about the camera image attached to THIS message. Cannot access the camera without an attached image.'),
@@ -122,30 +120,16 @@ async def execute(name, raw_args, *, request, context, image):
         result = await _weather(request).get(city=city, date=args.date.isoformat() if args.date else None)
         context['weather'] = result
         return result, None
-    if name == 'suggest_outfits':
-        items = await asyncio.to_thread(store.list_items)
-        if not items:
-            # Inventory may have been cleared since the previous turn. Never showcase stale items.
-            context['outfits'] = []
-            context['showcased_outfits'] = []
-            return {'outfits': [], 'message': 'Wardrobe is empty. Offer wardrobe capture.'}, None
-        if args.anchor_item_id and args.anchor_item_id not in {it['id'] for it in items}:
-            return {'error': 'Unknown anchor item ID. Read the wardrobe first.'}, None
-        result = await suggest_outfits(
-            request.app.state.provider, items, weather=context.get('weather'), event=args.event,
-            notes=(args.notes + '\nUser-provided style profile: ' + json.dumps(context.get('style_profile', {}), ensure_ascii=False)), anchor_id=args.anchor_item_id,
-            rules=store.list_rules(), memory=style_memory.load_memory(store.root),
-        )
-        by_id = {it['id']: it for it in items}
-        outfits = [{**o, 'items': public_items([by_id[i] for i in o['item_ids']])} for o in result['outfits']]
-        context['outfits'] = outfits
-        return {'outfits': outfits, 'source': result['source'], 'weather': context.get('weather')}, None
     if name == 'showcase_outfits':
-        outfits = context.get('outfits', [])
-        numbers = list(dict.fromkeys(args.outfit_numbers)) or list(range(1, len(outfits) + 1))
-        if not outfits or any(n > len(outfits) for n in numbers):
-            return {'error': 'No matching recent suggestions. Call suggest_outfits first.'}, None
-        selected = [outfits[n - 1] for n in numbers]
+        items = await asyncio.to_thread(store.list_items)
+        by_id = {item['id']: item for item in items}
+        invalid = [item_id for outfit in args.outfits for item_id in outfit.item_ids if item_id not in by_id]
+        if invalid:
+            return {'error': 'Unknown or deleted wardrobe IDs. Refresh list_wardrobe and correct the outfits.', 'invalid_item_ids': list(dict.fromkeys(invalid))}, None
+        if any(len(set(outfit.item_ids)) != len(outfit.item_ids) for outfit in args.outfits):
+            return {'error': 'Each outfit must contain unique item IDs. Correct the duplicate IDs.'}, None
+        selected = [{**outfit.model_dump(), 'items': public_items([by_id[i] for i in outfit.item_ids])} for outfit in args.outfits]
+        context['outfits'] = selected
         context['showcased_outfits'] = [o['item_ids'] for o in selected]
         return {'introduction': args.introduction, 'outfits': selected, 'status': 'displayed_with_tryon_buttons',
                 'message': 'The introduction and outfit cards have been shown. Cards already have photo/live try-on buttons. Do not repeat the introduction, create standalone try-on actions, or explain the buttons again.'}, None
@@ -170,7 +154,7 @@ async def execute(name, raw_args, *, request, context, image):
     if args.screen in ('tryon-photo', 'tryon-live'):
         known = {it['id'] for it in store.list_items()}
         if not args.item_ids or any(i not in known for i in args.item_ids) or len(set(args.item_ids)) != len(args.item_ids):
-            return {'error': 'Provide unique, existing wardrobe item IDs. Use list_wardrobe or suggest_outfits first.'}, None
+            return {'error': 'Provide unique, existing wardrobe item IDs. Use list_wardrobe first.'}, None
         action['items'] = args.item_ids
     elif args.screen == 'guide':
         if not args.skill_id:
