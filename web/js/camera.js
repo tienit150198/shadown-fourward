@@ -33,7 +33,7 @@ function explain(err) {
 }
 
 /**
- * Starts the rear camera into a <video> element.
+ * Starts the camera, optionally attaching it to a preview <video> element.
  * @returns {Promise<MediaStream>}
  */
 export async function startCamera(video, { facingMode = 'environment' } = {}) {
@@ -47,11 +47,13 @@ export async function startCamera(video, { facingMode = 'environment' } = {}) {
   for (const constraints of attempts) {
     try {
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      video.setAttribute('playsinline', '');
-      video.setAttribute('autoplay', '');
-      video.muted = true;
-      video.srcObject = stream;
-      try { await video.play(); } catch { /* autoplay may resolve later on user gesture */ }
+      if (video) {
+        video.setAttribute('playsinline', '');
+        video.setAttribute('autoplay', '');
+        video.muted = true;
+        video.srcObject = stream;
+        try { await video.play(); } catch { /* autoplay may resolve later on user gesture */ }
+      }
       return stream;
     } catch (err) {
       lastErr = err;

@@ -61,7 +61,8 @@ export function mount(el, { query = new URLSearchParams() } = {}) {
           h('button', { class: 'wd-hub-tile', type: 'button', onClick: () => gridSection.scrollIntoView({ behavior: 'smooth', block: 'start' }) },
             h('span', { class: 'wd-hub-emoji', 'aria-hidden': 'true' }, '🧺'), h('span', { class: 'wd-hub-label' }, 'Tủ đồ'), itemsCount),
           h('button', { class: 'wd-hub-tile', type: 'button', onClick: () => navigate('#/rules') },
-            h('span', { class: 'wd-hub-emoji', 'aria-hidden': 'true' }, '🎓'), h('span', { class: 'wd-hub-label' }, 'Dạy trợ lý'), rulesCountEl))),
+            h('span', { class: 'wd-hub-emoji', 'aria-hidden': 'true' }, '🎓'), h('span', { class: 'wd-hub-label' }, 'Dạy trợ lý'), rulesCountEl)),
+        h('a', { class: 'btn btn-ghost block', href: '#/tryon-ar' }, icon('camera', 20), 'Thử áo AR')),
       gridSection),
   );
 

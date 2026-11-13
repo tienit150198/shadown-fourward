@@ -1,0 +1,16 @@
+{
+  "name": "shadow-camera-kit",
+  "private": true,
+  "scripts": {
+    "build": "esbuild camera-kit.js --bundle --minify --format=esm --target=es2020 --outfile=../web/vendor/snap-camera-kit.js"
+  },
+  "dependencies": {
+    "@snap/camera-kit": "1.23.1"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2"
+  },
+  "overrides": {
+    "@snap/camera-kit": { "uuid": "11.1.1" }
+  }
+}

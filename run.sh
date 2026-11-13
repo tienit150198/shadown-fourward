@@ -24,6 +24,12 @@ if [ -f .env ]; then
   set +a
 fi
 
+if [ -n "${SNAP_CAMERA_KIT_API_TOKEN:-}" ] && [ -n "${SNAP_CAMERA_KIT_LENS_GROUP_ID:-}" ] && [ -n "${SNAP_CAMERA_KIT_LENS_ID:-}" ]; then
+  command -v npm >/dev/null 2>&1 || { echo 'Install Node.js with npm to build Camera Kit.' >&2; exit 1; }
+  echo '==> Building Snap Camera Kit'
+  (cd web-sdk && npm ci && npm run build)
+fi
+
 NGROK_PID=""
 cleanup() {
   if [ -n "$NGROK_PID" ]; then kill "$NGROK_PID" 2>/dev/null || true; fi

@@ -194,6 +194,28 @@ def test_mock_provider_composites(monkeypatch):
 # ---- API ------------------------------------------------------------------------------------------
 
 
+def test_snap_ar_requires_complete_web_configuration(wclient, monkeypatch):
+    monkeypatch.setenv("VIDU_API_KEY", "vidu-private")
+    monkeypatch.setenv("SNAP_CAMERA_KIT_API_TOKEN", "snap-web-token")
+    monkeypatch.setenv("SNAP_CAMERA_KIT_LENS_GROUP_ID", "snap-group")
+    monkeypatch.delenv("SNAP_CAMERA_KIT_LENS_ID", raising=False)
+
+    path = "/api/tryon/ar/config"
+    disabled = wclient.get(path)
+    assert disabled.status_code == 200
+    assert disabled.json() == {"available": False}
+
+    monkeypatch.setenv("SNAP_CAMERA_KIT_LENS_ID", " snap-lens ")
+    ready = wclient.get(path)
+    assert ready.headers["cache-control"] == "no-store"
+    assert ready.json() == {
+        "available": True,
+        "api_token": "snap-web-token",
+        "lens_group_id": "snap-group",
+        "lens_id": "snap-lens",
+    }
+
+
 def test_tryon_routes(wclient):
     config = wclient.get("/api/tryon/config").json()
     assert config["live"]["available"] is False

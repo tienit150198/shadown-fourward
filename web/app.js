@@ -11,9 +11,10 @@ import * as stylist from './js/screens/stylist.js';
 import * as tryonPhoto from './js/screens/tryon-photo.js';
 import * as rules from './js/screens/rules.js';
 import * as tryonLive from './js/screens/tryon-live.js';
+import * as tryonAr from './js/screens/tryon-ar.js';
 import { h } from './js/ui.js';
 
-const routes = { conversation, home, teach, review, guide, done, wardrobe, stylist, 'tryon-photo': tryonPhoto, 'tryon-live': tryonLive, 'image-studio': imageStudio, rules };
+const routes = { conversation, home, teach, review, guide, done, wardrobe, stylist, 'tryon-photo': tryonPhoto, 'tryon-live': tryonLive, 'tryon-ar': tryonAr, 'image-studio': imageStudio, rules };
 const root = document.getElementById('app');
 let current = null; // { name, cleanup }
 
