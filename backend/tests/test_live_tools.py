@@ -89,7 +89,7 @@ def test_weather_and_preferences_are_reused_by_stylist_and_cards(client,tool_ses
     assert invoke(client,key,'get_weather',call='weather').json()['result']['available']
     invoke(client,key,'update_style_profile',{'fit_preferences':'loose'},call='profile')
     result=invoke(client,key,'showcase_outfits',{'introduction':'Bộ này phù hợp.','outfits':[{'title':'Bộ thử','item_ids':['item-0','item-1'],'reason':'Layers'}]},call='show').json()
-    assert [event['type'] for event in result['events']]==['text','outfits']
+    assert [event['type'] for event in result['events']]==['live_outfit_intro','outfits']
     assert result['events'][1]['outfits'][0]['items'][0]['image_url']
     assert result['events'][1]['outfits'][0]['item_ids']==['item-0','item-1']
     assert invoke(client,key,'get_style_profile',call='read-profile').json()['result']['profile']['fit_preferences']=='loose'
@@ -116,3 +116,28 @@ def test_camera_tool_keeps_main_coordinator_without_decisions_call(client,tool_s
     assert result['intent']=='teach_skill' and result['source']=='tool_call'
     assert 'confidence' not in result
     assert result['camera_command']=='route_request'
+
+
+def test_live_tools_execute_in_camera_instead_of_offering_navigation(client,tool_session):
+    key,_=tool_session
+    schemas={tool['name']:tool for tool in live_tools.declarations()}
+    assert 'set_live_view' in schemas
+    assert 'open_screen' not in schemas
+    result=invoke(client,key,'open_screen',{'screen':'tryon-live'},call='wrong-tool').json()
+    assert 'camera_task' in result['result']['error']
+    assert result['events']==[]
+    assert invoke(client,key,'set_live_view',{'view':'original'},call='view').json()['result']=={'live_control':{'view':'original'}}
+    invalid=invoke(client,key,'set_live_view',{'view':'invented'},call='bad-view').json()
+    assert 'error' in invalid['result']
+
+
+def test_visible_outfit_is_available_to_voice_tryon_resolution(client,tool_session,monkeypatch):
+    key,_=tool_session
+    seen=[]
+    async def plan(provider,store,text,**kwargs):
+        seen.append(kwargs)
+        return {'status':'ready','item_ids':['item-0','item-1']}
+    monkeypatch.setattr(live_tools,'plan_tryon',plan)
+    result=invoke(client,key,'camera_task',{'intent':'tryon_live','request':'Thử bộ này đi'},suggested_item_ids=['item-0','item-1']).json()
+    assert seen[0]['selected_ids']==['item-0','item-1']
+    assert result['result']['camera_decision']['context']['tryon_plan']['status']=='ready'

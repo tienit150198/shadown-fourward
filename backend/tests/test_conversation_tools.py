@@ -334,3 +334,48 @@ def test_showcase_rejects_invalid_ids_without_cards(client, setup_chat, ids):
 def test_chat_has_no_separate_stylist_tool():
     from conversation_tools import tool_schemas
     assert 'suggest_outfits' not in {t['function']['name'] for t in tool_schemas()}
+
+
+def test_accepting_first_outfit_requests_execution_without_button(client, setup_chat):
+    provider=setup_chat(
+        tools(call('showcase_outfits',{'introduction':'Bộ đầu tiên nhé.','outfits':[{'title':'Clean tối giản','item_ids':['t2','b2','s1']}]})),
+        tools(call('start_tryon',{'outfit_number':1},id='fit')),
+        answer('Mình đang chuẩn bị thử bộ đầu tiên trong camera.'),
+    )
+    first=post(client)
+    rows=post(client,text='thử bộ đầu tiên',conversation_id=first[-1]['conversation_id'])
+    action=next(row for row in rows if row['type']=='action')
+    assert action['execute'] is True and action['route']=='tryon-live'
+    assert action['items']==['t2','b2']  # shoes are not supported by the live provider
+    assert results(provider)[-1]['status']=='execution_requested'
+    assert results(provider)[-1]['excluded_item_ids']==['s1']
+
+
+def test_direct_tryon_stop_and_unsupported_layers(client, setup_chat):
+    provider=setup_chat(tools(call('start_tryon',{'stop':True})),answer())
+    rows=post(client,text='Dừng thử đồ')
+    assert next(row for row in rows if row['type']=='action')['stop'] is True
+
+
+def test_direct_tryon_rejects_unsupported_layers(client, setup_chat):
+    provider=setup_chat(tools(call('start_tryon',{'item_ids':['t1','t2','b2']})),answer())
+    rows=post(client,text='Mặc hai áo này')
+    assert not any(row['type']=='action' for row in rows)
+    assert 'error' in results(provider)[0]
+
+
+def test_fallback_receives_visible_outfit_and_can_fit_it_in_fresh_session(client,setup_chat,monkeypatch):
+    import conversation
+    import conversation_tools
+    monkeypatch.setattr(conversation,'wardrobe_store',conversation_tools._store)
+    provider=setup_chat(tools(call('start_tryon',{'outfit_number':1})),answer('Mình đang chuẩn bị.'))
+    rows=post(client,text='Thử bộ này',current_outfit={'title':'Bộ đang hiển thị','item_ids':['t2','b2']})
+    assert next(row for row in rows if row['type']=='action')['items']==['t2','b2']
+    assert 'Bộ đang hiển thị' in provider.calls[0]['messages'][0]['content']
+
+
+def test_showcase_schema_requires_exactly_one_outfit():
+    from conversation_tools import ShowcaseArgs
+    from pydantic import ValidationError
+    with pytest.raises(ValidationError):
+        ShowcaseArgs.model_validate({'introduction':'Hai bộ', 'outfits':[{'title':'A','item_ids':['t1']},{'title':'B','item_ids':['t2']}]})

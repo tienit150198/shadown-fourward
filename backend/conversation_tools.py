@@ -38,9 +38,15 @@ class OutfitArgs(Arguments):
     tips: str = Field(default='', max_length=300)
 
 
+class TryOnArgs(Arguments):
+    item_ids: list[str] = Field(default_factory=list, max_length=20)
+    outfit_number: int | None = Field(default=None, ge=1, le=1, description='The single current outfit is number 1; use when the user accepts the displayed suggestion.')
+    stop: bool = False
+
+
 class ShowcaseArgs(Arguments):
     introduction: str = Field(min_length=1, max_length=500, description='Short introduction displayed before the outfit cards. Do not repeat button instructions.')
-    outfits: list[OutfitArgs] = Field(min_length=1, max_length=3, description='Outfits YOU selected from actual wardrobe tool results, including titles, explanations and exact item IDs.')
+    outfits: list[OutfitArgs] = Field(min_length=1, max_length=1, description='Exactly ONE outfit YOU selected from actual wardrobe results. This replaces the currently shown suggestion. Offer another only when requested.')
 
 
 class SkillArgs(Arguments):
@@ -70,7 +76,8 @@ DEFINITIONS = {
     'update_style_profile': (StyleProfileArgs, 'Save only preferences the user explicitly stated, or their decision to skip a question (clothing_preferences=["no preference"]). Never infer gender or age from camera, name or garments. Empty strings/lists clear a field. Stored only in this conversation.'),
     'list_wardrobe': (InventoryArgs, 'Read the current wardrobe inventory and taught styling rules, optionally filtered by category. Paginated: use next_offset if has_more. Use actual item IDs, never invent garments.'),
     'get_weather': (WeatherArgs, 'Fetch weather for a city and optional ISO date. Omit city to use the app-configured city. Ask only if no city is configured or stated. The result is retained; reuse it for suggestions.'),
-    'showcase_outfits': (ShowcaseArgs, 'Display outfits YOU choose directly from list_wardrobe results. Consider the user request, retained weather, explicitly stated preferences and taught rules. Pass exact item IDs in layer order, titles and explanations. No separate stylist model or scoring is used. Cards include images and photo/live try-on buttons. Use as the final tool of the turn; its introduction and cards complete the text response. Do not add duplicate actions or button instructions.'),
+    'start_tryon': (TryOnArgs, 'Execute live try-on directly IN THIS CAMERA when the user requests or accepts it. Use outfit_number for a recent outfit or exact item_ids. No button click or further confirmation is needed. stop=true stops fitting. The client performs execution; say it is starting, never claim completion before it succeeds.'),
+    'showcase_outfits': (ShowcaseArgs, 'Display exactly ONE outfit at a time that YOU choose directly from list_wardrobe results. Consider the user request, retained weather, explicitly stated preferences and taught rules. Pass exact item IDs in layer order, titles and explanations. No separate stylist model or scoring is used. Keep one current suggestion; generate a replacement only when the user asks for another. Cards include images and photo/live try-on buttons. Use as the final tool of the turn; its introduction and cards complete the text response. Do not add duplicate actions or button instructions.'),
     'list_skills': (Empty, 'List learned skills with their exact IDs and names.'),
     'get_skill': (SkillArgs, 'Read steps of an existing learned skill by its exact ID.'),
     'inspect_image': (InspectArgs, 'Ask the vision model a question about the camera image attached to THIS message. Cannot access the camera without an attached image.'),
@@ -120,6 +127,26 @@ async def execute(name, raw_args, *, request, context, image):
         result = await _weather(request).get(city=city, date=args.date.isoformat() if args.date else None)
         context['weather'] = result
         return result, None
+    if name == 'start_tryon':
+        if args.stop:
+            action={'route':'tryon-live','execute':True,'stop':True}
+            return {'status':'execution_requested','message':'Client will stop fitting in the current camera.'}, action
+        ids=args.item_ids
+        if args.outfit_number is not None:
+            outfits=context.get('outfits',[])
+            if args.outfit_number>len(outfits):
+                return {'error':'No matching recent outfit. Read wardrobe and showcase outfits first.'}, None
+            ids=outfits[args.outfit_number-1]['item_ids']
+        by_id={item['id']:item for item in await asyncio.to_thread(store.list_items)}
+        if not ids or any(i not in by_id for i in ids) or len(set(ids))!=len(ids):
+            return {'error':'Provide unique current wardrobe IDs or a valid recent outfit number.'}, None
+        garments=[i for i in ids if by_id[i].get('category') in ('top','bottom','outerwear','dress')]
+        categories=[by_id[i]['category'] for i in garments]
+        if not garments or len(garments)>3 or len(set(categories))!=len(categories) or ('dress' in categories and any(c in categories for c in ('top','bottom'))):
+            return {'error':'This live provider accepts at most one top, bottom and outerwear, or a dress instead of top/bottom. Ask which supported garments to try; do not silently replace layers.'}, None
+        action={'route':'tryon-live','execute':True,'items':garments,'label':'Đang thử bộ đã chọn'}
+        return {'status':'execution_requested','item_ids':garments,'excluded_item_ids':[i for i in ids if i not in garments],
+            'message':'The client is starting fitting in the current camera now. No button click is required. Do not claim it has finished.'}, action
     if name == 'showcase_outfits':
         items = await asyncio.to_thread(store.list_items)
         by_id = {item['id']: item for item in items}
@@ -132,7 +159,7 @@ async def execute(name, raw_args, *, request, context, image):
         context['outfits'] = selected
         context['showcased_outfits'] = [o['item_ids'] for o in selected]
         return {'introduction': args.introduction, 'outfits': selected, 'status': 'displayed_with_tryon_buttons',
-                'message': 'The introduction and outfit cards have been shown. Cards already have photo/live try-on buttons. Do not repeat the introduction, create standalone try-on actions, or explain the buttons again.'}, None
+                'message': 'The introduction and outfits are displayed over the video. Do not repeat the introduction or button instructions. When the user asks or accepts live fitting, call start_tryon directly with the outfit number or IDs; do not tell them to click.'}, None
     if name == 'list_skills':
         return {'skills': request.app.state.skill_store.list()[:80]}, None
     if name == 'get_skill':

@@ -285,3 +285,17 @@ test('a cancelled on-demand tool cannot emit late cards or a tool result', async
   assert.equal(events.filter(event=>event.type==='outfits').length,0);
   live.stop();
 });
+
+test('live view tool returns the actual client display state to Gemini', async () => {
+  const sent=[];
+  const live=new GeminiLiveSession({onLiveControl:async (control,{signal})=>{
+    assert.equal(signal.aborted,false);
+    assert.equal(control.view,'original');
+    return {status:'displayed',view:'original'};
+  }},{fetchImpl:async()=>Response.json({result:{live_control:{view:'original'}},events:[]})});
+  live.status='listening'; live.toolSessionId='session';
+  live.socket={readyState:1,send:raw=>sent.push(JSON.parse(raw)),close(){}};
+  await live.handleTool({id:'view',name:'set_live_view',args:{view:'original'}});
+  assert.equal(sent[0].toolResponse.functionResponses[0].response.execution.view,'original');
+  live.stop();
+});

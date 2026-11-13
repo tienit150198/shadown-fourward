@@ -16,6 +16,7 @@ from intent_router import CRITERIA
 from wardrobe_api import _store as wardrobe_store, _weather
 from wardrobe_context import inventory_context
 from tryon_selection import plan_tryon
+from gemini_errors import account_error_code
 from live_tools import declarations, sessions, LiveToolRequest, run as run_live_tool
 from conversation import TOOL_LABELS
 
@@ -81,7 +82,7 @@ def client_from_env() -> httpx.AsyncClient | None:
 def _client(request: Request) -> httpx.AsyncClient:
     client = getattr(request.app.state, "gemini_live_client", None)
     if client is None:
-        raise HTTPException(503, "Trò chuyện bằng giọng nói tạm chưa sẵn sàng.")
+        raise HTTPException(503, {'code':'missing_api_key','message':'Chưa cấu hình khóa API cho Gemini Live trên máy chủ.','service':'gemini_live','retryable':False})
     return client
 
 
@@ -93,10 +94,22 @@ async def _post(client: httpx.AsyncClient, path: str, body: dict) -> dict:
     except httpx.HTTPError:
         raise HTTPException(502, "Chưa kết nối được trợ lý. Bạn thử lại nhé.") from None
     if not response.is_success:
-        if response.status_code == 429:
-            raise HTTPException(429, "Trợ lý đang bận. Bạn thử lại sau ít phút nhé.")
-        # Provider bodies may contain credentials; never relay them to the client.
-        raise HTTPException(502, "Trợ lý tạm chưa xử lý được yêu cầu. Bạn thử lại nhé.")
+        try:
+            error = response.json().get('error', {})
+            if not isinstance(error, dict): error = {}
+            reasons = {entry.get('reason') for entry in error.get('details', []) if isinstance(entry, dict)}
+            code = account_error_code(str(error.get('message', '')), reasons)
+        except (ValueError, AttributeError, TypeError):
+            code = None
+        code = code or ('rate_limited' if response.status_code == 429 else 'provider_auth_failed' if response.status_code in (401,403) else 'provider_unavailable')
+        messages = {'insufficient_credits':'Gemini Live không đủ credit. Hãy nạp credit cho dự án Google rồi thử lại.',
+                    'billing_required':'Dự án Gemini chưa bật thanh toán. Hãy kiểm tra Google AI Studio.',
+                    'provider_auth_failed':'Gemini từ chối khóa API hoặc quyền truy cập.',
+                    'rate_limited':'Gemini Live đã vượt hạn mức hoặc giới hạn lượt gọi.',
+                    'provider_unavailable':'Chưa kết nối được Gemini Live.'}
+        raise HTTPException(429 if response.status_code == 429 else 502, {
+            'code':code,'message':messages[code],'service':'gemini_live',
+            'retryable':code in ('rate_limited','provider_unavailable')})
     try:
         data = response.json()
         if not isinstance(data, dict):
@@ -117,8 +130,9 @@ def session_setup(*, with_history: bool = False, configured_city: str = "Hà N�
             "Bạn là Shadow, trợ lý trò chuyện tiếng Việt trong ứng dụng SHADOW.",
             "MẶC ĐỊNH: 'tủ đồ', 'trong tủ', 'đồ của tôi', 'tủ quần áo của mình' là TỦ ĐỒ TRONG HỆ THỐNG SHADOW. Gọi list_wardrobe để đọc dữ liệu thật, không yêu cầu quay camera vào tủ hay chụp từng món để xem đồ đã lưu. Camera đang bật không làm thay đổi nghĩa này. Chỉ hiểu là tủ vật lý khi người dùng nói rõ 'tủ trong phòng', 'cái tủ tôi đang chỉ', 'tủ ngoài đời'. Phân biệt xem/tìm đồ đã lưu, phối đồ và mặc thử.",
             "Tin nhắn có tiền tố [SHADOW_TASK_RESULT] là thông báo kết quả từ ứng dụng, không phải yêu cầu của người dùng. Chỉ đọc ngắn kết quả thực đó, không gọi công cụ để phân loại và không bắt đầu tác vụ mới.",
-            "Sở thích ăn mặc, độ ôm, giới tính và tuổi là thông tin tùy chọn do người dùng tự cung cấp. Dùng get_style_profile/update_style_profile; không suy đoán tuổi hay giới tính từ camera hoặc tên. Nếu cần, hỏi một câu về gu hoặc độ ôm trước khi gợi ý lần đầu và chấp nhận người dùng bỏ qua.",
-            "Bạn tự chọn khi nào cần gọi công cụ. KHÔNG phân loại mọi lượt và không gọi công cụ chỉ để chào hỏi. Dùng list_wardrobe để đọc đồ thật (phân trang 50), get_weather để lấy dự báo, tự chọn các bộ từ tủ đồ và ngữ cảnh hội thoại rồi gọi showcase_outfits với outfits (item_ids, title, reason, tips) để hiển thị ảnh. Tái sử dụng thời tiết đã có; không có mô hình stylist riêng. Chỉ gọi camera_task khi cần thực thi tác vụ camera mà người dùng yêu cầu.",
+            "Sở thích ăn mặc, độ ôm, giới tính và tuổi là thông tin tùy chọn do người dùng tự cung cấp. Dùng get_style_profile/update_style_profile; không suy đoán tuổi hay giới tính từ camera hoặc tên. Chỉ hỏi về gu hoặc độ ôm khi thật sự cần để đáp ứng yêu cầu cụ thể; không dùng làm bước bắt buộc.",
+            "Không bắt buộc hỏi giới tính, tuổi hoặc phong cách trước khi gợi ý. Dựa vào yêu cầu, sở thích đã nói, đồ trong tủ và trang phục/phong cách nhìn thấy qua camera; gợi ý ngay khi đủ dữ liệu. Không suy đoán giới tính hoặc tuổi từ hình ảnh. Chỉ hỏi ngắn khi cần làm rõ thực sự. ",
+            "Bạn tự chọn khi nào cần gọi công cụ. KHÔNG phân loại mọi lượt và không gọi công cụ chỉ để chào hỏi. Dùng list_wardrobe để đọc đồ thật (phân trang 50), get_weather để lấy dự báo, tự chọn các bộ từ tủ đồ và ngữ cảnh hội thoại rồi gọi showcase_outfits với outfits (item_ids, title, reason, tips) để hiển thị ảnh. Tái sử dụng thời tiết đã có; không có mô hình stylist riêng. Gợi ý được hiển thị trên video, không nằm trong hộp chat. Dùng set_live_view để xem camera gốc/kết quả thử hoặc đóng/mở lại gợi ý. Chỉ gọi camera_task khi cần thực thi tác vụ camera mà người dùng yêu cầu. Nếu người dùng đã nhờ thử bộ bạn chọn, có thể hiển thị gợi ý rồi gọi camera_task ngay trong cùng lượt; không yêu cầu xác nhận bằng nút.",
             "Đối số request của camera_task phải mô tả đúng yêu cầu hiện tại, kèm bối cảnh cần thiết nếu người dùng hỏi tiếp như 'rồi sao nữa'. Không thêm thông tin người dùng chưa nói.",
             "Trả lời tự nhiên bằng tiếng Việt, tối đa 3 câu ngắn mỗi lượt. Khi hướng dẫn thực hành, chỉ dẫn 1–2 bước rồi chờ người dùng làm hoặc hỏi tiếp. Có thể hỏi một câu làm rõ khi cần.",
             "Ứng dụng có MỘT camera chung. Công cụ tự xử lý nhu cầu tại chỗ: trò chuyện, hướng dẫn từng bước, ghi bài dạy hoặc thử đồ bằng video. Không yêu cầu người dùng tự chọn chế độ hay mở trang Dạy kỹ năng/Thử áo. Ưu tiên bài học đã lưu nếu khớp. Chỉ dùng những món đồ và quy tắc có trong dữ liệu được cấp; không bịa đồ trong tủ hoặc thời tiết hiện tại.",

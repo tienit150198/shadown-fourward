@@ -25,18 +25,35 @@ class CameraArgs(BaseModel):
     intent: Literal['tryon_live','teach_skill','guide_skill','guide_coffee','guide_cupware','guide_folding','guide_cooking','guide_cleaning','guide_plants'] = 'guide_skill'
     request: str = Field(min_length=1, max_length=500)
     command: Literal['route_request','finish_teaching','cancel_task','continue_task','switch_task'] = 'route_request'
-    item_ids: list[str] = Field(default_factory=list, max_length=3)
+    item_ids: list[str] = Field(default_factory=list, max_length=3, description='Exact saved wardrobe IDs for the requested fitting. Use IDs from the outfit you just showed when the user accepts it. Leave empty only when you need wardrobe resolution. Xmax accepts at most three supported garments.')
     skill_id: str | None = Field(default=None, max_length=80)
+
+
+class LiveViewArgs(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    view: Literal['original','tryon','dismiss_outfits','show_outfits']
 
 
 def declarations() -> list[dict]:
     # Live already sees the shared camera; avoid a redundant second vision-model call.
     result = [{'name':entry['function']['name'], 'description':entry['function']['description'],
                'parametersJsonSchema':entry['function']['parameters'], 'behavior':'BLOCKING'}
-              for entry in tool_schemas() if entry['function']['name'] != 'inspect_image']
+              for entry in tool_schemas() if entry['function']['name'] not in ('inspect_image','open_screen','start_tryon')]
     for declaration in result:
         if declaration['name'] == 'showcase_outfits':
-            declaration['description'] = 'Display outfits YOU choose from actual list_wardrobe results as garment image cards. Pass exact item IDs in chosen layer order, titles and explanations, with your introduction before them. Use the user request, retained weather, preferences and taught rules. No separate stylist model or scoring is used. After showing cards, give a brief spoken summary; do not repeat the entire introduction or garment list, and do not add standalone try-on actions. The cards already offer try-on controls.'
+            declaration['description'] = 'Show exactly ONE outfit at a time that YOU choose from actual list_wardrobe results in an overlay ON THE LIVE VIDEO, not chat cards. Pass exact item IDs in chosen layer order, titles and explanations. Consider the conversation, retained weather, preferences and taught rules. This replaces the current suggestion. Do not showcase several alternatives or call repeatedly in the same turn. On a request for another outfit choose a new one and replace the old suggestion. Speak a short natural invitation after displaying. This only presents choices; if the user already requested fitting, also call camera_task intent=tryon_live with the chosen IDs. A spoken confirmation such as "try that one" is enough; never require clicking a button.'
+        elif declaration['name'] == 'open_screen':
+            declaration['description'] = 'Offer navigation ONLY when the user explicitly asks to leave the live camera for a saved-resource or separate image-generation screen. Does not execute anything. For live fitting, guidance, teaching, cancellation or clothing changes use camera_task instead. Never offer a navigation button instead of executing an explicit voice request.'
+            declaration['parametersJsonSchema']['properties']['screen']['enum'] = ['wardrobe','home','stylist','image-studio','tryon-photo']
+        elif declaration['name'] == 'list_wardrobe':
+            declaration['description'] += ' Reuse items already read in this live session; fetch more pages or refresh only when necessary. Choose outfits yourself and show them with showcase_outfits. Camera frames do not represent saved wardrobe data.'
+        elif declaration['name'] == 'get_weather':
+            declaration['description'] += ' Reuse the existing forecast for the same city/date; do not fetch for every spoken turn.'
+        elif declaration['name'] == 'get_skill':
+            declaration['description'] += ' To start spoken guidance in this camera, use camera_task with skill_id; no navigation or click required.'
+    result.append({'name':'set_live_view','behavior':'BLOCKING',
+        'description':'Control the live video UI in response to speech: show original camera, show the active try-on result, dismiss the outfit overlay, or reopen the latest suggestions. Switching original/tryon preserves the running fitting session; to stop fitting use camera_task cancel_task. Wait for actual client execution before claiming success.',
+        'parametersJsonSchema':LiveViewArgs.model_json_schema()})
     result.append({'name':'camera_task', 'behavior':'BLOCKING',
         'description':'Execute an explicitly requested shared-camera task: guidance, recording a lesson, fitting selected wardrobe clothes, or finishing/cancelling the current task. Call only when the user requests a camera operation; ordinary chat, wardrobe reads and outfit suggestions use other tools. finish_teaching means the ENTIRE lesson is finished, not one step. Preserve ongoing teaching; do not switch until the user finishes or cancels. Use actual wardrobe IDs for fitting. Camera execution happens in the client; wait for context.execution before claiming success.',
         'parametersJsonSchema':CameraArgs.model_json_schema()})
@@ -93,6 +110,7 @@ class LiveToolRequest(BaseModel):
     current_task: Literal['idle','chat','guiding','teaching','compiling','tryon'] = 'idle'
     task_title: str = Field(default='',max_length=200)
     selected_item_ids: list[Annotated[str,StringConstraints(min_length=1,max_length=100)]] = Field(default_factory=list,max_length=3)
+    suggested_item_ids: list[Annotated[str,StringConstraints(min_length=1,max_length=100)]] = Field(default_factory=list,max_length=20)
     history: list[ConversationTurn] = Field(default_factory=list,max_length=6)
 
 
@@ -109,7 +127,7 @@ async def camera_decision(args: CameraArgs, payload: LiveToolRequest, request):
                     'steps':[{key:step[key] for key in keys if key in step} for step in skill.get('steps',[])[:20]]}
         elif args.intent=='tryon_live' and payload.current_task not in ('teaching','compiling'):
             context['tryon_plan']=await plan_tryon(request.app.state.provider,_store(request),args.request,
-                selected_ids=payload.selected_item_ids,requested_ids=args.item_ids,history=[turn.model_dump() for turn in payload.history])
+                selected_ids=payload.selected_item_ids or payload.suggested_item_ids,requested_ids=args.item_ids,history=[turn.model_dump() for turn in payload.history])
     # No fake classifier score: this is a validated model function request, not a Decisions prediction.
     return {'intent':args.intent,'label':LABELS[args.intent],'camera_command':args.command,
             'context':context,'actions':actions,'source':'tool_call'}
@@ -135,7 +153,11 @@ async def run(payload: LiveToolRequest, request: Request) -> dict:
         events=[]
         try:
             async with asyncio.timeout(90):
-                if payload.name=='camera_task':
+                if payload.name=='set_live_view':
+                    result={'live_control':LiveViewArgs.model_validate(payload.arguments).model_dump()}
+                elif payload.name=='open_screen':
+                    result={'error':'Navigation is deprecated. Use wardrobe/skill tools to read data, showcase_outfits to display choices, or camera_task to execute in this camera.'}
+                elif payload.name=='camera_task':
                     args=CameraArgs.model_validate(payload.arguments)
                     decision=await camera_decision(args,payload,request)
                     result={'camera_decision':decision}
@@ -143,7 +165,7 @@ async def run(payload: LiveToolRequest, request: Request) -> dict:
                     result,action=await execute(payload.name,arguments,request=request,context=context,image=None)
                     if not result.get('error') and result.get('outfits') and payload.name in ('showcase_outfits','open_screen'):
                         if payload.name=='showcase_outfits':
-                            events.append({'type':'text','text':result['introduction']})
+                            events.append({'type':'live_outfit_intro','text':result['introduction']})
                         events.append({'type':'outfits','outfits':result['outfits'][:3]})
                     if action:
                         events.append({'type':'action',**action})
@@ -151,6 +173,8 @@ async def run(payload: LiveToolRequest, request: Request) -> dict:
             result={'error':'Invalid tool arguments. Check the function schema.'}
         except Exception:
             result={'error':'Tool failed or timed out. Do not invent a result.'}
+        if payload.name=='showcase_outfits' and not result.get('error'):
+            result['message']='Outfits are displayed over the live video. Give a short spoken invitation. If fitting was requested, call camera_task with the chosen IDs now; a voice confirmation is sufficient, no button required.'
         if len(json.dumps(result,ensure_ascii=False))>MAX_TOOL_RESULT:
             result,events={'error':'Tool result too large. Ask a narrower question.'},[]
         if await request.is_disconnected():

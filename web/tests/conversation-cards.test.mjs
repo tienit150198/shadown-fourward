@@ -61,7 +61,7 @@ test('interleaved text, tool activity, cards and actions keep chronological orde
   const nodes = second.context.renderTimeline(saved);
   assert.deepEqual(plain(nodes.map(node => node.props.class)), [
     'chat-bubble chat-assistant', 'chat-activity', 'chat-bubble chat-assistant',
-    'chat-outfits', 'chat-activity', 'chat-actions', 'chat-bubble chat-assistant',
+    'chat-activity', 'chat-actions', 'chat-bubble chat-assistant',
   ]);
 });
 

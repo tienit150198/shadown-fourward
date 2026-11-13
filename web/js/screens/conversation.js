@@ -1,8 +1,9 @@
 import { api, conversationEvents, fetchWithAccess } from '../api.js';
+import { LiveOutfits } from '../live-outfits.js';
 import { GeminiLiveSession } from '../gemini-live.js';
 import { CameraTasks } from '../camera-tasks.js';
 import { startSharedXmax } from '../xmax-camera.js';
-import { itemImageUrl } from '../wardrobe-api.js';
+import { wardrobeApi, itemImageUrl } from '../wardrobe-api.js';
 import { fileToJpeg } from '../wardrobe-ui.js';
 import { captureFrame, keepScreenAwake, startCamera, stopCamera } from '../camera.js';
 import { recordVoice, recordingSupported, transcribeVoice, voiceAudio } from '../cloud-voice.js';
@@ -114,7 +115,7 @@ function timelineNodes(timeline) {
   return timeline.flatMap((block) => {
     if (block.type === 'text') return [h('p', { class: 'chat-bubble chat-assistant' }, block.text)];
     if (block.type === 'tool_status') return [activityRow(block)];
-    if (block.type === 'outfits') return [outfitCards(block.outfits)];
+    if (block.type === 'outfits') return []; // Historic clothing cards belong on the video overlay.
     if (block.type === 'action') return [h('div', { class: 'chat-actions' }, actionLink(block.action))];
     return [];
   });
@@ -168,7 +169,8 @@ export function mount(el) {
     cameraFacing = cameraFacing === 'environment' ? 'user' : 'environment';
     try { await openCamera(); } catch (error) { status.textContent = error.userMessage || error.message; }
   } }, icon('refresh', 20));
-  const stage = h('div', { class: 'chat-stage' }, video, tryonView, prompt, taskCard, flipButton, cameraButton);
+  const outfitOverlay = h('section', {class:'live-outfit-overlay', hidden:true, 'aria-label':'Gợi ý trang phục', 'aria-live':'polite'});
+  const stage = h('div', { class: 'chat-stage' }, video, tryonView, prompt, taskCard, outfitOverlay, flipButton, cameraButton);
   const transcript = h('div', { id: 'shadow-transcript', class: 'chat-transcript', role: 'log', 'aria-label': 'Cuộc trò chuyện', tabindex: 0 },
     h('p', { class: 'chat-bubble chat-assistant' }, 'Chào bạn. Hôm nay bạn muốn mình giúp gì?'),
     completedTurns.flatMap(({ question, answer, actions, timeline }) => [
@@ -211,6 +213,7 @@ export function mount(el) {
     },
   }, 'Live');
   composer.prepend(liveMode);
+  composer.append(h('button', {type:'button', class:'chat-toggle chat-clear', 'aria-label':'Xóa trò chuyện', title:'Xóa trò chuyện', onClick:clearChat}, icon('trash',18)));
   const intentBadge = h('div', { class: 'chat-intent', hidden: true, role: 'status', 'aria-live': 'polite' });
   const transcriptToggle = h('button', {
     type: 'button', class: 'chat-history-toggle', 'aria-expanded': 'false', 'aria-controls': 'shadow-transcript',
@@ -221,9 +224,10 @@ export function mount(el) {
       transcript.scrollTop = transcript.scrollHeight;
     },
   }, 'Mở rộng', icon('up', 14));
+  const fallbackNotice=h('p',{class:'chat-fallback-notice',hidden:true,role:'status'});
   const pane = h('div', { class: 'chat-pane' },
     h('div', { class: 'chat-pane-head' }, transcriptToggle),
-    h('div', { class: 'chat-routing' }, intentBadge), transcript, status, composer);
+    h('div', { class: 'chat-routing' }, intentBadge), transcript, fallbackNotice, status, composer);
   const audioUnlock = h('button', {
     type: 'button', class: 'chat-audio-unlock', hidden: true,
     onClick: () => { live.resumeAudio(); void video.play().catch(() => {}); },
@@ -233,10 +237,52 @@ export function mount(el) {
     h('header', { class: 'chat-nav' },
       h('a', { class: 'chat-brand', href: '#/conversation', 'aria-current': 'page' }, 'Shadow'),
       h('nav', { 'aria-label': 'Tài nguyên đã lưu' },
-        h('a', { href: '#/wardrobe?from=conversation' }, 'Tủ đồ'),
-        h('a', { href: '#/home?from=conversation' }, 'Bài đã học'))),
+        h('a', {href:'#/wardrobe?from=conversation'}, 'Tủ đồ'),
+        h('a', {href:'#/home?from=conversation'}, 'Bài đã học'),
+        h('button', {type:'button', onClick:()=>{
+          if (tasks.state.mode==='tryon') { tasks.cancel(); live.notifyTaskResult(tasks.execution()); }
+          else if (outfitPanel.outfits.length) void tryOverlayOutfit(outfitPanel.outfits[outfitPanel.index]);
+          else void askInPlace('Mình muốn thử một bộ đồ ngay trong camera này.');
+        }}, 'Thử đồ'))),
     h('div', { class: 'chat-layout' }, stage, pane),
   );
+  function clearChat() {
+    const resumeLive = live.status !== 'idle';
+    request?.abort(); request = null;
+    setListening(false); cancelRecording(); stopOutput();
+    live.stop();
+    completedTurns.splice(0);
+    conversationState.conversationId = null;
+    liveBubbles = {}; liveQuestion = liveAnswer = '';
+    liveActions = []; liveActionBox = null;
+    liveTimeline = []; liveOutfits = []; liveActivities = new Map();
+    liveCommitted = false; liveNarrated = false; liveOutfitIntroduction = '';
+    outfitPanel.show([], '');
+    intentBadge.hidden = true;
+    text.value = '';
+    transcript.replaceChildren(h('p', {class:'chat-bubble chat-assistant'}, 'Cuộc trò chuyện mới. Bạn muốn mình giúp gì?'));
+    saveConversation();
+    status.textContent = 'Đã xóa trò chuyện và bắt đầu ngữ cảnh mới.';
+    if (resumeLive) startLive();
+  }
+  async function askInPlace(question) {
+    if (live.sendText(question)) return;
+    await submit(question);
+  }
+  function localAction(event) {
+    const link=event.target.closest?.('a.chat-action');
+    if (!link) return;
+    event.preventDefault();
+    const url=new URL(link.href,location.href);
+    const [path,search='']=url.hash.replace(/^#\//,'').split('?');
+    const query=new URLSearchParams(search);
+    if (path.startsWith('tryon-')) {
+      let ids=[]; try { ids=JSON.parse(query.get('outfit') || '[]'); } catch { /* invalid legacy link */ }
+      if (ids.length) void tryOverlayOutfit({title:'Bộ đã chọn',item_ids:ids});
+      else void askInPlace('Mình muốn thử đồ trực tiếp trong camera này.');
+    } else void askInPlace(({wardrobe:'Cho xem đồ trong tủ và gợi ý bộ phù hợp.',stylist:'Gợi ý trang phục cho mình.',home:'Liệt kê bài đã học.',teach:'Mình muốn dạy bạn một bài mới.'})[path] || `Hãy giúp mình ngay trong camera này: ${link.textContent}`);
+  }
+  el.addEventListener('click',localAction);
   transcript.scrollTop = transcript.scrollHeight;
   // Keep the overlay above mobile keyboards and leave room for task cards.
   function fitViewport() {
@@ -270,6 +316,39 @@ export function mount(el) {
       } else live.notifyTaskResult(execution);
     },
   });
+  let liveOutfitIntroduction = '';
+  let originalView = false;
+  const outfitPanel = new LiveOutfits(outfitOverlay, {
+    onTry: outfit => { void tryOverlayOutfit(outfit); },
+    onOther: () => {
+      if (!live.sendText('Gợi ý bộ khác từ tủ đồ nhé.')) status.textContent = 'Bật micro Live để nhờ chọn bộ khác.';
+    },
+  });
+  async function tryOverlayOutfit(outfit) {
+    if (tasks.state.mode === 'teaching' || tasks.state.mode === 'compiling') {
+      status.textContent = 'Hãy lưu hoặc hủy bài dạy trước khi thử đồ.'; return;
+    }
+    outfitPanel.dismiss();
+    try {
+      const inventory=outfit.items?.length ? outfit.items : await wardrobeApi.listItems();
+      const selected=outfit.item_ids.map(id=>inventory.find(item=>item.id===id)).filter(Boolean);
+      if (selected.length!==outfit.item_ids.length) throw new Error('Một món đồ không còn trong tủ. Hãy nhờ chọn lại bộ nhé.');
+      const garments=selected.filter(item=>['top','bottom','outerwear','dress'].includes(item.category));
+      const categories=garments.map(item=>item.category);
+      if (!garments.length || garments.length>3 || new Set(categories).size!==categories.length || (categories.includes('dress') && categories.some(c=>['top','bottom'].includes(c)))) throw new Error('Thử trực tiếp hỗ trợ một áo, một quần và một áo khoác, hoặc váy. Hãy chọn các lớp muốn thử.');
+      await tasks.handle({intent:'tryon_live',source:'tool_call',label:'Thử bộ đã chọn',camera_command:'route_request'}, {itemIds:garments.map(item=>item.id),request:`Thử bộ ${outfit.title}`});
+      live.notifyTaskResult(tasks.execution());
+    } catch (error) { status.textContent = error.userMessage || error.message; outfitPanel.reopen(); }
+  }
+  function setLiveView(view) {
+    if (view === 'dismiss_outfits') { outfitPanel.dismiss(); return {status:'dismissed'}; }
+    if (view === 'show_outfits') return outfitPanel.reopen();
+    if (view === 'tryon' && !['loading','live'].includes(tasks.state.status)) return {status:'unavailable',message:'Chưa có phiên thử đồ đang chạy.'};
+    originalView = view === 'original';
+    stage.classList.toggle('chat-show-original',originalView);
+    renderTask(tasks.state);
+    return {status:'displayed',view};
+  }
   renderTask(tasks.state);
 
   function renderTask(state) {
@@ -279,6 +358,26 @@ export function mount(el) {
       if (stats) stats.textContent = `${state.lines || 0} câu hướng dẫn · ${state.frames || 0} khung hình`;
       return;
     }
+    if (state.mode === 'tryon' && ['loading','live'].includes(state.status) && !state.showGarments) {
+      outfitPanel.dismiss();
+      taskCard.dataset.mode = 'tryon'; taskCard.dataset.status = state.status;
+      taskCard.classList.add('chat-fitting-bar');
+      const ids = state.applied_ids?.length ? state.applied_ids : state.selected_ids || [];
+      const items = ids.map(id => state.items?.find(item => item.id === id)).filter(Boolean);
+      taskCard.replaceChildren(
+        h('div',{class:'chat-fitting-summary'}, h('div',{class:'chat-fitting-thumbs'},items.map(item => h('img',{src:itemImageUrl(item),alt:item.name || 'Trang phục'}))),
+          h('div',null,h('small',null,state.status === 'loading' ? 'ĐANG CHUẨN BỊ' : 'ĐANG THỬ'),h('p',null,items.map(item => item.name).join(' + ') || state.title)),
+          h('button',{type:'button',class:'live-outfit-close','aria-label':'Đổi trang phục',onClick:()=>tasks.update({showGarments:true})},icon('sliders',18))),
+        h('div',{class:'chat-fitting-controls'},
+          h('div',{class:'chat-fitting-segments','aria-label':'Hiển thị video'},
+            h('button',{type:'button','aria-pressed':String(originalView),onClick:()=>setLiveView('original')},'Gốc'),
+            h('button',{type:'button','aria-pressed':String(!originalView),onClick:()=>setLiveView('tryon')},'Thử đồ')),
+          h('button',{type:'button',class:'live-outfit-close','aria-label':'Dừng thử đồ',onClick:()=>{tasks.cancel();live.notifyTaskResult(tasks.execution());}},icon('close',18))),
+        ...(state.status === 'loading' && state.message ? [h('p',{role:'status'},state.message)] : []));
+      return;
+    }
+    taskCard.classList.remove('chat-fitting-bar');
+    if (state.mode !== 'tryon') { originalView=false; stage.classList.remove('chat-show-original'); }
     taskCard.dataset.mode = state.mode;
     taskCard.dataset.status = state.status;
     taskCard.replaceChildren(h('span', { class: 'chat-task-label' }, ({ chat: 'SHADOW', guiding: 'HƯỚNG DẪN', teaching: 'ĐANG GHI BÀI DẠY', compiling: 'ĐANG BIÊN SOẠN', tryon: state.status === 'loading' ? 'ĐANG THAY ĐỒ' : 'THỬ ĐỒ' })[state.mode]),
@@ -364,6 +463,7 @@ export function mount(el) {
 
   function liveToolEvent(event) {
     if (disposed) return;
+    if (event.type === 'live_outfit_intro') { liveOutfitIntroduction=event.text || ''; return; }
     if (event.type === 'text') { liveTranscript('assistant', event.text || ''); return; }
     if (event.type === 'tool_status') {
       let entry = liveActivities.get(event.id);
@@ -376,7 +476,7 @@ export function mount(el) {
     } else if (event.type === 'outfits') {
       const existing = new Set(liveOutfits.map(outfit => JSON.stringify(outfit.item_ids)));
       const fresh = normalizeOutfits(event.outfits).filter(outfit => !existing.has(JSON.stringify(outfit.item_ids))).slice(0,3-liveOutfits.length);
-      if (fresh.length) { liveOutfits.push(...fresh); liveTimeline.push({type:'outfits',outfits:fresh}); transcript.append(outfitCards(fresh)); }
+      if (fresh.length) { liveOutfits = fresh.slice(0,1); outfitPanel.show(liveOutfits,liveOutfitIntroduction); }
     } else if (event.type === 'action') {
       const link = actionLink(event);
       if (link) { liveActions.push(event); liveTimeline.push({type:'action',action:event}); transcript.append(h('div',{class:'chat-actions'},link)); }
@@ -398,6 +498,7 @@ export function mount(el) {
     },
     onTranscript: liveTranscript,
     onToolEvent: liveToolEvent,
+    onLiveControl(control, {signal}) { if (disposed || signal.aborted) return null; return setLiveView(control.view); },
     async onCameraTask(result, turn) {
       if (disposed) return;
       intentBadge.hidden = false;
@@ -437,7 +538,8 @@ export function mount(el) {
       startButton.disabled = active;
       prompt.hidden = active || Boolean(camera);
       pane.dataset.live = value;
-      if (value === 'idle' && ['teaching', 'tryon'].includes(tasks.state.mode)) tasks.cancel('Phiên Live đã dừng. Bản ghi chưa lưu đã được hủy.');
+      if (value === 'idle') outfitPanel.dismiss();
+      if (value === 'idle' && tasks.state.mode === 'teaching') tasks.cancel('Phiên Live đã dừng. Bản ghi chưa lưu đã được hủy.');
       mic.setAttribute('aria-pressed', String(active));
       mic.setAttribute('aria-label', active ? 'Dừng trò chuyện Live' : 'Bật micro');
       stage.classList.toggle('chat-live-active', active);
@@ -450,14 +552,24 @@ export function mount(el) {
         speaking: 'Shadow đang nói. Bạn có thể nói chen để hỏi tiếp.',
       })[value];
     },
-    onError(error) { if (!disposed) status.textContent = error.userMessage || error.message; },
+    onError(error) {
+      if (disposed) return;
+      livePreferred=false;
+      liveMode.setAttribute('aria-pressed','false');
+      const reason=error.userMessage || error.message;
+      fallbackNotice.textContent=`${reason} Đang dùng trò chuyện thường; camera vẫn mở.`;
+      fallbackNotice.hidden=false;
+      if (sttSupported()) { cloudMic=false; setListening(true); listen(); }
+      else if (cloud && recordingSupported()) { cloudMic=true; void startRecording(); }
+      updateMicrophoneControl();
+    },
     onNotice(message) { if (!disposed) status.textContent = message; },
     onAudioBlocked(blocked) { if (!disposed) audioUnlock.hidden = !blocked; },
   }, {
     fetchImpl: fetchWithAccess,
     getFrame: () => tasks.ar?.getFrame?.() || (camera ? captureFrame(video, { maxSide: 448 }) : null),
     getCity: () => shortText(getSettings().wardrobeCity,80) || 'Hà Nội',
-    getTaskContext: () => tasks.context(),
+    getTaskContext: () => ({...tasks.context(), suggested_item_ids: outfitPanel.container.hidden ? [] : outfitPanel.outfits[outfitPanel.index]?.item_ids || []}),
     getHistory: () => completedTurns.slice(-3).flatMap(({ question, answer }) => [
       { role: 'user', text: question }, { role: 'assistant', text: answer },
     ]).filter(turn => turn.text?.trim()),
@@ -478,6 +590,7 @@ export function mount(el) {
     updateMicrophoneControl();
     if (liveAvailable) autoStartLive();
     else {
+      livePreferred=false;
       prompt.hidden = false;
       status.textContent = 'Live chưa được cấu hình. Bạn vẫn có thể nhập câu hỏi hoặc bật micro.';
     }
@@ -501,6 +614,7 @@ export function mount(el) {
     request = null;
     stopOutput();
     intentBadge.hidden = true;
+    fallbackNotice.hidden=true;
     void live.start();
     void openCamera().catch(error => { if (!disposed) status.textContent = error.userMessage || error.message; });
   }
@@ -622,6 +736,7 @@ export function mount(el) {
       return;
     }
     unlockAudio();
+    if (!camera) void openCamera().catch(error=>{ if (!disposed) status.textContent=error.userMessage || error.message; });
     if (cloudMic) {
       if (recording) void finishRecording();
       else void startRecording();
@@ -771,7 +886,9 @@ export function mount(el) {
     const revision = voiceRevision;
     const streamVoice = voiceEnabled && (!cloud || hasVietnameseVoice());
     const city = shortText(getSettings().wardrobeCity, 80) || 'Hà Nội';
+    const visibleOutfit=outfitPanel.outfits[outfitPanel.index];
     const payload = {
+      ...(visibleOutfit ? {current_outfit:{title:(visibleOutfit.title || 'Bộ hiện tại').slice(0,80),item_ids:visibleOutfit.item_ids,reason:(visibleOutfit.reason || '').slice(0,500),tips:(visibleOutfit.tips || '').slice(0,300)}} : {}),
       ...(city ? { configured_city: city } : {}),
       text: question.slice(0, 500),
       history: context.filter(turn => turn.text?.trim()),
@@ -830,10 +947,13 @@ export function mount(el) {
           const known = new Set(turnOutfits.map(o => JSON.stringify(o.item_ids)));
           const fresh = normalizeOutfits(item.outfits).filter(o => !known.has(JSON.stringify(o.item_ids))).slice(0, 3 - turnOutfits.length);
           if (fresh.length) {
-            turnOutfits.push(...fresh);
+            turnOutfits = fresh.slice(0,1);
             timeline.push({ type: 'outfits', outfits: fresh });
-            transcript.append(outfitCards(fresh));
+            outfitPanel.show(turnOutfits,answer);
           }
+        } else if (item.type === 'action' && item.execute && item.route==='tryon-live') {
+          if (item.stop) tasks.cancel();
+          else await tryOverlayOutfit({title:'Bộ đã chọn',item_ids:item.items || []});
         } else if (item.type === 'action') {
           const link = actionLink(item);
           if (link) {
@@ -906,6 +1026,7 @@ export function mount(el) {
     window.visualViewport?.removeEventListener('resize', fitViewport);
     window.visualViewport?.removeEventListener('scroll', fitViewport);
     window.removeEventListener('resize', fitViewport);
+    el.removeEventListener('click',localAction);
     el.removeEventListener('pointerdown', unlockLiveAudio);
     el.removeEventListener('keydown', unlockLiveAudio);
     document.removeEventListener('visibilitychange', onVisibility);

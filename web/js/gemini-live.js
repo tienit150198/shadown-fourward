@@ -1,3 +1,4 @@
+import { geminiLiveError } from './gemini-errors.js';
 import { pcmBase64, decodePcm16 } from './live-pcm.js';
 
 export class GeminiLiveSession {
@@ -78,7 +79,7 @@ export class GeminiLiveSession {
         signal: AbortSignal.any([this.abort.signal, AbortSignal.timeout(20000)]),
       });
       const session = await response.json();
-      if (!response.ok) throw new Error(session.detail || session.error?.message || "Chưa tạo được phiên trò chuyện.");
+      if (!response.ok) throw geminiLiveError(session,response.status);
       if (generation !== this.generation) return;
       this.toolSessionId = session.toolSessionId;
       this.toolLabels = session.toolLabels || {};
@@ -95,16 +96,21 @@ export class GeminiLiveSession {
           try {
             const message = JSON.parse(typeof event.data === "string" ? event.data : new TextDecoder().decode(event.data));
             if (message.setupComplete) { clearTimeout(timeout); this.setupReject = null; resolve(); }
-            if (message.error) throw new Error("Trò chuyện trực tiếp tạm chưa sẵn sàng. Bạn thử lại sau nhé.");
+            if (message.error) throw geminiLiveError(message);
             this.handleMessage(message);
           } catch (error) { this.fail(error); }
         };
         socket.onerror = () => { clearTimeout(timeout); reject(new Error("Kết nối trò chuyện gặp lỗi. Bạn thử lại nhé.")); };
-        socket.onclose = () => {
+        socket.onclose = (event) => {
           clearTimeout(timeout);
           if (generation !== this.generation) return;
-          reject(new Error("Cuộc trò chuyện đã ngắt kết nối. Bạn có thể mở lại micro."));
-          this.stop("Phiên Live đã đóng. Bấm micro để bắt đầu lại.");
+          if (event?.code && ![1000,1001].includes(event.code)) {
+            const error=geminiLiveError({reason:event.reason});
+            reject(error); this.fail(error);
+          } else {
+            reject(new Error('Cuộc trò chuyện đã ngắt kết nối. Bạn có thể mở lại micro.'));
+            this.stop('Phiên Live đã đóng. Bấm micro để bắt đầu lại.');
+          }
         };
       });
       if (generation !== this.generation) return;
@@ -136,7 +142,7 @@ export class GeminiLiveSession {
     } catch (error) {
       if (generation === this.generation) {
         const messages = { NotAllowedError: "Cho phép dùng micro để bắt đầu trò chuyện.", NotFoundError: "Không tìm thấy micro.", NotReadableError: "Không mở được micro. Hãy thử lại." };
-        this.fail(new Error(messages[error.name] || error.message));
+        this.fail(error.code ? error : new Error(messages[error.name] || error.message));
       }
     }
   }
@@ -291,6 +297,10 @@ export class GeminiLiveSession {
       if (signal.aborted || generation !== this.generation || turn !== this.turn || this.status === 'idle') return;
       const result = data.result;
       if (!result || typeof result !== 'object') throw new Error('Kết quả công cụ chưa hợp lệ.');
+      if (result.live_control) {
+        result.execution = await this.callbacks.onLiveControl?.(result.live_control, {signal});
+        if (!result.execution) result.error = 'Live view control is unavailable. Do not claim it succeeded.';
+      }
       if (result.camera_decision) {
         const execute = this.callbacks.onCameraTask || this.callbacks.onClassification;
         const execution = await execute?.(result.camera_decision,{request:call.args.request || turn.input,signal,itemIds:call.args.item_ids});

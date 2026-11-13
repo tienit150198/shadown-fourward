@@ -1,7 +1,7 @@
 // SHADOW service worker — caches the app shell only.
 // Cached shell renders immediately; refresh it in the background.
 // Never touches /api, /session or /skills-media, and ignores cross-origin requests (CDN, fonts).
-const CACHE = 'shadow-shell-v13-tools';
+const CACHE = 'shadow-shell-v22-taller-outfit';
 const SHELL = [
   './',
   'index.html',
@@ -55,13 +55,14 @@ self.addEventListener('fetch', (event) => {
       if (response.ok && response.type === 'basic') await cache.put(request, response.clone()).catch(() => {});
       return response;
     });
-    if (cached) {
+    if (cached && !['/app.js','/styles.css','/','/index.html'].includes(url.pathname) && !url.pathname.startsWith('/js/')) {
       event.waitUntil(refresh.catch(() => {}));
       return cached;
     }
     try {
       return await refresh;
     } catch (err) {
+      if (cached) return cached;
       if (request.mode === 'navigate') {
         const shell = await cache.match('index.html');
         if (shell) return shell;
