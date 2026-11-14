@@ -1,3 +1,7 @@
+## Alternate camera interface
+
+This branch adapts the cream/sage landing page and camera-session layout from the sibling `shadow-camera-demo` prototype. It keeps the real OpenAI Live/Sol and Xmax integrations. The home page offers learning, teaching, outfit and wardrobe actions; microphone/camera access starts only after a user action. “Kết thúc” releases the camera and microphone and returns to the landing page. The wardrobe photograph is copied from the prototype's `public/wardrobe.jpg`.
+
 ## OpenAI demo setup
 
 Copy `.env.example` to `.env`, set `OPENAI_API_KEY` privately, then run `./run.sh` (or `docker compose up --build -d`). The demo configuration uses `gpt-6.1-sol` for vision, lesson compilation, text chat and delegated reasoning, `gpt-live-1` for Vietnamese full duplex voice through the Live API, and OpenAI transcription/speech for the fallback voice controls. No Gemini key is needed. `OPENAI_LIVE_MODEL` selects the Live voice model. `OPENAI_REASONING_EFFORT=low` is the minimum supported setting for Sol; Sol does not accept `none`. Camera images go to its delegated Responses backend, while GPT Live handles audio.

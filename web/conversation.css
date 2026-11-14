@@ -346,3 +346,77 @@ body[data-screen="conversation"] { overflow: hidden; }
 .chat-composer > .chat-send { grid-column: 3; grid-row: 1; }
 .chat-nav .chat-brand { min-height: 44px; }
 .chat-pane-tools .chat-live-mode { min-width: 44px; }
+
+/* Alternate interface adapted from shadow-camera-demo. */
+body:has(.shadow-interface:not(.shadow-session)) { overflow-y: auto; background: #f6f5f0; }
+.shadow-interface { --accent: #d9e5ba; --accent-ink: #30442a; --accent-soft: #dce6c626; }
+.shadow-interface:not(.shadow-session) { position: relative; top: auto; height: auto !important; min-height: 100dvh; overflow: visible; color: #30372c; background: #f6f5f0; }
+.shadow-interface:not(.shadow-session) .chat-nav { position: relative; inset: auto; margin: 0 auto; width: min(1200px, 100%); height: 94px; padding: max(12px, var(--sat)) 32px 0; }
+.shadow-interface:not(.shadow-session) .chat-brand { color: #30372c; font-size: 22px; letter-spacing: .12em; }
+.shadow-interface:not(.shadow-session) .chat-brand-logo { display: none; }
+.shadow-interface:not(.shadow-session) .chat-nav nav { flex: none; max-width: none; gap: 20px; padding: 0; background: none; border: 0; backdrop-filter: none; }
+.shadow-interface:not(.shadow-session) .chat-nav nav a, .shadow-interface:not(.shadow-session) .chat-nav nav button { color: #59634e; text-shadow: none; font-size: 12px; }
+.shadow-interface:not(.shadow-session) .chat-layout { position: relative; inset: auto; display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(300px, 1fr); gap: 48px; width: min(1200px, 100%); margin: 0 auto; padding: 12px 32px 40px; }
+.shadow-interface:not(.shadow-session) .chat-stage { position: relative; inset: auto; min-height: min(700px, calc(100dvh - 150px)); border-radius: 23px; background: #4b5544 url('images/shadow-wardrobe.jpg') 55% center / cover; }
+.shadow-interface:not(.shadow-session) .chat-stage::after { background: linear-gradient(180deg, #17201608 10%, #15251b26 40%, #17271edb); }
+.shadow-welcome { position: absolute; z-index: 1; left: 36px; right: 24px; bottom: 58px; color: #fffdf3; }
+.shadow-eyebrow { display: block; font-size: 9px; line-height: 1.6; letter-spacing: .16em; font-weight: 600; }
+.shadow-welcome .shadow-eyebrow { color: #f0eee2c9; }
+.shadow-welcome h1 { font-family: 'Instrument Serif', Georgia, serif; font-size: clamp(40px, 4.4vw, 66px); font-weight: 400; line-height: 1.06; letter-spacing: -.035em; margin: 22px 0 0; }
+.shadow-welcome em { color: #e8ecb8; font-weight: 400; }
+.shadow-interface:not(.shadow-session) .chat-hero, .shadow-interface:not(.shadow-session) .chat-pane,
+.shadow-interface:not(.shadow-session) .chat-stage > button, .shadow-interface:not(.shadow-session) .chat-task { display: none; }
+.shadow-companion { display: flex; flex-direction: column; justify-content: center; min-width: 0; padding: 20px 0; }
+.shadow-companion > .shadow-eyebrow { color: #86917b; }
+.shadow-companion h2 { font-family: 'Instrument Serif', Georgia, serif; font-size: clamp(35px, 3.4vw, 52px); font-weight: 400; line-height: 1.08; letter-spacing: -.03em; margin: 18px 0 22px; }
+.shadow-companion h2 em { color: #758564; font-weight: 400; }
+.shadow-quick-list { display: grid; gap: 9px; }
+.shadow-quick { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 76px; padding: 13px; color: #48513f; background: #fafaf6; border: 1px solid #e4e6dd; border-radius: 14px; text-align: left; text-decoration: none; transition: border-color .2s, background .2s; }
+.shadow-quick:hover { background: #fff; border-color: #b8c4a8; }
+.shadow-quick-icon { display: grid; place-items: center; flex: 0 0 40px; height: 40px; border-radius: 11px; }
+.shadow-quick-icon.lavender { background: #eae8f6; color: #777195; }
+.shadow-quick-icon.peach { background: #f2e4d7; color: #aa825e; }
+.shadow-quick-icon.sage { background: #e5eadc; color: #6c7f56; }
+.shadow-quick-copy { flex: 1; min-width: 0; }
+.shadow-quick strong { display: block; font-size: 13px; font-weight: 600; line-height: 1.4; }
+.shadow-quick small { display: block; font-size: 11px; color: #858d7d; line-height: 1.5; margin-top: 4px; }
+.shadow-home-voice { display: grid; justify-items: center; gap: 10px; padding-top: 25px; }
+.shadow-home-mic { display: grid; place-items: center; width: 68px; height: 68px; border-radius: 50%; border: 0; background: #435b37; color: #fffef3; box-shadow: 0 6px 20px #435b3726; }
+.shadow-home-voice > span { color: #7f8875; font-size: 11px; }
+.shadow-exit { display: none; }
+.shadow-session .shadow-welcome, .shadow-session .shadow-companion, .shadow-session .chat-nav { display: none; }
+.shadow-session .shadow-exit { position: absolute; z-index: 4; top: calc(var(--sat) + 18px); left: max(18px, var(--sal)); display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 14px; border: 1px solid #ffffff40; border-radius: 999px; background: #14221180; color: #fffef3; backdrop-filter: blur(12px); font-size: 12px; }
+.shadow-session .chat-stage { background: #33412d; }
+.shadow-session .chat-stage::after { background: linear-gradient(180deg, #0c140b66, transparent 40%, transparent 60%, #0c140b99); }
+.shadow-session .chat-pane { background: linear-gradient(155deg, #192418dd, #101b12c9); border-color: #f4f5e526; }
+.shadow-session .chat-send, .shadow-session .chat-start { background: #f4f5e5; color: #35462b; }
+.shadow-session .chat-composer > .chat-toggle { background: #f8f7eceb; color: #35462b; border-color: transparent; border-radius: 50%; }
+.shadow-session .chat-composer > .chat-toggle[aria-pressed='true'] { background: #435b37; color: #fffef3; }
+.shadow-session .chat-toggle[aria-pressed='true'] { box-shadow: inset 0 0 0 1px #e1eacb; color: #e1eacb; }
+
+@media (max-width: 760px) {
+  .shadow-interface:not(.shadow-session) .chat-nav { height: 68px; padding: max(8px, var(--sat)) 20px 0; }
+  .shadow-interface:not(.shadow-session) .chat-nav nav { gap: 8px; }
+  .shadow-interface:not(.shadow-session) .chat-layout { grid-template-columns: minmax(0, 1fr); gap: 0; padding: 10px 20px 24px; }
+  .shadow-interface:not(.shadow-session) .chat-stage { min-height: 0; height: clamp(200px, 34dvh, 360px); border-radius: 19px; }
+  .shadow-welcome { left: 24px; bottom: 26px; }
+  .shadow-welcome h1 { font-size: clamp(32px, 8vw, 46px); margin-top: 14px; }
+  .shadow-welcome .shadow-eyebrow { font-size: 8px; }
+  .shadow-companion { padding: 20px 0 0; }
+  .shadow-companion > .shadow-eyebrow, .shadow-companion > h2 { display: none; }
+  .shadow-quick { min-height: 64px; padding: 10px 12px; }
+  .shadow-quick strong { font-size: 12px; }
+  .shadow-quick small { font-size: 10px; }
+  .shadow-quick-icon { flex-basis: 36px; height: 36px; }
+  .shadow-home-voice { padding-top: 20px; gap: 8px; }
+  .shadow-home-mic { width: 60px; height: 60px; }
+}
+@media (max-width: 360px) {
+  .shadow-interface:not(.shadow-session) .chat-nav { padding-left: 16px; padding-right: 16px; }
+  .shadow-interface:not(.shadow-session) .chat-nav nav { gap: 2px; }
+  .shadow-interface:not(.shadow-session) .chat-nav nav a, .shadow-interface:not(.shadow-session) .chat-nav nav button { padding: 0 3px; font-size: 11px; }
+  .shadow-interface:not(.shadow-session) .chat-layout { padding-left: 16px; padding-right: 16px; }
+  .shadow-quick { gap: 9px; }
+}
+.shadow-interface:not(.shadow-session) { color-scheme: light; }
+.shadow-interface:not(.shadow-session) .chat-brand { text-shadow: none; }

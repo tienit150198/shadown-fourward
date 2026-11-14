@@ -124,6 +124,7 @@ function timelineNodes(timeline) {
 }
 
 export function mount(el, {query=new URLSearchParams()}={}) {
+  el.classList.add('shadow-interface');
   let disposed = false;
   let camera = null;
   let cameraRevision = 0;
@@ -145,7 +146,7 @@ export function mount(el, {query=new URLSearchParams()}={}) {
   let audioSource = null;
   let liveAvailable = false;
   let livePreferred = true;
-  let autoStartPending = true;
+  let autoStartPending = false;
   let liveBubbles = {};
   let liveQuestion = '';
   let liveAnswer = '';
@@ -181,7 +182,11 @@ export function mount(el, {query=new URLSearchParams()}={}) {
     try { await openCamera(); } catch (error) { status.textContent = error.userMessage || error.message; }
   } }, icon('refresh', 20));
   const outfitOverlay = h('section', {class:'live-outfit-overlay', hidden:true, 'aria-label':'Gợi ý trang phục', 'aria-live':'polite'});
-  const stage = h('div', { class: 'chat-stage' }, video, tryonView, prompt, taskCard, outfitOverlay, flipButton, cameraButton);
+  const welcome = h('div', {class:'shadow-welcome'},
+    h('span', {class:'shadow-eyebrow'}, 'MỖI NGÀY, THÊM MỘT ĐIỀU HAY'),
+    h('h1', null, 'Cuộc sống luôn có', h('br'), 'điều mới để học.', h('br'), h('em', null, 'Cùng SKI khám phá.')));
+  const exitButton = h('button', {type:'button', class:'shadow-exit', 'aria-label':'Kết thúc phiên', onClick:endExperience}, icon('back',20), 'Kết thúc');
+  const stage = h('div', { class: 'chat-stage' }, video, tryonView, welcome, prompt, taskCard, outfitOverlay, flipButton, cameraButton, exitButton);
   const transcript = h('div', { id: 'shadow-transcript', class: 'chat-transcript', role: 'log', 'aria-label': 'Cuộc trò chuyện', tabindex: 0 },
     h('p', { class: 'chat-bubble chat-assistant' }, 'Chào bạn. Hôm nay bạn muốn mình giúp gì?'),
     completedTurns.flatMap(({ question, answer, actions, timeline }) => [
@@ -250,12 +255,41 @@ export function mount(el, {query=new URLSearchParams()}={}) {
         h('a', {href:'#/wardrobe?from=conversation'}, 'Tủ đồ'),
         h('a', {href:'#/home?from=conversation'}, 'Bài đã học'),
         h('button', {type:'button', onClick:()=>{
+          enterExperience();
           if (tasks.state.mode==='tryon') { tasks.cancel(); live.notifyTaskResult(tasks.execution()); }
           else if (outfitPanel.outfits.length) void tryOverlayOutfit(outfitPanel.outfits[outfitPanel.index]);
           else void askInPlace('Mình muốn thử một bộ đồ ngay trong camera này.');
         }}, 'Thử đồ'))),
-    h('div', { class: 'chat-layout' }, stage, pane),
+    h('div', { class: 'chat-layout' }, stage, pane, companion()),
   );
+  function enterExperience() { el.classList.add('shadow-session'); fitViewport(); }
+  function endExperience() {
+    autoStartPending = false;
+    request?.abort(); request = null;
+    live.stop(); setListening(false); cancelRecording(); stopOutput();
+    tasks.cancel('Đã kết thúc phiên.'); closeCamera();
+    el.classList.remove('shadow-session');
+  }
+  function companion() {
+    const quick = (symbol, tone, title, subtitle, action) => h('button', {type:'button',class:'shadow-quick',onClick:action},
+      h('span',{class:`shadow-quick-icon ${tone}`},icon(symbol,21)),
+      h('span',{class:'shadow-quick-copy'},h('strong',null,title),h('small',null,subtitle)),icon('right',18));
+    const begin = async action => {
+      enterExperience();
+      try { await openCamera(); await action(); }
+      catch(error) { status.textContent = error.userMessage || error.message || 'Chưa mở được camera.'; }
+    };
+    return h('section',{class:'shadow-companion','aria-label':'Bắt đầu cùng SKI'},
+      h('span',{class:'shadow-eyebrow'},'MỘT NGƯỜI BẠN ĐỒNG HÀNH'),
+      h('h2',null,'Bạn muốn khám phá',h('br'),h('em',null,'điều gì hôm nay?')),
+      h('div',{class:'shadow-quick-list'},
+        quick('list','lavender','Tôi muốn học một kỹ năng','Khám phá những bài đã học cùng SKI',()=>void begin(()=>askInPlace('Cho mình xem các bài đã học và giúp mình chọn một bài để thực hành.'))),
+        quick('camera','peach','Tôi có điều muốn dạy','Biến kinh nghiệm thành bài học',()=>void begin(()=>runLessonControl({command:'start_teaching'}))),
+        quick('sparkle','sage','Giúp tôi phối đồ','Khám phá cách phối đồ mới',()=>void begin(()=>askInPlace('Gợi ý một bộ đồ phù hợp từ tủ đồ thật của mình.'))),
+        h('a',{class:'shadow-quick',href:'#/wardrobe?from=conversation'},h('span',{class:'shadow-quick-icon sage'},icon('list',21)),
+          h('span',{class:'shadow-quick-copy'},h('strong',null,'Tủ đồ của tôi'),h('small',null,'Xem, sắp xếp và khám phá trang phục')),icon('right',18))),
+      h('div',{class:'shadow-home-voice'},h('button',{type:'button',class:'shadow-home-mic','aria-label':'Bắt đầu trò chuyện với SKI',onClick:toggleMic},icon('mic',25)),h('span',null,'Chạm để trò chuyện')));
+  }
   function clearChat() {
     const resumeLive = live.status !== 'idle';
     request?.abort(); request = null;
@@ -631,6 +665,7 @@ export function mount(el, {query=new URLSearchParams()}={}) {
   }
 
   function startLive() {
+    enterExperience();
     if (disposed || live.status !== 'idle') return;
     setListening(false);
     cancelRecording();
@@ -701,6 +736,7 @@ export function mount(el, {query=new URLSearchParams()}={}) {
   }
 
   async function openCamera() {
+    enterExperience();
     if (camera) return camera;
     if (openingCamera) return openingCamera;
     openingCamera = openCameraStream();
@@ -753,6 +789,7 @@ export function mount(el, {query=new URLSearchParams()}={}) {
   }
 
   function toggleMic() {
+    enterExperience();
     autoStartPending = false;
     if (liveAvailable && livePreferred) {
       if (live.status !== 'idle') { live.stop(); return; }
