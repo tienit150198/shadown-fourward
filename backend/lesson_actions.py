@@ -35,7 +35,7 @@ class LessonSnapshot(BaseModel):
     steps: list[LessonStepSnapshot] = Field(default_factory=list,max_length=30)
 
 
-DESCRIPTION = ('Distinguish user learning from user teaching AI: asking to learn/practice must use start_guidance, never start_teaching. First read list_skills to select a matching saved skill_id. A correction such as wanting to learn must change your action immediately. ' 
+DESCRIPTION = ('Distinguish user learning from user teaching AI: asking to learn/practice must use start_guidance, never start_teaching. First read list_skills to select a matching saved skill_id. A correction such as wanting to learn must change your action immediately. '
     'Control teaching, draft review and learned-skill practice IN THE CURRENT CAMERA. '
     'start_teaching records spoken demonstration; finish_teaching compiles a draft for review, it DOES NOT save. '
     'Use review to show steps; skill_id loads a saved lesson as a NEW editable copy. '
