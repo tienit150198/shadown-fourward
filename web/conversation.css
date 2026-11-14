@@ -281,7 +281,7 @@ body[data-screen="conversation"] { overflow: hidden; }
 .chat-fitting-segments { display: flex; padding: 3px; background: var(--surface-2); border-radius: 12px; }
 .chat-fitting-segments button { border: 0; background: transparent; color: var(--text-2); border-radius: 9px; padding: 8px 22px; font: inherit; font-size: .72rem; cursor: pointer; }
 .chat-fitting-segments button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
-.chat-show-original .chat-xmax { display: none !important; pointer-events: none; }
+.chat-show-original .chat-xmax { opacity: 0 !important; pointer-events: none; }
 .chat-show-original .chat-video { visibility: visible; }
 @media (max-width: 480px) {
   .live-outfit-overlay, .chat-task.chat-fitting-bar { left: max(12px, var(--sal)); width: calc(100% - 76px); }

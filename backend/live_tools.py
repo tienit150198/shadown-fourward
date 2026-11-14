@@ -4,10 +4,12 @@ from __future__ import annotations
 import asyncio
 import copy
 import json
+import os
 import time
 from dataclasses import dataclass, field
 from typing import Annotated, Any, Literal
 from uuid import UUID, uuid4
+from pathlib import Path
 
 from fastapi import HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, ValidationError
@@ -80,27 +82,65 @@ class ToolSession:
 
 
 class LiveToolStore:
-    def __init__(self, maximum=128):
+    def __init__(self, maximum=128, directory: Path | None = None):
         self.maximum = maximum
         self.sessions: dict[str, ToolSession] = {}
+        self.directory = directory
+        if directory is not None:
+            directory.mkdir(parents=True, exist_ok=True, mode=0o700)
+
+    def save(self, key):
+        if self.directory is None:
+            return
+        key = str(UUID(str(key)))
+        session = self.sessions[key]
+        value = {'expires': time.time() + max(0, session.expires - time.monotonic()),
+                 'context': session.context, 'results': session.results}
+        target = self.directory / (key + '.json')
+        temporary = target.with_suffix('.tmp')
+        fd = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        with os.fdopen(fd, 'w') as stream:
+            json.dump(value, stream, ensure_ascii=False)
+        os.replace(temporary, target)
 
     def clean(self):
         now=time.monotonic()
         for key,value in list(self.sessions.items()):
             if value.expires < now and not value.lock.locked():
                 del self.sessions[key]
+                if self.directory is not None:
+                    (self.directory / (key + '.json')).unlink(missing_ok=True)
+        if self.directory is not None:
+            for path in self.directory.glob('*.json'):
+                try:
+                    if json.loads(path.read_text())['expires'] <= time.time():
+                        path.unlink(missing_ok=True)
+                except (ValueError, KeyError):
+                    path.unlink(missing_ok=True)
 
     def create(self, city):
         self.clean()
-        if len(self.sessions) >= self.maximum:
+        stored = {path.stem for path in self.directory.glob('*.json')} if self.directory else set()
+        if len(stored | self.sessions.keys()) >= self.maximum:
             raise HTTPException(503, 'Đang có nhiều phiên trò chuyện. Bạn thử lại sau nhé.')
         key=str(uuid4())
         self.sessions[key]=ToolSession(context={'configured_city':city})
+        self.save(key)
         return key
 
     def get(self, key):
         self.clean()
-        session=self.sessions.get(str(key))
+        key = str(UUID(str(key)))
+        session=self.sessions.get(key)
+        if session is None and self.directory is not None:
+            path = self.directory / (key + '.json')
+            if path.exists():
+                value = json.loads(path.read_text())
+                remaining = value['expires'] - time.time()
+                if remaining > 0:
+                    session = ToolSession(context=value['context'], expires=time.monotonic() + min(300, remaining),
+                        results={call: (tuple(row[0]), row[1]) for call, row in value['results'].items()})
+                    self.sessions[key] = session
         if not session or session.expires < time.monotonic():
             raise HTTPException(410, 'Phiên công cụ đã hết hạn. Hãy mở lại cuộc trò chuyện.')
         return session
@@ -108,7 +148,7 @@ class LiveToolStore:
 
 def sessions(request):
     if not hasattr(request.app.state,'live_tool_sessions'):
-        request.app.state.live_tool_sessions=LiveToolStore()
+        request.app.state.live_tool_sessions=LiveToolStore(directory=Path(_store(request).root) / '.live-tools')
     return request.app.state.live_tool_sessions
 
 
@@ -212,4 +252,5 @@ async def run(payload: LiveToolRequest, request: Request) -> dict:
             session.context=context
             response={'result':result,'events':events}
         session.results[payload.call_id]=(fingerprint,response)
+        sessions(request).save(payload.session_id)
         return response

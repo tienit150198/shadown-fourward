@@ -703,7 +703,8 @@ export function mount(el, {query=new URLSearchParams()}={}) {
   }
 
   async function openCamera() {
-    if (camera) return camera;
+    if (camera?.getVideoTracks().some(track => track.readyState === 'live')) return camera;
+    if (camera) closeCamera();
     if (openingCamera) return openingCamera;
     openingCamera = openCameraStream();
     try { return await openingCamera; } finally { openingCamera = null; }

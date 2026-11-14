@@ -11,6 +11,34 @@ import conversation_tools
 import live_tools
 
 
+def test_live_tools_survive_restart_without_extending_expiry_or_repeating_a_call(tmp_path):
+    original = live_tools.LiveToolStore(directory=tmp_path)
+    key = original.create('Hà Nội')
+    session = original.get(key)
+    session.context['location'] = {'latitude': 21.0, 'longitude': 105.8}
+    session.expires = time.monotonic() + 20
+    session.results['save-once'] = (('save_skill', '{}'), {'result': {'saved': True}})
+    original.save(key)
+    restarted = live_tools.LiveToolStore(directory=tmp_path)
+    restored = restarted.get(key)
+    assert restored.context == session.context
+    assert restored.results == session.results
+    assert 0 < restored.expires - time.monotonic() <= 20
+    assert ((tmp_path / (key + '.json')).stat().st_mode & 0o777) == 0o600
+    restored.expires = time.monotonic() - 1
+    restarted.save(key)
+    with pytest.raises(live_tools.HTTPException) as error:
+        live_tools.LiveToolStore(directory=tmp_path).get(key)
+    assert error.value.status_code == 410
+
+
+def test_restarted_tool_store_keeps_the_session_limit(tmp_path):
+    live_tools.LiveToolStore(maximum=1, directory=tmp_path).create('')
+    with pytest.raises(live_tools.HTTPException) as error:
+        live_tools.LiveToolStore(maximum=1, directory=tmp_path).create('')
+    assert error.value.status_code == 503
+
+
 @pytest.fixture
 def tool_session(client,monkeypatch,tmp_path):
     upstream=httpx.AsyncClient(base_url='https://generativelanguage.googleapis.com',transport=httpx.MockTransport(lambda r:httpx.Response(200,json={'name':'ephemeral-test-token'})))

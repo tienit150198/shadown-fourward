@@ -16,14 +16,14 @@ export async function connectXmaxVideo(manager, local, context, view, { check = 
       check();
       const remote = await manager.connect(local);
       check();
-      view.remoteTrack = remote.videoTrack;
+      view.track = remote.videoTrack;
       return await manager.startGeneration({ localStream: local, context });
     } catch (error) {
       check();
       if (attempt || error.name === 'AbortError' || !/timed out|timeout/i.test(error.message || '')) throw error;
       // A failed allocation can time out before sending a first frame. Retry
       // once with the same manager, temporary key, credit cap and camera.
-      view.remoteTrack = undefined;
+      view.track = undefined;
       await manager.disconnect().catch(() => {});
       check();
       onRetry();
@@ -31,10 +31,10 @@ export async function connectXmaxVideo(manager, local, context, view, { check = 
   }
 }
 
-export async function startSharedXmax(itemIds, stream, container, { signal, onState = () => {}, onError = () => {}, fetchImpl = fetchWithAccess } = {}) {
+export async function startSharedXmax(itemIds, stream, container, { signal, onState = () => {}, onError = () => {}, fetchImpl = fetchWithAccess, loadSdk = () => import('/vendor/xmax/xmax.js') } = {}) {
   const source = stream?.getVideoTracks().find(track => track.readyState === 'live');
   if (!source) throw new Error('Cần mở camera để thử đồ.');
-  let session, manager, view, stopped = false, generating = false, timer, startupTimer;
+  let session, manager, view, inputTrack, stopped = false, generating = false, timer, startupTimer;
   let resolveReady, rejectReady;
   let ready;
   const resetReady = () => {
@@ -43,7 +43,7 @@ export async function startSharedXmax(itemIds, stream, container, { signal, onSt
   };
   resetReady();
   const cleanMessage = tryonErrorMessage;
-  const closeKey = () => session ? fetch('/api/tryon/xmax/close', {
+  const closeKey = () => session ? fetchImpl('/api/tryon/xmax/close', {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token: session.token }), keepalive: true,
   }).catch(() => {}) : Promise.resolve();
   const stop = async () => {
@@ -52,9 +52,11 @@ export async function startSharedXmax(itemIds, stream, container, { signal, onSt
     clearTimeout(timer); clearTimeout(startupTimer);
     signal?.removeEventListener('abort', onAbort);
     container.hidden = true;
+    container.style.opacity = '';
     view?.detach();
     container.replaceChildren();
     await Promise.allSettled([manager?.close(), closeKey()]);
+    inputTrack?.stop();
   };
   const onAbort = () => { rejectReady(new DOMException('Đã dừng thử đồ.', 'AbortError')); void stop(); };
   const check = () => { if (stopped || signal?.aborted) throw new DOMException('Đã dừng thử đồ.', 'AbortError'); };
@@ -66,7 +68,7 @@ export async function startSharedXmax(itemIds, stream, container, { signal, onSt
   try {
     check();
     onState('Đang chuẩn bị thay đồ cho bạn…');
-    const sdk = await import('/vendor/xmax/xmax.js');
+    const sdk = await loadSdk();
     check();
     const response = await fetchImpl('/api/tryon/xmax/session', {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ item_ids: Array.isArray(itemIds) ? itemIds : [itemIds] }), signal,
@@ -84,25 +86,28 @@ export async function startSharedXmax(itemIds, stream, container, { signal, onSt
         rejectReady(error);
         if (generating) { void stop(); onError(error.message); }
       }
-      if (state.connectionState === 'Generating') { generating = true; resolveReady(); }
     });
     check();
-    view = new sdk.XmaxRealtimeDualVideoView({ isInteractionEnabled: false });
+    // Keep the existing full-screen camera as the preview. The SDK owns only
+    // the full-size result layer, never a second local camera/PiP layout.
+    view = new sdk.XmaxRealtimeVideoView({ isInteractionEnabled: false });
+    view.frameDisplayHandler = () => { if (!stopped) { generating = true; resolveReady(); } };
     Object.assign(view.element.style, { width: '100%', height: '100%' });
     view.attach(container);
+    container.style.opacity = '0';
+    container.hidden = false; // Mounted at full size so first-frame detection can run.
     onState('Đang chuẩn bị bộ đồ đã chọn…');
     const image = await fetchImpl(session.reference_image_url || session.item.image_url, { signal });
     if (!image.ok) throw new Error('Chưa lấy được ảnh trang phục.');
     const file = await client.createStorageService().uploadImage({ data: await image.blob(), fileName: 'shadow-outfit.jpg', contentType: 'image/jpeg' });
     check();
     const settings = source.getSettings();
+    inputTrack = source.clone();
     const local = await manager.createExternalVideoStream({
-      videoTrack: source,
+      videoTrack: inputTrack,
       videoFormat: new sdk.RealtimeVideoFormat({ width: settings.width || 1280, height: settings.height || 720, fps: 24 }),
     });
     check();
-    view.localTrack = local.videoTrack;
-    container.hidden = false;
     onState('Chúng tôi đang thay đồ cho bạn…');
     // Bind the remote placeholder before starting so its first frame has an
     // active renderer, including browsers that defer media without a view.
@@ -111,6 +116,7 @@ export async function startSharedXmax(itemIds, stream, container, { signal, onSt
     });
     await ready;
     check();
+    container.style.opacity = '1';
     clearTimeout(startupTimer);
     timer = setTimeout(() => { void stop(); onError('Đã hết phiên thử đồ 2 phút. Bạn có thể chọn đồ để thử tiếp.'); }, session.maxSeconds * 1000);
     return { stop, provider: 'xmax', model: 'x2.1', getFrame: () => {

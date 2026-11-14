@@ -322,6 +322,10 @@ export class GeminiLiveSession {
           ...this.getTaskContext(),history:this.getHistory().slice(-6).filter(turn => turn.text?.trim())}), signal,
       });
       const data = await response.json();
+      if (response.status === 410) {
+        this.stop('Phiên trò chuyện đã hết hạn. Bấm micro để mở lại.');
+        return;
+      }
       if (!response.ok) throw new Error(data.message || (typeof data.detail === 'string' ? data.detail : '') || 'Chưa thực hiện được công cụ.');
       if (signal.aborted || generation !== this.generation || turn !== this.turn || this.status === 'idle') return;
       const result = data.result;
