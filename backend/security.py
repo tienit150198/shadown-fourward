@@ -215,7 +215,7 @@ def rate_rule_for(method: str, path: str) -> str | None:
         return "access"
     if path == "/api/ask":
         return "ask"
-    if path in ("/api/conversation", "/api/intent", "/api/live/classify"):
+    if path in ("/api/conversation", "/api/intent", "/api/live/classify", "/api/live/tool"):
         return "conversation"
     if path in ("/api/voice/transcribe", "/api/voice/speech"):
         return "voice"

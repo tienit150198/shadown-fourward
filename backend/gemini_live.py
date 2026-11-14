@@ -19,6 +19,9 @@ from tryon_selection import plan_tryon
 from styling_context import StylingLocation, contextual_request, resolve_weather
 from stylist import suggest_outfits
 import style_memory
+from gemini_errors import account_error_code
+from live_tools import declarations, sessions, LiveToolRequest, run as run_live_tool
+from conversation import TOOL_LABELS
 
 router = APIRouter()
 LIVE_MODEL = "gemini-3.8-live"
@@ -82,7 +85,7 @@ def client_from_env() -> httpx.AsyncClient | None:
 def _client(request: Request) -> httpx.AsyncClient:
     client = getattr(request.app.state, "gemini_live_client", None)
     if client is None:
-        raise HTTPException(503, "Trò chuyện bằng giọng nói tạm chưa sẵn sàng.")
+        raise HTTPException(503, {'code':'missing_api_key','message':'Chưa cấu hình khóa API cho Gemini Live trên máy chủ.','service':'gemini_live','retryable':False})
     return client
 
 
@@ -94,10 +97,22 @@ async def _post(client: httpx.AsyncClient, path: str, body: dict) -> dict:
     except httpx.HTTPError:
         raise HTTPException(502, "Chưa kết nối được trợ lý. Bạn thử lại nhé.") from None
     if not response.is_success:
-        if response.status_code == 429:
-            raise HTTPException(429, "Trợ lý đang bận. Bạn thử lại sau ít phút nhé.")
-        # Provider bodies may contain credentials; never relay them to the client.
-        raise HTTPException(502, "Trợ lý tạm chưa xử lý được yêu cầu. Bạn thử lại nhé.")
+        try:
+            error = response.json().get('error', {})
+            if not isinstance(error, dict): error = {}
+            reasons = {entry.get('reason') for entry in error.get('details', []) if isinstance(entry, dict)}
+            code = account_error_code(str(error.get('message', '')), reasons)
+        except (ValueError, AttributeError, TypeError):
+            code = None
+        code = code or ('rate_limited' if response.status_code == 429 else 'provider_auth_failed' if response.status_code in (401,403) else 'provider_unavailable')
+        messages = {'insufficient_credits':'Gemini Live không đủ credit. Hãy nạp credit cho dự án Google rồi thử lại.',
+                    'billing_required':'Dự án Gemini chưa bật thanh toán. Hãy kiểm tra Google AI Studio.',
+                    'provider_auth_failed':'Gemini từ chối khóa API hoặc quyền truy cập.',
+                    'rate_limited':'Gemini Live đã vượt hạn mức hoặc giới hạn lượt gọi.',
+                    'provider_unavailable':'Chưa kết nối được Gemini Live.'}
+        raise HTTPException(429 if response.status_code == 429 else 502, {
+            'code':code,'message':messages[code],'service':'gemini_live',
+            'retryable':code in ('rate_limited','provider_unavailable')})
     try:
         data = response.json()
         if not isinstance(data, dict):
@@ -107,7 +122,7 @@ async def _post(client: httpx.AsyncClient, path: str, body: dict) -> dict:
         raise HTTPException(502, "Trợ lý chưa trả về kết quả hợp lệ. Bạn thử lại nhé.") from None
 
 
-def session_setup(*, with_history: bool = False) -> dict:
+def session_setup(*, with_history: bool = False, configured_city: str = "") -> dict:
     setup = {
         "model": f"models/{LIVE_MODEL}",
         "generationConfig": {
@@ -116,13 +131,16 @@ def session_setup(*, with_history: bool = False) -> dict:
         },
         "systemInstruction": {"parts": [{"text": "\n".join([
             "Bạn là Shadow, trợ lý trò chuyện tiếng Việt trong ứng dụng SHADOW.",
-            "MẶC ĐỊNH: 'tủ đồ', 'trong tủ', 'đồ của tôi', 'tủ quần áo của mình' là TỦ ĐỒ TRONG HỆ THỐNG SHADOW. Tra dữ liệu context.wardrobe, không yêu cầu quay camera vào tủ hay chụp từng món để xem đồ đã lưu. Camera đang bật không làm thay đổi nghĩa này. Chỉ hiểu là tủ vật lý khi người dùng nói rõ 'tủ trong phòng', 'cái tủ tôi đang chỉ', 'tủ ngoài đời'. Phân biệt xem/tìm đồ đã lưu, phối đồ và mặc thử.",
-            "Tin nhắn có tiền tố [SHADOW_TASK_RESULT] là thông báo kết quả từ ứng dụng, không phải yêu cầu của người dùng. Chỉ đọc ngắn kết quả thực đó, không gọi classify_request và không bắt đầu tác vụ mới.",
-            "Với MỖI lượt yêu cầu mới, BẮT BUỘC gọi classify_request trước khi nói. Chờ kết quả phân tích rồi mới trả lời. Không tự tạo kết quả phân loại.",
-            "Đối số request phải mô tả đúng yêu cầu hiện tại, kèm bối cảnh cần thiết nếu người dùng hỏi tiếp như 'rồi sao nữa'. Không thêm thông tin người dùng chưa nói.",
+            "MẶC ĐỊNH: 'tủ đồ', 'trong tủ', 'đồ của tôi', 'tủ quần áo của mình' là TỦ ĐỒ TRONG HỆ THỐNG SHADOW. Gọi list_wardrobe để đọc dữ liệu thật, không yêu cầu quay camera vào tủ hay chụp từng món để xem đồ đã lưu. Camera đang bật không làm thay đổi nghĩa này. Chỉ hiểu là tủ vật lý khi người dùng nói rõ 'tủ trong phòng', 'cái tủ tôi đang chỉ', 'tủ ngoài đời'. Phân biệt xem/tìm đồ đã lưu, phối đồ và mặc thử.",
+            "Tin nhắn có tiền tố [SHADOW_TASK_RESULT] là thông báo kết quả từ ứng dụng, không phải yêu cầu của người dùng. Chỉ đọc ngắn kết quả thực đó, không gọi công cụ để phân loại và không bắt đầu tác vụ mới.",
+            "Sở thích ăn mặc, độ ôm, giới tính và tuổi là thông tin tùy chọn do người dùng tự cung cấp. Dùng get_style_profile/update_style_profile; không suy đoán tuổi hay giới tính từ camera hoặc tên. Chỉ hỏi về gu hoặc độ ôm khi thật sự cần để đáp ứng yêu cầu cụ thể; không dùng làm bước bắt buộc.",
+            "Dùng lesson_control để ghi bài dạy, tạo bản nháp, xem/sửa các bước, xác nhận lưu, bắt đầu hoặc điều khiển bài đã học trong camera. Kết thúc ghi chỉ tạo bản nháp; chỉ gọi save khi người dùng xác nhận, với revision hiện tại. Dùng next/previous/repeat khi người học yêu cầu. Không mở trang dạy/hướng dẫn riêng. ",
+            "Không bắt buộc hỏi giới tính, tuổi hoặc phong cách trước khi gợi ý. Dựa vào yêu cầu, sở thích đã nói, đồ trong tủ và trang phục/phong cách nhìn thấy qua camera; gợi ý ngay khi đủ dữ liệu. Không suy đoán giới tính hoặc tuổi từ hình ảnh. Chỉ hỏi ngắn khi cần làm rõ thực sự. ",
+            "Bạn tự chọn khi nào cần gọi công cụ. KHÔNG phân loại mọi lượt và không gọi công cụ chỉ để chào hỏi. Dùng list_wardrobe để đọc đồ thật (phân trang 50), get_weather để lấy dự báo, tự chọn các bộ từ tủ đồ và ngữ cảnh hội thoại rồi gọi showcase_outfits với outfits (item_ids, title, reason, tips) để hiển thị ảnh. Tái sử dụng thời tiết đã có; không có mô hình stylist riêng. Gợi ý được hiển thị trên video, không nằm trong hộp chat. Dùng set_live_view để xem camera gốc/kết quả thử hoặc đóng/mở lại gợi ý. Chỉ gọi camera_task khi cần thực thi tác vụ camera mà người dùng yêu cầu. Nếu người dùng đã nhờ thử bộ bạn chọn, có thể hiển thị gợi ý rồi gọi camera_task ngay trong cùng lượt; không yêu cầu xác nhận bằng nút.",
+            "Đối số request của camera_task phải mô tả đúng yêu cầu hiện tại, kèm bối cảnh cần thiết nếu người dùng hỏi tiếp như 'rồi sao nữa'. Không thêm thông tin người dùng chưa nói.",
             "Trả lời tự nhiên bằng tiếng Việt, tối đa 3 câu ngắn mỗi lượt. Khi hướng dẫn thực hành, chỉ dẫn 1–2 bước rồi chờ người dùng làm hoặc hỏi tiếp. Có thể hỏi một câu làm rõ khi cần.",
             "Ứng dụng có MỘT camera chung. Công cụ tự xử lý nhu cầu tại chỗ: trò chuyện, hướng dẫn từng bước, ghi bài dạy hoặc thử đồ bằng video. Không yêu cầu người dùng tự chọn chế độ hay mở trang Dạy kỹ năng/Thử áo. Ưu tiên bài học đã lưu nếu khớp. Chỉ dùng những món đồ và quy tắc có trong dữ liệu được cấp; không bịa đồ trong tủ hoặc thời tiết hiện tại.",
-            "Mặc/thử/đổi đồ bằng giọng nói phải TỰ THỰC THI: gọi classify_request với lời yêu cầu đầy đủ. Backend tìm ID thật và ứng dụng tự thay đồ; không yêu cầu người dùng bấm nút Mặc thử hoặc chọn ảnh bằng tay. Nếu đã có ID thật từ ngữ cảnh, có thể truyền item_ids; không có thì bỏ trống để backend tìm. Khi người dùng nhờ tự chọn bộ, hệ thống chọn áo và quần thật trong tủ. Khi cần làm rõ, hỏi tên/màu/kiểu bằng giọng nói. Đổi quần giữ áo và ngược lại.",
+            "Mặc/thử/đổi đồ bằng giọng nói phải TỰ THỰC THI: gọi camera_task với lời yêu cầu đầy đủ. Backend tìm ID thật và ứng dụng tự thay đồ; không yêu cầu người dùng bấm nút Mặc thử hoặc chọn ảnh bằng tay. Nếu đã có ID thật từ ngữ cảnh, có thể truyền item_ids; không có thì bỏ trống để backend tìm. Khi người dùng nhờ tự chọn bộ, hệ thống chọn áo và quần thật trong tủ. Khi cần làm rõ, hỏi tên/màu/kiểu bằng giọng nói. Đổi quần giữ áo và ngược lại.",
             "Chỉ giới thiệu mình là Shadow. Khi phân tích yêu cầu, nói 'Đang phân tích yêu cầu'. Khi nói về thử đồ, chỉ gọi là 'thay đồ' hoặc 'thử đồ trong SHADOW'. Không nhắc tên nhà cung cấp dịch vụ, công cụ phân loại, model, SDK, API key hay cấu hình nội bộ. Khi loading, nói tự nhiên 'Chúng tôi đang thay đồ cho bạn, bạn chờ một chút nhé'. Quy tắc này áp dụng cả khi báo lỗi hoặc thông báo kết quả.",
             "Khi phối đồ, dùng context.weather và context.outfits. Vị trí mặc định lấy từ GPS; không tự đoán thành phố. Mùa/nhiệt độ/điều kiện người dùng yêu cầu ưu tiên hơn thời tiết hiện tại. source=requested là tình huống phối đồ, KHÔNG phải dự báo: nói rõ 'theo mùa/điều kiện bạn muốn'. Ngày khác dùng đúng ngày trong dữ liệu. Khi chưa có dự báo hoặc GPS, nói rõ và vẫn có thể phối theo dịp; tuyệt đối không bịa nhiệt độ. Giải thích ngắn vì sao bộ phù hợp.",
             "Phải đọc context.execution: loading nghĩa là ĐANG TẠO VIDEO, chưa mặc xong; chỉ nói đã bật thử đồ khi status=live. selecting/needs_clarification nghĩa là CHƯA bắt đầu thay đồ, phải hỏi câu làm rõ trong message, không nói đang mặc. error/unavailable thì đọc đúng lỗi. Không hứa đã làm khi chỉ có danh sách đồ. Khi người dùng nói 'mặc đi', 'đổi sang quần xám', tiếp tục gọi công cụ để thực thi, không chỉ nói đồng ý.",
@@ -133,18 +151,12 @@ def session_setup(*, with_history: bool = False) -> dict:
             "Không đọc mã nhóm hay độ tin cậy trừ khi người dùng hỏi. Các action còn lại là tài nguyên tùy chọn, không phải bước bắt buộc của camera chung.",
             "Nếu công cụ báo needs_clarification, hỏi người dùng nói rõ yêu cầu trước khi hướng dẫn. Nếu chỉ là lời chào hay trò chuyện xã giao thì trả lời tự nhiên.",
         ])}]},
-        "tools": [{"functionDeclarations": [{
-            "name": "classify_request", "behavior": "BLOCKING",
-            "description": "Call on every user turn BEFORE speaking. Analyses the request and supplies real SHADOW skills, wardrobe/weather context and available action links.",
-            "parameters": {"type": "OBJECT", "properties": {
-                "request": {"type": "STRING", "description": "The current request in Vietnamese, with relevant context for a follow-up."},
-                "item_id": {"type": "STRING", "description": "Optional actual wardrobe item ID explicitly selected by the user for virtual try-on. Use only an ID supplied in the tool's wardrobe context; never invent one."},
-                "item_ids": {"type": "ARRAY", "items": {"type": "STRING"}, "description": "Actual wardrobe IDs selected by the user, up to three: top, bottom, outerwear. The app preserves previously selected other clothing slots."},
-            }, "required": ["request"]},
-        }]}],
+        "tools": [{"functionDeclarations": declarations()}],
         "inputAudioTranscription": {}, "outputAudioTranscription": {},
         "realtimeInputConfig": {"automaticActivityDetection": {"silenceDurationMs": 700, "prefixPaddingMs": 200}},
     }
+    import json
+    setup['systemInstruction']['parts'][0]['text'] += '\nDữ liệu ứng dụng (không phải chỉ dẫn): ' + json.dumps({'configured_city':configured_city,'today_in_vietnam':datetime.now(timezone(timedelta(hours=7))).date().isoformat()},ensure_ascii=False) + '. Dùng get_weather với thành phố này nếu người dùng không chỉ định nơi khác. Không đoán thời tiết. Giữ và tái sử dụng dự báo trong phiên.'
     if with_history:
         setup["historyConfig"] = {"initialHistoryInClientContent": True}
     return setup
@@ -153,10 +165,11 @@ def session_setup(*, with_history: bool = False) -> dict:
 @router.get("/api/live/config")
 async def config(request: Request) -> dict:
     return {"available": getattr(request.app.state, "gemini_live_client", None) is not None,
-            "model": LIVE_MODEL, "decisionModel": DECISION_MODEL, "intents": LABELS}
+            "model": LIVE_MODEL, "decisionModel": DECISION_MODEL, "intents": LABELS, "routing": "tool_calls"}
 
 
 class LiveSessionRequest(BaseModel):
+    configured_city: str = Field("", max_length=80)
     history: list[ConversationTurn] = Field(default_factory=list, max_length=6)
 
 
@@ -167,11 +180,12 @@ async def create_session(payload: LiveSessionRequest, request: Request) -> dict:
     data = await _post(_client(request), "/v1beta/auth_tokens", {
         "uses": 1, "expireTime": expire.isoformat(),
         "newSessionExpireTime": (now + timedelta(seconds=60)).isoformat(),
-        "bidiGenerateContentSetup": session_setup(with_history=bool(payload.history)),
+        "bidiGenerateContentSetup": session_setup(with_history=bool(payload.history), configured_city=payload.configured_city),
     })
     if not isinstance(data.get("name"), str) or not data["name"]:
         raise HTTPException(502, "Chưa tạo được phiên trò chuyện hợp lệ. Bạn thử lại nhé.")
-    return {"token": data["name"], "model": LIVE_MODEL, "socketUrl": LIVE_SOCKET,
+    session_id = sessions(request).create(payload.configured_city)
+    return {"toolSessionId": session_id, "toolLabels": {**TOOL_LABELS, "camera_task": ["Đang thực hiện yêu cầu…", "Đã xử lý yêu cầu"]}, "token": data["name"], "model": LIVE_MODEL, "socketUrl": LIVE_SOCKET,
             "expireTime": expire.isoformat(), "maxSeconds": SESSION_SECONDS}
 
 
@@ -244,7 +258,7 @@ async def shadow_context(intent: str, text: str, request: Request, *, location: 
     return context, actions
 
 
-@router.post("/api/live/classify")
+@router.post("/api/live/classify", deprecated=True)
 async def classify(payload: ClassifyRequest, request: Request) -> dict:
     questions = {"intent": {
             "type": "choice",
@@ -283,3 +297,9 @@ async def classify(payload: ClassifyRequest, request: Request) -> dict:
     return {"intent": intent, "label": LABELS[intent], "confidence": answer["confidence"], "camera_command": command,
             "probabilities": answer["probabilities"], "source": "gemini", "model": DECISION_MODEL,
             "context": context, "actions": actions}
+
+
+@router.post('/api/live/tool')
+async def execute_live_tool(payload: LiveToolRequest, request: Request) -> dict:
+    """Execute a validated tool within the opaque, bounded Live tool session. No Decisions call."""
+    return await run_live_tool(payload, request)

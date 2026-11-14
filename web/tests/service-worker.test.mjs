@@ -10,19 +10,19 @@ function worker({ fetch, cache }) {
   return listeners;
 }
 
-test('a cached app renders while the relay is still waiting, then refreshes in the background', async () => {
-  let finish, response;
-  const cached = { text: 'cached app' }, refreshed = { ok: true, type: 'basic', clone: () => ({ text: 'new app' }) };
-  const updates = [], background = [];
-  const listeners = worker({ fetch: () => new Promise(resolve => { finish = resolve; }), cache: {
-    match: async () => cached, put: async (...args) => updates.push(args),
-  } });
-  listeners.fetch({ request: { method: 'GET', url: 'https://shadow.example/app.js' }, respondWith: value => { response = value; }, waitUntil: value => background.push(value) });
-  assert.equal(await response, cached);
-  assert.equal(updates.length, 0);
-  finish(refreshed);
-  await Promise.all(background);
-  assert.equal(updates.length, 1);
+test('the app shell uses the new release immediately and falls back to cached code offline', async () => {
+  const cached = { text: 'cached app' };
+  const fresh = { ok: true, type: 'basic', clone: () => ({ text: 'new app' }) };
+  const updates = [];
+  for (const offline of [false, true]) {
+    let response;
+    const listeners = worker({ fetch: async () => { if (offline) throw Error('offline'); return fresh; }, cache: {
+      match: async () => cached, put: async (...args) => updates.push(args),
+    } });
+    listeners.fetch({request:{method:'GET',url:'https://shadow.example/app.js'},respondWith:value=>{response=value;}});
+    assert.equal(await response, offline ? cached : fresh);
+  }
+  assert.equal(updates.length,1);
 });
 
 test('tokens, user media and access-code links never enter the app cache', () => {

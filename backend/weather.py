@@ -1,19 +1,22 @@
-"""Weather for the wardrobe stylist via Open-Meteo (free, no API key). New in SHADOW.
+"""Weather via keyless wttr.in, with Open-Meteo as fallback.
 
 - Geocoding: https://geocoding-api.open-meteo.com/v1/search?name=..&language=vi (prefers country VN)
 - Forecast:  https://api.open-meteo.com/v1/forecast (daily, timezone Asia/Bangkok), today .. +14 days
 
 Never raises on network problems: returns {"available": False, "message": "..."} instead.
-Results are cached in memory for 30 minutes. Tests inject an httpx transport.
+wttr.in is queried directly first, without a geocoding round trip. Both providers must cover the exact requested date.
+Results from both providers are cached in memory for 30 minutes. Tests inject an httpx transport.
 """
 
 from __future__ import annotations
 
 import asyncio
 import logging
+import math
 import time
 from datetime import date as date_cls, datetime, timedelta, timezone
 from typing import Any
+from urllib.parse import quote
 
 import httpx
 
@@ -22,6 +25,9 @@ from wardrobe_store import fold_vi
 logger = logging.getLogger("uvicorn.error")
 
 GEOCODING_URL = "https://geocoding-api.open-meteo.com/v1/search"
+FALLBACK_URL = "https://wttr.in"
+WEATHER_USER_AGENT = "fourward-wardrobe/1.0 (https://fourward.thangqt.com)"
+PROVIDER_BUDGET_S = 6.0
 FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
 TIMEZONE_NAME = "Asia/Bangkok"
 MAX_DAYS_AHEAD = 14
@@ -60,6 +66,18 @@ WMO_VI: dict[int, str] = {
 }
 RAIN_CODES = {51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82, 95, 96, 99}
 
+
+# Unknown provider codes remain null rather than being passed off as WMO codes.
+WTTR_TO_WMO = {
+    '113':0, '116':2, '119':3, '122':3, '143':45, '248':45, '260':48,
+    '176':80, '179':71, '185':56, '200':95, '230':75,
+    '263':51, '266':53, '281':56, '284':57, '293':61, '296':61,
+    '299':63, '302':63, '305':65, '308':65, '311':66, '314':67,
+    '323':71, '326':71, '329':73, '332':73,
+    '335':75, '338':75, '353':80, '356':81, '359':82,
+    '368':85, '371':86, '374':77, '377':77,
+    '386':95, '389':95, '392':95, '395':95,
+}
 
 def wmo_description_vi(code: Any) -> str:
     try:
@@ -144,7 +162,7 @@ class WeatherService:
         self._cache[key] = (time.monotonic(), value)
 
     async def _get_json(self, url: str, params: dict[str, Any]) -> Any:
-        async with httpx.AsyncClient(timeout=self._timeout, transport=self._transport) as client:
+        async with httpx.AsyncClient(timeout=self._timeout, transport=self._transport, headers={"User-Agent": WEATHER_USER_AGENT}) as client:
             response = await client.get(url, params=params)
             response.raise_for_status()
             return response.json()
@@ -176,38 +194,47 @@ class WeatherService:
         return place
 
     # ---- forecast ------------------------------------------------------------
-    async def get(
-        self,
-        *,
-        city: str | None = None,
-        lat: float | None = None,
-        lon: float | None = None,
-        date: str | None = None,
-    ) -> dict[str, Any]:
+    async def get(self, *, city=None, lat=None, lon=None, date=None):
         try:
             target = parse_target_date(date)
         except ValueError as error:
             return unavailable(str(error), date=str(date))
-        try:
-            if lat is not None and lon is not None:
-                if not (-90 <= lat <= 90 and -180 <= lon <= 180):
-                    return unavailable("Toạ độ không hợp lệ.", date=target.isoformat())
-                place = {"name": (city or "").strip() or "Vị trí của bạn", "lat": lat, "lon": lon}
-            else:
-                name = (city or "").strip()
-                if not name:
-                    return unavailable("Chưa có vị trí GPS để lấy thời tiết.", needs_location=True, date=target.isoformat())
-                place = await self.geocode(name)
-                if place is None:
-                    return unavailable(f"Không tìm thấy thành phố “{name}”.", city=name, date=target.isoformat())
-            return await self._forecast(place, target)
-        except (httpx.HTTPError, ValueError, KeyError, TypeError) as error:
-            logger.warning("weather lookup failed: %r", error)
-            return unavailable(
-                "Không lấy được thời tiết lúc này.",
-                city=(city or "Vị trí của bạn"),
-                date=target.isoformat(),
-            )
+        if lat is not None and lon is not None and not (-90 <= lat <= 90 and -180 <= lon <= 180):
+            return unavailable("Toạ độ không hợp lệ.", date=target.isoformat())
+        name = (city or "").strip() or ("Vị trí của bạn" if lat is not None and lon is not None else "")
+        if not name:
+            return unavailable("Chưa có vị trí GPS để lấy thời tiết.", needs_location=True, date=target.isoformat())
+        key = ('weather', fold_vi(name), lat, lon, target.isoformat())
+        cached = self._cache_get(key)
+        if cached is not None:
+            return cached
+        # Coalesce simultaneous chat/UI requests and recheck after acquiring the lock.
+        async with self._lock:
+            cached = self._cache_get(key)
+            if cached is not None:
+                return cached
+            errors = (httpx.HTTPError, asyncio.TimeoutError, ValueError, KeyError, TypeError, AttributeError, OverflowError, IndexError)
+            try:
+                async with asyncio.timeout(min(self._timeout, PROVIDER_BUDGET_S)):
+                    result = await self._fallback(None, name, lat, lon, target)
+                result['fallback'] = False
+                result.pop('fallback_reason', None)
+                self._cache_put(key, result)
+                return result
+            except errors as error:
+                logger.warning('wttr.in weather failed (%s); trying Open-Meteo', type(error).__name__)
+            try:
+                async with asyncio.timeout(min(self._timeout, PROVIDER_BUDGET_S)):
+                    place = {'name': name, 'lat': lat, 'lon': lon} if lat is not None and lon is not None else await self.geocode(name)
+                    if place is None:
+                        return unavailable(f'Không tìm thấy thành phố “{name}”.', city=name, date=target.isoformat())
+                    result = await self._forecast(place, target)
+                result.update(provider='open-meteo', fallback=True, fallback_reason='primary_unavailable')
+                self._cache_put(key, result)
+                return result
+            except errors as error:
+                logger.warning('Open-Meteo weather fallback failed (%s)', type(error).__name__)
+                return unavailable('Không lấy được thời tiết lúc này.', city=name, date=target.isoformat())
 
     async def _forecast(self, place: dict[str, Any], target: date_cls) -> dict[str, Any]:
         lat, lon = round(place["lat"], 3), round(place["lon"], 3)
@@ -226,6 +253,8 @@ class WeatherService:
                 },
             )
             block = (data or {}).get("daily") or {}
+            if not block.get("time") or block["time"][0] != target.isoformat():
+                raise ValueError("forecast has wrong date")
 
             def first(name: str) -> Any:
                 values = block.get(name) or []
@@ -237,8 +266,16 @@ class WeatherService:
                 "rain_prob": first("precipitation_probability_max"),
                 "code": first("weather_code"),
             }
-            if daily["t_max"] is None and daily["t_min"] is None:
+            if not any(isinstance(daily[name], (int, float)) and not isinstance(daily[name], bool) and math.isfinite(daily[name]) for name in ("t_max", "t_min")):
                 raise ValueError("forecast has no daily values")
+            for name in ('t_max', 't_min', 'rain_prob'):
+                value = daily[name]
+                if value is not None and (isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value)):
+                    raise ValueError('invalid daily forecast value')
+            if daily['rain_prob'] is not None and not 0 <= daily['rain_prob'] <= 100:
+                raise ValueError('invalid daily rain probability')
+            if daily['t_min'] is not None and daily['t_max'] is not None and daily['t_min'] > daily['t_max']:
+                raise ValueError('invalid daily temperature range')
             self._cache_put(key, daily)
 
         def num(value: Any) -> float | int | None:
@@ -252,6 +289,8 @@ class WeatherService:
         description = wmo_description_vi(code) if code is not None else ""
         return {
             "available": True,
+            "provider": "open-meteo",
+            "fallback": False,
             "city": place["name"],
             "lat": place["lat"],
             "lon": place["lon"],
@@ -263,3 +302,50 @@ class WeatherService:
             "description_vi": description,
             "summary_vi": summary_vi(place["name"], t_min, t_max, rain_prob, description),
         }
+
+
+    async def _fallback(self, place, city, lat, lon, target):
+        # A known place uses coordinates. If primary geocoding failed, wttr resolves the city.
+        if place:
+            lat, lon = place['lat'], place['lon']
+        location = f"{lat:.3f},{lon:.3f}" if lat is not None and lon is not None else city
+        data = await self._get_json(f"{FALLBACK_URL}/{quote(location, safe=',')}", {'format':'j1', 'lang':'vi'})
+        day = next((row for row in data['weather'] if row.get('date') == target.isoformat()), None)
+        if day is None:
+            raise ValueError('fallback does not cover requested date')
+        def number(value):
+            number = float(value)
+            if not math.isfinite(number):
+                raise ValueError('nonfinite weather value')
+            return round(number, 1)
+        t_min, t_max = number(day['mintempC']), number(day['maxtempC'])
+        if t_min > t_max:
+            raise ValueError('invalid temperature range')
+        hours = day.get('hourly') or []
+        probabilities = []
+        codes = []
+        for hour in hours:
+            value = hour.get('chanceofrain')
+            if value not in (None, ''):
+                probability = number(value)
+                if not 0 <= probability <= 100:
+                    raise ValueError('invalid rain probability')
+                probabilities.append(probability)
+            code = WTTR_TO_WMO.get(str(hour.get('weatherCode', '')))
+            if code is not None:
+                codes.append(code)
+        rain_prob = int(max(probabilities)) if probabilities else None
+        # Pick a reported significant condition; never infer probabilities from precipitation amounts.
+        code = max(codes, key=lambda value: (value in RAIN_CODES, value)) if codes else None
+        description = wmo_description_vi(code) if code is not None else ''
+        nearest = (data.get('nearest_area') or [{}])[0]
+        area = (nearest.get('areaName') or [{}])[0].get('value')
+        resolved_city = place['name'] if place else (city if city != 'Vị trí của bạn' else area or city)
+        result_lat = lat if lat is not None else float(nearest['latitude'])
+        result_lon = lon if lon is not None else float(nearest['longitude'])
+        if not (-90 <= result_lat <= 90 and -180 <= result_lon <= 180):
+            raise ValueError('invalid fallback location')
+        return {'available':True, 'provider':'wttr.in', 'fallback':True,
+            'fallback_reason':'primary_unavailable', 'city':resolved_city, 'lat':result_lat, 'lon':result_lon,
+            'date':target.isoformat(), 't_min':t_min, 't_max':t_max, 'rain_prob':rain_prob, 'code':code,
+            'description_vi':description, 'summary_vi':summary_vi(resolved_city,t_min,t_max,rain_prob,description)}

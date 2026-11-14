@@ -7,8 +7,9 @@ separate Docker Compose project, `shadow-hackathon`, with only
 
 ## Paths and state
 
-- Current app: `/opt/shadow/current` → `/opt/shadow/releases/e531ced`.
-- Backend source commit: `e531ceda1f76166c10cfc5909657d38e4c4d3046`.
+- Current app: `/opt/shadow/current` → `/opt/shadow/releases/<commit>`.
+  Use `readlink -f /opt/shadow/current` to identify the active release.
+- Backend source commit: recorded in `/opt/shadow/deployed-commit` after a healthy deployment.
 - Environment: `/opt/shadow/.env`, mode 0600, linked into the release directory.
   Includes `SHADOW_PORT=18080`; AI keys stay in this file.
 - Persistent volumes: `shadow-hackathon_skills`, `shadow-hackathon_wardrobe`,
@@ -18,9 +19,9 @@ separate Docker Compose project, `shadow-hackathon`, with only
 - ACME webroot: `/var/www/shadow-acme`.
 - HTTPS setup files: `/opt/shadow/deploy/` (the two files under `deploy/` in this repo).
 
-The source was transferred as a Git archive because this workstation's GitHub
-authentication was unavailable. This deployment does not mean the local commit
-has been pushed to GitHub.
+Build sources are transferred as a Git archive over SSH. GitHub authentication is
+kept on the workstation; no GitHub token is stored on the VPS. A push is verified
+separately against the remote branch's commit.
 
 ## DNS and HTTPS
 

@@ -241,3 +241,12 @@ def test_missing_camera_control_cannot_finish_or_cancel_a_recording(client, inst
     install_gemini(lambda _: httpx.Response(200, json=answer("teach_skill")))
     result = client.post("/api/live/classify", json={"text": "Xong rồi", "current_task": "teaching"})
     assert result.status_code == 502
+
+
+def test_google_depleted_balance_is_reported_without_upstream_secrets(client, install_gemini):
+    install_gemini(lambda r: httpx.Response(429,json={'error':{'message':'Prepayment credits are depleted private-project secret-key','status':'RESOURCE_EXHAUSTED'}}))
+    response=client.post('/api/live/session',json={})
+    assert response.status_code==429
+    assert response.json()['detail']['code']=='insufficient_credits'
+    assert response.json()['detail']['retryable'] is False
+    assert 'secret-key' not in response.text

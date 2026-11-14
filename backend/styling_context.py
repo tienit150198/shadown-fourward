@@ -13,7 +13,7 @@ import httpx
 from pydantic import BaseModel, Field
 
 from wardrobe_store import fold_vi
-from weather import MAX_DAYS_AHEAD, local_today
+from weather import MAX_DAYS_AHEAD, PROVIDER_BUDGET_S, local_today
 
 
 class StylingLocation(BaseModel):
@@ -153,7 +153,7 @@ async def resolve_weather(service, text: str, *, location: StylingLocation | Non
     try:
         data = await asyncio.wait_for(service.get(date=target, **(
             {"lat": location.lat, "lon": location.lon} if location else {"city": city}
-        )), timeout=6)
+        )), timeout=2 * PROVIDER_BUDGET_S + 1)
     except (asyncio.TimeoutError, httpx.HTTPError):
         data = {"available": False, "message": "Chưa lấy được dự báo thực tế. Mình vẫn có thể phối theo dịp hoặc mùa bạn nói."}
     result = {**data, "date": target, "source": "forecast" if data.get("available") else "unknown",

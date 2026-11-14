@@ -1,7 +1,6 @@
 // Home: skill list, "Dạy kỹ năng mới" CTA, backend mode badge.
 import { api, mediaUrl } from '../api.js';
 import { h, icon, toast, errorToast, actionSheet, confirmSheet, navigate, createScope } from '../ui.js';
-import { setDraft } from '../store.js';
 
 function modeBadge(health) {
   if (!health) return h('span', { class: 'badge badge-off' }, h('i', { class: 'dot' }), 'Offline');
@@ -32,7 +31,7 @@ export function mount(el) {
       h('section', { class: 'hero' },
         h('h1', { class: 'hero-title' }, 'Làm mẫu một lần.', h('br'), h('span', { class: 'accent' }, 'AI hướng dẫn người sau.')),
         h('p', { class: 'hero-sub' }, 'Quay lại cách bạn làm và vừa làm vừa nói. SHADOW biến nó thành từng bước, rồi nhìn qua camera để kèm người tiếp theo bằng giọng nói.'),
-        h('button', { class: 'cta', type: 'button', onClick: () => navigate('#/teach') },
+        h('button', { class: 'cta', type: 'button', onClick: () => navigate('#/conversation?lesson=teach') },
           h('span', { class: 'cta-icon' }, icon('camera', 26)),
           h('span', { class: 'cta-text' }, h('span', { class: 'cta-title' }, 'Dạy kỹ năng mới'), h('span', { class: 'cta-sub' }, 'Quay & nói — AI tự chia bước')),
           icon('right', 22))),
@@ -100,7 +99,7 @@ export function mount(el) {
       h('div', { class: 'skill-actions' },
         h('button', { class: 'icon-btn', type: 'button', 'aria-label': 'Tuỳ chọn', onClick: (e) => { e.stopPropagation(); openMenu(s); } }, icon('more', 22)),
         h('span', { class: 'play-chip', 'aria-hidden': 'true' }, icon('play', 18))));
-    const start = () => navigate(`#/guide/${encodeURIComponent(s.id)}`);
+    const start = () => navigate(`#/conversation?lesson=guide&skill=${encodeURIComponent(s.id)}`);
     card.addEventListener('click', start);
     card.addEventListener('keydown', (e) => { if (e.key === 'Enter') start(); });
     return card;
@@ -108,22 +107,13 @@ export function mount(el) {
 
   function openMenu(s) {
     actionSheet(s.display_name || s.id, [
-      { label: 'Bắt đầu hướng dẫn', icon: 'play', onSelect: () => navigate(`#/guide/${encodeURIComponent(s.id)}`) },
+      { label: 'Bắt đầu hướng dẫn', icon: 'play', onSelect: () => navigate(`#/conversation?lesson=guide&skill=${encodeURIComponent(s.id)}`) },
       { label: 'Chỉnh sửa các bước', icon: 'edit', onSelect: () => editSkill(s.id) },
       { label: 'Xoá kỹ năng', icon: 'trash', danger: true, onSelect: () => removeSkill(s) },
     ]);
   }
 
-  async function editSkill(id) {
-    try {
-      const skill = await api.getSkill(id);
-      if (scope.disposed) return;
-      setDraft({ skill, draft_id: null, isNew: false });
-      navigate('#/review');
-    } catch (err) {
-      errorToast(err, 'Không mở được kỹ năng');
-    }
-  }
+  function editSkill(id) { navigate(`#/conversation?lesson=review&skill=${encodeURIComponent(id)}`); }
 
   async function removeSkill(s) {
     const ok = await confirmSheet(`Xoá “${s.display_name || s.id}”? Không thể hoàn tác.`, { okLabel: 'Xoá', danger: true });

@@ -236,6 +236,32 @@ test('Live supplies device coordinates to the shared weather context', async () 
   live.stop();
 });
 
+test('on-demand Live weather includes GPS and the current request', async () => {
+  let body;
+  const live = new GeminiLiveSession({}, {
+    getLocation: async () => ({lat: 10.8, lon: 106.6}),
+    fetchImpl: async (_, init) => { body = JSON.parse(init.body); return Response.json({result: {available: true}, events: []}); },
+  });
+  live.status = 'listening'; live.toolSessionId = 'weather-session';
+  live.turn.input = 'Phối đồ ngày mai';
+  await live.handleTool({id: 'weather-gps', name: 'get_weather', args: {}});
+  assert.deepEqual(body.location, {lat: 10.8, lon: 106.6});
+  assert.equal(body.request_text, 'Phối đồ ngày mai');
+  live.stop();
+});
+
+test('cancelling an on-demand weather tool while GPS waits sends nothing', async () => {
+  let locate; let requests = 0;
+  const live = new GeminiLiveSession({}, {
+    getLocation: () => new Promise(resolve => { locate = resolve; }),
+    fetchImpl: async () => { requests++; return Response.json({result: {}, events: []}); },
+  });
+  live.status = 'listening'; live.toolSessionId = 'weather-session';
+  const pending = live.handleTool({id: 'cancel-gps', name: 'get_weather', args: {}});
+  live.stop(); locate({lat: 10.8, lon: 106.6}); await pending;
+  assert.equal(requests, 0);
+});
+
 test('cancelling while GPS permission is pending never sends an obsolete turn', async () => {
   let locate;
   let requests = 0;
@@ -248,4 +274,98 @@ test('cancelling while GPS permission is pending never sends an obsolete turn', 
   locate({ lat: 10.8, lon: 106.6 });
   await pending;
   assert.equal(requests, 0);
+});
+
+test('ordinary Live audio does not trigger Decisions or any HTTP tool request', () => {
+  const requests=[],played=[];
+  const live=new GeminiLiveSession({}, {fetchImpl:async url => {requests.push(url);throw new Error('unexpected request');}});
+  live.status='listening';
+  live.playAudio=audio=>played.push(audio);
+  live.handleMessage({serverContent:{inputTranscription:{text:'Xin chào'},modelTurn:{parts:[{inlineData:{mimeType:'audio/pcm;rate=24000',data:'AAAA'}}]}}});
+  assert.equal(played.length,1);
+  assert.deepEqual(requests,[]);
+  live.stop();
+});
+
+test('on-demand tools use the opaque Live session and replay duplicate IDs without re-execution', async () => {
+  const requests=[],sent=[],events=[];
+  const live=new GeminiLiveSession({onToolEvent:event=>events.push(event)}, {fetchImpl:async (url,options)=>{
+    requests.push({url,body:JSON.parse(options.body)});
+    return Response.json({result:{profile:{}},events:[]});
+  }});
+  live.toolSessionId='test-tool-session';
+  live.status='listening';
+  live.socket={readyState:1,send:raw=>sent.push(JSON.parse(raw)),close(){}};
+  const request={id:'read-profile',name:'get_style_profile',args:{}};
+  await live.handleTool(request);
+  await live.handleTool(request);
+  assert.equal(requests.length,1);
+  assert.equal(requests[0].url,'/api/live/tool');
+  assert.equal(requests[0].body.session_id,'test-tool-session');
+  assert.equal(sent.length,2);
+  assert.deepEqual(sent[0],sent[1]);
+  assert.deepEqual(events.map(event=>event.state),['running','done']);
+  live.stop();
+});
+
+test('camera function waits for actual shared-camera execution without a Decisions request', async () => {
+  const sent=[];
+  const live=new GeminiLiveSession({onCameraTask:async (decision,turn)=>{
+    assert.equal(decision.intent,'teach_skill');
+    assert.equal(turn.request,'Dạy bài mới');
+    return {mode:'teaching',status:'recording'};
+  }},{fetchImpl:async url=>{
+    assert.equal(url,'/api/live/tool');
+    return Response.json({result:{camera_decision:{intent:'teach_skill',context:{},actions:[],source:'tool_call'}},events:[]});
+  }});
+  live.status='listening';live.toolSessionId='test-session';
+  live.socket={readyState:1,send:raw=>sent.push(JSON.parse(raw)),close(){}};
+  await live.handleTool({id:'camera',name:'camera_task',args:{intent:'teach_skill',request:'Dạy bài mới'}});
+  assert.equal(sent[0].toolResponse.functionResponses[0].response.context.execution.status,'recording');
+  live.stop();
+});
+
+test('a cancelled on-demand tool cannot emit late cards or a tool result', async () => {
+  let resolve;
+  const sent=[],events=[];
+  const live=new GeminiLiveSession({onToolEvent:event=>events.push(event)}, {fetchImpl:()=>new Promise(done=>{resolve=done;})});
+  live.status='listening';live.toolSessionId='test-session';
+  live.socket={readyState:1,send:raw=>sent.push(JSON.parse(raw)),close(){}};
+  const pending=live.handleTool({id:'cancel-me',name:'list_wardrobe',args:{}});
+  live.handleMessage({toolCallCancellation:{ids:['cancel-me']}});
+  resolve(Response.json({result:{items:[]},events:[{type:'outfits',outfits:[]}]}));
+  await pending;
+  assert.equal(sent.length,0);
+  assert.equal(events.filter(event=>event.type==='outfits').length,0);
+  live.stop();
+});
+
+test('live view tool returns the actual client display state to Gemini', async () => {
+  const sent=[];
+  const live=new GeminiLiveSession({onLiveControl:async (control,{signal})=>{
+    assert.equal(signal.aborted,false);
+    assert.equal(control.view,'original');
+    return {status:'displayed',view:'original'};
+  }},{fetchImpl:async()=>Response.json({result:{live_control:{view:'original'}},events:[]})});
+  live.status='listening'; live.toolSessionId='session';
+  live.socket={readyState:1,send:raw=>sent.push(JSON.parse(raw)),close(){}};
+  await live.handleTool({id:'view',name:'set_live_view',args:{view:'original'}});
+  assert.equal(sent[0].toolResponse.functionResponses[0].response.execution.view,'original');
+  live.stop();
+});
+
+test('lesson tools return actual reviewed draft revision to Live instead of pretending it was saved',async()=>{
+  const sent=[];
+  const live=new GeminiLiveSession({onLessonControl:async control=>{
+    assert.equal(control.command,'finish_teaching');
+    return {mode:'reviewing',status:'review',lesson_state:{revision:4,title:'Gấp áo',steps:[{number:1,instruction:'Gấp tay áo'}]}};
+  }},{fetchImpl:async()=>Response.json({result:{lesson_control:{command:'finish_teaching'}},events:[]})});
+  live.status='listening';live.toolSessionId='session';
+  live.socket={readyState:1,send:raw=>sent.push(JSON.parse(raw)),close(){}};
+  await live.handleTool({id:'lesson',name:'lesson_control',args:{command:'finish_teaching'}});
+  const result=sent[0].toolResponse.functionResponses[0].response.execution;
+  assert.equal(result.status,'review');
+  assert.equal(result.lesson_state.revision,4);
+  assert.equal(result.saved_skill,undefined);
+  live.stop();
 });

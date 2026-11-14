@@ -31,7 +31,8 @@ def test_city_forecast_prefers_vietnam_and_caches():
     assert first["summary_vi"] == "Hà Nội, 18–24°C, 60% khả năng mưa – mưa nhẹ"
     second = run(service.get(city="ha noi"))  # same city folded → cache hit
     assert second == first
-    assert counter == {"geocoding-api.open-meteo.com": 1, "api.open-meteo.com": 1}
+    assert counter == {"wttr.in": 1, "geocoding-api.open-meteo.com": 1, "api.open-meteo.com": 1}
+    assert first["provider"] == "open-meteo" and first["fallback"] is True
 
 
 def test_coordinates_and_future_date():
@@ -72,3 +73,55 @@ def test_weather_route(wclient):
     body = response.json()
     assert body["available"] is True and body["city"] == "Hà Nội"
     assert set(body) >= {"city", "date", "t_min", "t_max", "rain_prob", "code", "summary_vi"}
+
+
+def wttr_payload(target=None):
+    return {'nearest_area':[{'areaName':[{'value':'Hanoi'}],'latitude':'21.03','longitude':'105.85'}],
+        'weather':[{'date':target or weather_mod.local_today().isoformat(),'mintempC':'18','maxtempC':'23',
+                    'hourly':[{'chanceofrain':'75','weatherCode':'353'}]}]}
+
+
+def test_wttr_is_primary_without_geocoding_and_is_cached():
+    import httpx
+    requests=[]
+    def respond(request):
+        requests.append(request)
+        assert request.url.host=='wttr.in'
+        return httpx.Response(200,json=wttr_payload())
+    service=WeatherService(transport=httpx.MockTransport(respond))
+    result=run(service.get(city='Hà Nội'))
+    assert result['provider']=='wttr.in' and not result['fallback']
+    assert result['city']=='Hà Nội'
+    assert result['t_min']==18 and result['rain_prob']==75
+    assert run(service.get(city='ha noi'))==result
+    assert len(requests)==1
+
+
+def test_wttr_wrong_date_falls_back_instead_of_reusing_today():
+    import httpx
+    base=weather_transport()
+    seen=[]
+    def respond(request):
+        seen.append(request.url.host)
+        if request.url.host=='wttr.in':
+            return httpx.Response(200,json=wttr_payload((weather_mod.local_today()-timedelta(days=1)).isoformat()))
+        return base.handle_request(request)
+    result=run(WeatherService(transport=httpx.MockTransport(respond)).get(city='Hà Nội'))
+    assert result['available'] and result['provider']=='open-meteo'
+    assert result['date']==weather_mod.local_today().isoformat()
+    assert seen==['wttr.in','geocoding-api.open-meteo.com','api.open-meteo.com']
+
+
+def test_concurrent_weather_reads_share_one_primary_request():
+    import httpx
+    calls=[]
+    async def respond(request):
+        calls.append(request)
+        await asyncio.sleep(.01)
+        return httpx.Response(200,json=wttr_payload())
+    async def check():
+        service=WeatherService(transport=httpx.MockTransport(respond))
+        results=await asyncio.gather(*(service.get(city='Hà Nội') for _ in range(3)))
+        assert all(r['available'] for r in results)
+    run(check())
+    assert len(calls)==1
