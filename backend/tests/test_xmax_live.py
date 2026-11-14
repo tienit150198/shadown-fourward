@@ -277,3 +277,31 @@ def test_malformed_pool_env_does_not_echo_credentials(monkeypatch, raw):
     with pytest.raises(ValueError) as error:
         client_from_env()
     assert raw not in str(error.value)
+
+
+@pytest.mark.asyncio
+async def test_priority_skips_empty_balance_before_creating_a_temporary_key():
+    calls = []
+    def respond(request):
+        key = request.headers['X-Api-Key']; calls.append((request.method, key))
+        if request.method == 'GET':
+            return httpx.Response(200, json={'success': True, 'data': {'currentBalance': 0 if key == 'empty' else 200}})
+        return httpx.Response(200, json={'success': True, 'data': {'temporaryApiKey': 'tk-funded'}})
+    pool = XmaxClient(['empty', 'funded'], strategy='priority', check_balance=True, transport=httpx.MockTransport(respond))
+    try:
+        assert (await pool.issue())['temporaryApiKey'] == 'tk-funded'
+        assert calls == [('GET', 'empty'), ('GET', 'funded'), ('POST', 'funded')]
+        assert pool.cooldowns[0] > time.monotonic()
+    finally:
+        await pool.aclose()
+
+
+@pytest.mark.asyncio
+async def test_production_pool_checks_balance_before_issuing(monkeypatch):
+    from xmax_live import client_from_env
+    monkeypatch.setenv('XMAX_API_KEYS', '["configured"]')
+    pool = client_from_env()
+    try:
+        assert pool.check_balance is True
+    finally:
+        await pool.aclose()

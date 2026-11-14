@@ -32,7 +32,7 @@ class ProviderFailure(HTTPException):
 
 
 class XmaxClient:
-    def __init__(self, key: str | list[str], environment: str = 'global', *, strategy='round_robin', transport=None):
+    def __init__(self, key: str | list[str], environment: str = 'global', *, strategy='round_robin', check_balance=False, transport=None):
         self.environment = environment if environment in BASES else 'global'
         keys = list(dict.fromkeys(value.strip() for value in ([key] if isinstance(key, str) else key) if isinstance(value, str) and value.strip()))
         if not keys:
@@ -44,6 +44,7 @@ class XmaxClient:
         self.cursor = 0
         self.strategy = strategy if strategy in ('round_robin', 'priority') else 'round_robin'
         self.rotation_lock = asyncio.Lock()
+        self.check_balance = check_balance
 
     async def request(self, method: str, path: str, body=None, *, owner=0, timeout=25) -> dict:
         try:
@@ -66,6 +67,20 @@ class XmaxClient:
             raise ProviderFailure(502, 'Dịch vụ thay đồ trả về dữ liệu không hợp lệ.', cooldown=15)
         return data['data']
 
+    async def _issue_for_key(self, owner: int, timeout: float) -> dict:
+        # Xmax can mint a temporary key even when the owning account has no credit.
+        # Check before starting a paid generation so priority mode skips empty accounts.
+        if self.check_balance:
+            data = await self.request('GET', '/balance', owner=owner, timeout=timeout)
+            balance = data.get('currentBalance')
+            if not isinstance(balance, (int, float)) or isinstance(balance, bool) or not math.isfinite(balance):
+                raise ProviderFailure(502, 'Chưa kiểm tra được phiên thay đồ. Bạn thử lại nhé.', cooldown=15)
+            if balance <= 0:
+                raise ProviderFailure(429, 'Hiện chưa thể thay đồ. Bạn thử lại sau ít phút nhé.', cooldown=60)
+        return await self.request('POST', '/temporary-api-key', {
+            'expireSeconds': MAX_SECONDS + 30, 'pointsLimit': POINTS_LIMIT, 'temporaryApiKeySessionLimit': 1,
+        }, owner=owner, timeout=timeout)
+
     async def issue(self) -> dict:
         now = time.monotonic()
         async with self.rotation_lock:
@@ -84,9 +99,7 @@ class XmaxClient:
                 break
             try:
                 attempt_timeout = min(KEY_ATTEMPT_TIMEOUT, remaining)
-                data = await asyncio.wait_for(self.request('POST', '/temporary-api-key', {
-                    'expireSeconds': MAX_SECONDS + 30, 'pointsLimit': POINTS_LIMIT, 'temporaryApiKeySessionLimit': 1,
-                }, owner=owner, timeout=attempt_timeout), timeout=attempt_timeout)
+                data = await asyncio.wait_for(self._issue_for_key(owner, attempt_timeout), timeout=attempt_timeout)
                 token = data.get('temporaryApiKey')
                 if not isinstance(token, str) or not token.startswith('tk-'):
                     raise ProviderFailure(502, 'Chưa tạo được phiên thay đồ. Bạn thử lại nhé.', cooldown=15)
@@ -143,7 +156,7 @@ def client_from_env():
     if not keys:
         keys = [os.getenv('XMAX_API_KEY', '').strip()]
     keys = list(dict.fromkeys(value for value in keys if value))
-    return XmaxClient(keys, os.getenv('XMAX_ENVIRONMENT', 'global'), strategy=os.getenv('XMAX_KEY_STRATEGY', 'round_robin').strip().lower()) if keys else None
+    return XmaxClient(keys, os.getenv('XMAX_ENVIRONMENT', 'global'), strategy=os.getenv('XMAX_KEY_STRATEGY', 'round_robin').strip().lower(), check_balance=True) if keys else None
 
 
 def client(request: Request) -> XmaxClient:
