@@ -27,7 +27,7 @@ TASK_INTENTS = ('tryon_live', 'teach_skill', 'guide_skill', 'guide_coffee', 'gui
 
 class CameraArgs(BaseModel):
     model_config = ConfigDict(extra='forbid', str_strip_whitespace=True)
-    intent: Literal['tryon_live','teach_skill','guide_skill','guide_coffee','guide_cupware','guide_folding','guide_cooking','guide_cleaning','guide_plants'] = 'guide_skill'
+    intent: Literal['tryon_live','teach_skill','guide_skill','guide_coffee','guide_cupware','guide_folding','guide_cooking','guide_cleaning','guide_plants'] = 'tryon_live'
     request: str = Field(min_length=1, max_length=500)
     command: Literal['route_request','finish_teaching','cancel_task','continue_task','switch_task'] = 'route_request'
     item_ids: list[str] = Field(default_factory=list, max_length=3, description='Exact saved wardrobe IDs for the requested fitting. Use IDs from the outfit you just showed when the user accepts it. Leave empty only when you need wardrobe resolution. Xmax accepts at most three supported garments.')
@@ -56,13 +56,12 @@ def declarations() -> list[dict]:
         elif declaration['name'] == 'get_weather':
             declaration['description'] += ' Reuse the existing forecast for the same city/date; do not fetch for every spoken turn.'
         elif declaration['name'] == 'get_skill':
-            declaration['description'] += ' To start spoken guidance in this camera, use camera_task with skill_id; no navigation or click required.'
+            declaration['description'] += ' To start spoken guidance in this camera, use lesson_control command=start_guidance with skill_id; no navigation or click required.'
     result.append({'name':'set_live_view','behavior':'BLOCKING',
         'description':'Control the live video UI in response to speech: show original camera, show the active try-on result, dismiss the outfit overlay, or reopen the latest suggestions. Switching original/tryon preserves the running fitting session; to stop fitting use camera_task cancel_task. Wait for actual client execution before claiming success.',
         'parametersJsonSchema':LiveViewArgs.model_json_schema()})
     camera_schema=CameraArgs.model_json_schema()
     camera_schema['properties']['intent']['enum']=['tryon_live']
-    camera_schema['properties']['intent']['default']='tryon_live'
     camera_schema['properties']['command']['enum']=['route_request','cancel_task','continue_task','switch_task']
     camera_schema['properties'].pop('skill_id',None)
     result.append({'name':'camera_task','behavior':'BLOCKING',

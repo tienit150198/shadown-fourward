@@ -203,6 +203,28 @@ def test_visible_outfit_is_available_to_voice_tryon_resolution(client,tool_sessi
     assert result['result']['camera_decision']['context']['tryon_plan']['status']=='ready'
 
 
+def test_voice_tryon_without_optional_intent_executes_the_selected_outfit(client, tool_session, monkeypatch):
+    # Reproduce the phone's real call: the advertised intent has a default, so
+    # Live can send just request + item_ids. Runtime must use that same default.
+    key, store = tool_session
+    items = [
+        {'id': 'coat', 'name': 'Áo khoác', 'category': 'outerwear', 'image_url': '/coat.jpg'},
+        {'id': 'shirt', 'name': 'Áo len', 'category': 'top', 'image_url': '/shirt.jpg'},
+        {'id': 'jeans', 'name': 'Quần jeans', 'category': 'bottom', 'image_url': '/jeans.jpg'},
+    ]
+    store.list_items = lambda: items
+    monkeypatch.setattr(live_tools, '_store', lambda _: store)
+    declaration = next(tool for tool in live_tools.declarations() if tool['name'] == 'camera_task')
+    assert declaration['parametersJsonSchema']['properties']['intent']['default'] == 'tryon_live'
+    result = invoke(client, key, 'camera_task', {
+        'request': 'Thử bộ trang phục gồm áo khoác, áo len và quần jeans cho tôi.',
+        'item_ids': ['coat', 'shirt', 'jeans'],
+    }).json()['result']['camera_decision']
+    assert result['intent'] == 'tryon_live'
+    assert result['context']['tryon_plan']['status'] == 'ready'
+    assert result['context']['tryon_plan']['item_ids'] == ['coat', 'shirt', 'jeans']
+
+
 def test_live_lesson_controls_return_client_command_with_no_navigation(client,tool_session):
     key,_=tool_session
     response=invoke(client,key,'lesson_control',{'command':'review','skill_id':'test-skill'},lesson_state={'status':'review','title':'Bài của tôi','revision':3,'steps':[]}).json()
