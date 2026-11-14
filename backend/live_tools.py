@@ -18,6 +18,7 @@ from conversation_tools import execute, tool_schemas
 from tryon_selection import plan_tryon
 from wardrobe_api import _store
 from styling_context import StylingLocation, contextual_request
+from wardrobe_preferences import CatalogGender, wardrobe_gender
 
 TASK_INTENTS = ('tryon_live', 'teach_skill', 'guide_skill', 'guide_coffee', 'guide_cupware', 'guide_folding', 'guide_cooking', 'guide_cleaning', 'guide_plants')
 
@@ -29,6 +30,7 @@ class CameraArgs(BaseModel):
     command: Literal['route_request','finish_teaching','cancel_task','continue_task','switch_task'] = 'route_request'
     item_ids: list[str] = Field(default_factory=list, max_length=3, description='Exact saved wardrobe IDs for the requested fitting. Use IDs from the outfit you just showed when the user accepts it. Leave empty only when you need wardrobe resolution. Xmax accepts at most three supported garments.')
     skill_id: str | None = Field(default=None, max_length=80)
+    gender: CatalogGender | None = Field(default=None, description='Explicitly requested clothing audience (men/women include unisex). Omit to keep the current preference or profile. Never infer from camera; all removes filtering only when requested.')
 
 
 class LiveViewArgs(BaseModel):
@@ -124,7 +126,7 @@ class LiveToolRequest(BaseModel):
     history: list[ConversationTurn] = Field(default_factory=list,max_length=6)
 
 
-async def camera_decision(args: CameraArgs, payload: LiveToolRequest, request):
+async def camera_decision(args: CameraArgs, payload: LiveToolRequest, request, tool_context=None):
     from gemini_live import LABELS, shadow_context
     context,actions={},[]
     if args.command in ('route_request','switch_task'):
@@ -137,7 +139,8 @@ async def camera_decision(args: CameraArgs, payload: LiveToolRequest, request):
                     'steps':[{key:step[key] for key in keys if key in step} for step in skill.get('steps',[])[:20]]}
         elif args.intent=='tryon_live' and payload.current_task not in ('teaching','compiling'):
             context['tryon_plan']=await plan_tryon(request.app.state.provider,_store(request),args.request,
-                selected_ids=payload.selected_item_ids or payload.suggested_item_ids,requested_ids=args.item_ids,history=[turn.model_dump() for turn in payload.history])
+                selected_ids=payload.selected_item_ids or payload.suggested_item_ids,requested_ids=args.item_ids,history=[turn.model_dump() for turn in payload.history],
+                gender=wardrobe_gender(tool_context if tool_context is not None else {}, args.gender))
     # No fake classifier score: this is a validated model function request, not a Decisions prediction.
     return {'intent':args.intent,'label':LABELS[args.intent],'camera_command':args.command,
             'context':context,'actions':actions,'source':'tool_call'}
@@ -160,6 +163,7 @@ async def run(payload: LiveToolRequest, request: Request) -> dict:
         if len(session.results)>=60:
             raise HTTPException(429,'Phiên đã đạt giới hạn gọi công cụ. Hãy bắt đầu phiên mới.')
         context=copy.deepcopy(session.context)
+        context['lesson_state'] = payload.lesson_state.model_dump() if payload.lesson_state else None
         if 'location' in payload.model_fields_set:
             location = payload.location.model_dump() if payload.location else None
             if location != context.get('location'):
@@ -180,7 +184,7 @@ async def run(payload: LiveToolRequest, request: Request) -> dict:
                     result={'error':'Navigation is deprecated. Use wardrobe/skill tools to read data, showcase_outfits to display choices, or camera_task to execute in this camera.'}
                 elif payload.name=='camera_task':
                     args=CameraArgs.model_validate(payload.arguments)
-                    decision=await camera_decision(args,payload,request)
+                    decision=await camera_decision(args,payload,request,context)
                     result={'camera_decision':decision}
                 else:
                     result,action=await execute(payload.name,arguments,request=request,context=context,image=None)

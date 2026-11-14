@@ -9,6 +9,20 @@ from wardrobe_testlib import FakeProvider, data_url, make_jpeg, wardrobe_dir, wc
 SEED_DIR = Path(__file__).resolve().parent.parent / "wardrobe_seed"
 
 
+def test_garment_gender_survives_create_edit_and_reload(wclient, wardrobe_dir):
+    item = wclient.post('/api/wardrobe/items', json={'image': data_url(make_jpeg()), 'name': 'Áo', 'gender': 'women'}).json()
+    assert item['gender'] == 'women'
+    path = f"/api/wardrobe/items/{item['id']}"
+    assert wclient.put(path, json={'name': 'Áo mới'}).json()['gender'] == 'women'
+    assert wclient.put(path, json={'gender': 'men'}).json()['gender'] == 'men'
+    assert wclient.get(path).json()['gender'] == 'men'
+    assert wclient.put(path, json={'gender': 'invented'}).status_code == 422
+    assert wclient.get(path).json()['gender'] == 'men'
+    assert wclient.put(path, json={'gender': 'unknown'}).json()['gender'] == 'unknown'
+    assert wclient.post('/api/wardrobe/items', json={'image': data_url(make_jpeg()), 'gender': 'all'}).status_code == 422
+    assert wclient.post('/api/wardrobe/items', json={'image': data_url(make_jpeg())}).json()['gender'] == 'unknown'
+
+
 def test_items_crud_mock_mode(wclient, wardrobe_dir):
     assert wclient.get("/api/wardrobe/items").json() == []
     response = wclient.post("/api/wardrobe/items", json={"image": data_url(make_jpeg(color=(200, 30, 40)))})

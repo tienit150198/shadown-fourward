@@ -318,6 +318,12 @@ def normalize_item_fields(raw: dict[str, Any], *, partial: bool = False) -> dict
                 raise WardrobeError(f"Loại đồ không hợp lệ: {raw.get('category')!r}. Chọn: {', '.join(CATEGORIES)}.")
             category = "top"
         out["category"] = category
+    if "gender" in raw or not partial:
+        gender = {'nam': 'men', 'male': 'men', 'men': 'men', 'nu': 'women', 'female': 'women',
+                  'women': 'women', 'unisex': 'unisex', 'unknown': 'unknown', 'chua xac dinh': 'unknown', '': 'unknown'}.get(fold_vi(raw.get('gender')))
+        if gender is None:
+            raise WardrobeError('Nhãn đồ phải là Nam, Nữ, Unisex hoặc Chưa xác định.')
+        out['gender'] = gender
     if has("colors") or not partial:
         out["colors"] = _clean_list(raw.get("colors"), max_items=4, max_len=24)
     if has("style") or not partial:
@@ -387,6 +393,7 @@ class WardrobeStore:
     @staticmethod
     def public_item(item: dict[str, Any]) -> dict[str, Any]:
         data = dict(item)
+        data.setdefault('gender', 'unknown')
         data["image_url"] = media_url(item.get("image"))
         from garment_attrs import public_attrs_vi  # garment_attrs hook: Vietnamese labels of attribute codes
 

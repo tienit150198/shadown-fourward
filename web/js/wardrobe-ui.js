@@ -5,6 +5,9 @@ import { startCamera, stopCamera, captureFrame, keepScreenAwake } from './camera
 import { holdToTalk, sttSupported } from './speech.js';
 import { itemImageUrl } from './wardrobe-api.js';
 
+export const GENDERS = [{id:'men',label:'Nam'},{id:'women',label:'Nữ'},{id:'unisex',label:'Unisex'},{id:'unknown',label:'Chưa xác định'}];
+export function genderLabel(value) { return GENDERS.find(g => g.id === value)?.label || 'Chưa xác định'; }
+
 export const CATEGORIES = [
   { id: 'top', label: 'Áo', emoji: '👕' },
   { id: 'bottom', label: 'Quần', emoji: '👖' },

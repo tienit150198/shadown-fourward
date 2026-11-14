@@ -181,3 +181,18 @@ def test_live_lesson_controls_return_client_command_with_no_navigation(client,to
     assert response['result']['lesson_control']['skill_id']=='test-skill'
     assert response['events']==[]
     assert 'lesson_control' in {tool['name'] for tool in live_tools.declarations()}
+
+
+def test_finish_and_save_is_a_single_voice_control_and_review_uses_client_revision(client, tool_session):
+    key, _ = tool_session
+    recording = invoke(client, key, 'lesson_control', {'command': 'finish_and_save'}, call='finish',
+        request_text='Dạy xong rồi, lưu lại đi', current_task='teaching',
+        lesson_state={'status': 'recording', 'title': 'Gấp áo', 'revision': 0}).json()['result']
+    assert recording['lesson_control'] == {'command': 'finish_and_save'}
+    assert recording['status'] == 'execution_requested'
+    reviewed = invoke(client, key, 'lesson_control', {'command': 'save'}, call='save',
+        lesson_state={'status': 'review', 'title': 'Gấp áo', 'revision': 4}).json()['result']
+    assert reviewed['lesson_control']['revision'] == 4
+    stale = invoke(client, key, 'lesson_control', {'command': 'save', 'revision': 2}, call='stale',
+        lesson_state={'status': 'review', 'title': 'Gấp áo', 'revision': 4}).json()['result']
+    assert stale['lesson_control']['revision'] == 2  # The client still rejects an explicitly stale edit.

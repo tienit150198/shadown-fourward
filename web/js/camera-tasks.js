@@ -173,8 +173,12 @@ export class CameraTasks {
     this.state.title = this.recording.title;
   }
 
-  finish() {
+  finish({save = false} = {}) {
     const recording = this.recording;
+    if (save && this.state.mode==='compiling') {
+      this.saveAfterCompile = true;
+      this.update({message:'Đã nhận yêu cầu lưu. Bài sẽ được lưu khi biên soạn xong.'});
+    }
     if (!recording) return this.execution();
     if (!recording.transcript.length) {
       this.update({message:'Chưa ghi được lời hướng dẫn. Hãy làm mẫu và giải thích trước khi xem lại.'});
@@ -186,6 +190,7 @@ export class CameraTasks {
     const revision = this.revision;
     const abort = new AbortController();
     this.compileAbort = abort;
+    this.saveAfterCompile = save;
     this.update({ mode: 'compiling', status: 'compiling', message: 'Đang biên soạn bài dạy từ lời nói và hình camera…' });
     this.pending = (async () => {
       try {
@@ -197,10 +202,16 @@ export class CameraTasks {
         this.lessonRevision++;
         this.update({mode:'reviewing',status:'review',title:result.skill.display_name || recording.title,
           message:'Xem lại các bước. Bạn có thể nhờ sửa bằng giọng nói, rồi nói “xác nhận và lưu”.',lesson:result.skill,reviewHidden:false});
-        this.notify(this.execution());
+        if (this.saveAfterCompile) {
+          this.saveAfterCompile = false;
+          await this.saveLesson(abort.signal);
+        } else this.notify(this.execution());
       } catch (error) {
         if (abort.signal.aborted || revision !== this.revision) return;
-        this.update({ mode: 'chat', status: 'error', message: error.userMessage || error.message || 'Chưa lưu được bài dạy.' });
+        this.recording = recording;
+        this.saveAfterCompile = false;
+        this.timer = setInterval(() => { this.capture(); this.update({frames:this.recording?.frames.length || 0}); },2000);
+        this.update({ mode: 'teaching', status: 'error', message: (error.userMessage || error.message || 'Chưa biên soạn được bài dạy.') + ' Nội dung đã ghi vẫn còn; bạn có thể nói “lưu lại” để thử lại.' });
         this.notify(this.execution());
       } finally { if (this.compileAbort === abort) this.compileAbort = null; }
     })();
@@ -228,6 +239,7 @@ export class CameraTasks {
       return result;
     }
     if (command==='finish_teaching') return this.finish();
+    if (['save','finish_and_save'].includes(command) && (this.recording || this.state.mode==='compiling')) return this.finish({save:true});
     if (command==='start_guidance') {
       if (this.recording || ['reviewing','compiling'].includes(this.state.mode)) return {...this.execution(),error:'Hãy lưu hoặc hủy bài dạy hiện tại trước.'};
       const revision=++this.revision; this.stopGuide();
@@ -270,7 +282,7 @@ export class CameraTasks {
     }
     if (!this.draft || this.state.status==='saving') return {...this.execution(),error:'Chưa có bản nháp sẵn sàng để chỉnh hoặc lưu.'};
     if (control.revision!==this.lessonRevision) return {...this.execution(),error:'Bản nháp đã thay đổi. Dùng revision mới trong lesson_state rồi thử lại.'};
-    if (command==='save') return this.saveLesson(signal);
+    if (['save','finish_and_save'].includes(command)) return this.saveLesson(signal);
     const skill=structuredClone(this.draft.skill), steps=skill.steps;
     if (command==='rename') {
       if (!control.title?.trim()) return {...this.execution(),error:'Cần tên bài học.'};
@@ -353,6 +365,7 @@ export class CameraTasks {
     this.compileAbort?.abort();
     this.compileAbort = null;
     this.recording = null;
+    this.saveAfterCompile = false;
     this.stopAr();
     this.update({ mode: 'chat', status: 'ready', title: 'Camera tự hiểu nhu cầu', message, lesson: null, saved_skill: null });
   }

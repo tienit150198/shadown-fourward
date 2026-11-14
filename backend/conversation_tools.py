@@ -12,6 +12,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from providers import vision_model
 from wardrobe_api import _store, _weather
 from styling_context import StylingLocation, resolve_weather
+from wardrobe_preferences import CatalogGender, catalog_gender, gender_error, matches_gender, wardrobe_gender
 
 
 class Arguments(BaseModel):
@@ -24,6 +25,7 @@ class Empty(Arguments):
 
 class InventoryArgs(Arguments):
     category: Literal['top', 'bottom', 'dress', 'outerwear', 'shoes', 'accessory'] | None = None
+    gender: CatalogGender | None = Field(default=None, description='Explicitly requested clothing audience: men/women include unisex, unisex only, or all to remove filtering. Omit to reuse the current clothing choice or self-described profile gender. Never infer from camera. Unknown item labels are excluded when filtering.')
     offset: int = Field(default=0, ge=0, le=10000)
     limit: int = Field(default=50, ge=1, le=50)
 
@@ -45,6 +47,7 @@ class TryOnArgs(Arguments):
     item_ids: list[str] = Field(default_factory=list, max_length=20)
     outfit_number: int | None = Field(default=None, ge=1, le=1, description='The single current outfit is number 1; use when the user accepts the displayed suggestion.')
     stop: bool = False
+    gender: CatalogGender | None = Field(default=None, description='Only set when the user explicitly changes the requested clothing audience; otherwise preserve the current preference.')
 
 
 class ShowcaseArgs(Arguments):
@@ -78,7 +81,7 @@ DEFINITIONS = {
     'lesson_control': (LessonControlArgs, LESSON_DESCRIPTION),
     'get_style_profile': (Empty, 'Read the clothing preferences, optional self-described gender, age range and fit preferences supplied by this user in this conversation. Missing fields are unknown, not inferred.'),
     'update_style_profile': (StyleProfileArgs, 'Save only preferences the user explicitly stated, or their decision to skip a question (clothing_preferences=["no preference"]). Never infer gender or age from camera, name or garments. Empty strings/lists clear a field. Stored only in this conversation.'),
-    'list_wardrobe': (InventoryArgs, 'Read the current wardrobe inventory and taught styling rules, optionally filtered by category. Paginated: use next_offset if has_more. Use actual item IDs, never invent garments.'),
+    'list_wardrobe': (InventoryArgs, 'Read the current wardrobe inventory and taught styling rules, filtered by category and clothing audience. Defaults to the current clothing preference or self-described gender in the style profile. Pass gender for an explicit request for men/women/unisex/all; this does not change the person\'s gender. Men/women include unisex, unknown labels are excluded. Paginated: use next_offset if has_more. Use actual item IDs, never invent garments.'),
     'get_weather': (WeatherArgs, 'Resolve the requested date/season/temperature before fetching weather. Omit city to use device GPS, then an explicitly configured city. If neither is available, ask to enable GPS; never guess the city. Seasons/temperatures requested by the user are styling scenarios, not forecasts. Refresh when date, location or requested conditions change; otherwise reuse the retained result.'),
     'start_tryon': (TryOnArgs, 'Execute live try-on directly IN THIS CAMERA when the user requests or accepts it. Use outfit_number for a recent outfit or exact item_ids. No button click or further confirmation is needed. stop=true stops fitting. The client performs execution; say it is starting, never claim completion before it succeeds.'),
     'showcase_outfits': (ShowcaseArgs, 'Display exactly ONE outfit at a time that YOU choose directly from list_wardrobe results. Consider the user request, retained weather, explicitly stated preferences and taught rules. Pass exact item IDs in layer order, titles and explanations. No separate stylist model or scoring is used. Keep one current suggestion; generate a replacement only when the user asks for another. Cards include images and photo/live try-on buttons. Use as the final tool of the turn; its introduction and cards complete the text response. Do not add duplicate actions or button instructions.'),
@@ -95,7 +98,7 @@ def tool_schemas():
 
 
 def public_items(items):
-    fields = ('id', 'name', 'category', 'colors', 'style', 'warmth', 'occasions', 'material', 'subtype', 'image_url', 'presentation', 'style_notes')
+    fields = ('id', 'name', 'category', 'gender', 'colors', 'style', 'warmth', 'occasions', 'material', 'subtype', 'image_url', 'presentation', 'style_notes')
     return [{k: item.get(k) for k in fields} for item in items[:80]]
 
 
@@ -107,13 +110,16 @@ async def execute(name, raw_args, *, request, context, image):
     store = _store(request)
     if name == 'lesson_control':
         control=args.model_dump(exclude_none=True)
+        snapshot = context.get('lesson_state') or {}
+        if args.command in ('save', 'finish_and_save') and args.revision is None and snapshot.get('status') == 'review':
+            control['revision'] = snapshot['revision']
         if args.command in ('start_guidance','review') and args.skill_id:
             request.app.state.skill_store.get_dict(args.skill_id)  # Validate existence; client fetches full lesson without putting detector prompts into the model context.
         if args.command=='start_guidance' and not args.skill_id:
             return {'error':'Choose an exact skill_id from list_skills first.'}, None
         return {'lesson_control':control,'status':'execution_requested','message':'The client executes this in the camera. Do not claim saved or edited until actual lesson state confirms it.'}, {'route':'lesson-control','execute':True,'control':control}
     if name == 'get_style_profile':
-        return {'profile': context.get('style_profile', {}), 'scope': 'this_conversation'}, None
+        return {'profile': context.get('style_profile', {}), 'gender_filter': wardrobe_gender(context), 'scope': 'this_conversation'}, None
     if name == 'update_style_profile':
         profile = dict(context.get('style_profile', {}))
         for key, value in args.model_dump(exclude_unset=True).items():
@@ -123,13 +129,21 @@ async def execute(name, raw_args, *, request, context, image):
                 profile[key] = value
             else:
                 profile.pop(key, None)
+        if 'gender' in args.model_fields_set and profile.get('gender') != context.get('style_profile', {}).get('gender'):
+            for key in ('wardrobe_gender', 'outfits', 'showcased_outfits'):
+                context.pop(key, None)
         context['style_profile'] = profile
         return {'profile': profile, 'scope': 'this_conversation'}, None
     if name == 'list_wardrobe':
         items = await asyncio.to_thread(store.list_items)
-        filtered = [it for it in items if not args.category or it.get('category') == args.category]
+        gender = wardrobe_gender(context, args.gender)
+        candidates = [it for it in items if not args.category or it.get('category') == args.category]
+        filtered = [it for it in candidates if matches_gender(it, gender)]
+        counts = {label: sum(catalog_gender(it.get('gender')) == label for it in candidates) for label in ('men', 'women', 'unisex')}
+        counts['unknown'] = len(candidates) - sum(counts.values())
         end = args.offset + args.limit
         return {'items': public_items(filtered[args.offset:end]), 'total': len(filtered), 'has_more': end < len(filtered),
+                'gender_filter': gender, 'available_gender_counts': counts,
                 'next_offset': end if end < len(filtered) else None, 'rules': store.list_rules()[:40]}, None
     if name == 'get_weather':
         location = StylingLocation.model_validate(context['location']) if context.get('location') and not args.city else None
@@ -159,6 +173,9 @@ async def execute(name, raw_args, *, request, context, image):
         by_id={item['id']:item for item in await asyncio.to_thread(store.list_items)}
         if not ids or any(i not in by_id for i in ids) or len(set(ids))!=len(ids):
             return {'error':'Provide unique current wardrobe IDs or a valid recent outfit number.'}, None
+        mismatch = gender_error([by_id[i] for i in ids], wardrobe_gender(context, args.gender))
+        if mismatch:
+            return mismatch, None
         garments=[i for i in ids if by_id[i].get('category') in ('top','bottom','outerwear','dress')]
         categories=[by_id[i]['category'] for i in garments]
         if not garments or len(garments)>3 or len(set(categories))!=len(categories) or ('dress' in categories and any(c in categories for c in ('top','bottom'))):
@@ -174,6 +191,9 @@ async def execute(name, raw_args, *, request, context, image):
             return {'error': 'Unknown or deleted wardrobe IDs. Refresh list_wardrobe and correct the outfits.', 'invalid_item_ids': list(dict.fromkeys(invalid))}, None
         if any(len(set(outfit.item_ids)) != len(outfit.item_ids) for outfit in args.outfits):
             return {'error': 'Each outfit must contain unique item IDs. Correct the duplicate IDs.'}, None
+        mismatch = gender_error([by_id[i] for outfit in args.outfits for i in outfit.item_ids], wardrobe_gender(context))
+        if mismatch:
+            return mismatch, None
         selected = [{**outfit.model_dump(), 'items': public_items([by_id[i] for i in outfit.item_ids])} for outfit in args.outfits]
         context['outfits'] = selected
         context['showcased_outfits'] = [o['item_ids'] for o in selected]

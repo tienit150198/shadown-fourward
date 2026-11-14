@@ -12,7 +12,7 @@ import json
 import logging
 import os
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import APIRouter, Body, HTTPException, Query, Request
 from fastapi.responses import FileResponse, JSONResponse
@@ -98,6 +98,7 @@ class NewItemRequest(BaseModel):
     image: str = Field(..., max_length=MAX_IMAGE_DATA_URL_CHARS)
     name: str | None = Field(None, max_length=80)
     category: str | None = Field(None, max_length=40)
+    gender: Literal['men', 'women', 'unisex', 'unknown'] = 'unknown'
 
 
 @router.get("/api/wardrobe/items")
@@ -122,6 +123,7 @@ async def create_item(payload: NewItemRequest, request: Request) -> dict[str, An
     name = (payload.name or "").strip() or None
     category = (payload.category or "").strip() or None
     fields, source = await tag_item_with_attrs(_provider(request), jpeg, name=name, category=category)
+    fields['gender'] = payload.gender
     try:
         return _store(request).create_item(fields, jpeg, extra={"tag_source": source})
     except WardrobeError as error:

@@ -55,6 +55,65 @@ test('finishing opens a review draft; only explicit confirmation saves a new les
   } finally { tasks.cancel(); }
 });
 
+test('finish and save completes from one spoken confirmation, including media promotion', async () => {
+  const {tasks,saved,notices}=setup();
+  try {
+    await tasks.lessonControl({command:'start_teaching',title:'Gấp áo'});
+    tasks.narrate('Gấp hai tay áo vào trong rồi gấp đôi thân áo.');
+    const result=await tasks.lessonControl({command:'finish_and_save'});
+    assert.equal(result.status,'compiling');
+    await tasks.pending;
+    assert.equal(tasks.state.status,'saved');
+    assert.equal(saved.length,1);
+    assert.equal(saved[0].skill.draft_id,'draft1');
+    assert.ok(saved[0].skill.steps[0].reference_image_url.startsWith(`/skills-media/${saved[0].id}/`));
+    assert.deepEqual(notices.map(n=>n.status),['saved']);
+  } finally {tasks.cancel();}
+});
+
+test('save while compiling is queued once and cancellation revokes it', async () => {
+  for (const cancelled of [false,true]) {
+    let compiled,compiles=0;
+    const saved=[];
+    const {tasks}=setup({skillApi:{compile:()=>{compiles++;return new Promise(resolve=>{compiled=resolve;});},saveSkill:async (...args)=>saved.push(args)}});
+    try {
+      await tasks.lessonControl({command:'start_teaching'});
+      tasks.narrate('Gấp tay áo vào trong.');
+      tasks.finish();
+      await tasks.lessonControl({command:'save'});
+      await tasks.lessonControl({command:'finish_and_save'});
+      if(cancelled) tasks.cancel();
+      compiled({draft_id:'draft1',compiled_by:'ai',skill:{steps:[{id:'one'}]}});
+      await tasks.pending;
+      assert.equal(compiles,1);
+      assert.equal(saved.length,cancelled?0:1);
+    } finally {tasks.cancel();}
+  }
+});
+
+test('compiler failure preserves demonstration and retry can save without recording again', async () => {
+  let compiles=0;
+  const saved=[];
+  const {tasks}=setup({skillApi:{compile:async payload=>{
+    compiles++;
+    assert.equal(payload.transcript[0].text,'Tráng phin rồi thêm cà phê.');
+    assert.ok(payload.frames.length);
+    if(compiles===1) throw new Error('Mất kết nối');
+    return {draft_id:'draft1',compiled_by:'ai',skill:{steps:[{id:'one'}]}};
+  },saveSkill:async (...args)=>saved.push(args)}});
+  try {
+    await tasks.lessonControl({command:'start_teaching'});
+    tasks.narrate('Tráng phin rồi thêm cà phê.');
+    await tasks.lessonControl({command:'finish_and_save'});await tasks.pending;
+    assert.equal(tasks.state.status,'error');
+    assert.equal(tasks.recording.transcript.length,1);
+    assert.equal(saved.length,0);
+    await tasks.lessonControl({command:'save'});await tasks.pending;
+    assert.equal(compiles,2);assert.equal(saved.length,1);
+    assert.equal(tasks.state.status,'saved');
+  } finally {tasks.cancel();}
+});
+
 test('cancelling while the compiler is pending prevents a late save', async () => {
   let finish;
   const saved = [];

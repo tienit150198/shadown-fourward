@@ -5,6 +5,7 @@ import re
 
 from providers import conversation_model
 from wardrobe_context import balanced_items, inventory_context
+from wardrobe_preferences import matches_gender
 
 GARMENT_CATEGORIES = {'top', 'bottom', 'outerwear', 'dress'}
 CLARIFY = 'Bạn muốn thử món nào hoặc kiểu áo, quần nào trong tủ đồ SKI? Bạn có thể nói tên, màu hoặc kiểu đồ.'
@@ -26,12 +27,12 @@ def merge_selection(items, previous_ids, changed_ids):
     return selected if len(selected) <= 3 else []
 
 
-async def plan_tryon(provider, store, text, *, selected_ids=(), requested_ids=(), history=()):
-    items = [item for item in store.list_items() if item.get('category') in GARMENT_CATEGORIES and item.get('image_url')]
+async def plan_tryon(provider, store, text, *, selected_ids=(), requested_ids=(), history=(), gender=None):
+    items = [item for item in store.list_items() if item.get('category') in GARMENT_CATEGORIES and item.get('image_url') and matches_gender(item, gender)]
     by_id = {item['id']: item for item in items}
     previous = [value for value in selected_ids if value in by_id]
     if not items:
-        return {'status': 'needs_clarification', 'item_ids': [], 'message': 'Tủ đồ SKI chưa có ảnh trang phục để thử.'}
+        return {'status': 'needs_clarification', 'item_ids': [], 'message': 'Tủ đồ SKI chưa có ảnh trang phục phù hợp với nhóm đồ đã chọn để thử.' if gender not in (None, 'all') else 'Tủ đồ SKI chưa có ảnh trang phục để thử.'}
     if requested_ids:
         ids = merge_selection(items, previous, list(requested_ids))
         return {'status': 'ready' if ids else 'needs_clarification', 'item_ids': ids, 'message': '' if ids else CLARIFY}
@@ -42,7 +43,7 @@ async def plan_tryon(provider, store, text, *, selected_ids=(), requested_ids=()
     relevant = inventory_context(store, text)['items']
     previous_advice = next((turn.get('text', '') for turn in reversed(history) if turn.get('role') == 'assistant'), '')
     recommended = inventory_context(store, previous_advice)['items'] if previous_advice else []
-    pool_ids = list(dict.fromkeys(previous + [item['id'] for item in relevant] + [item['id'] for item in recommended] + [item['id'] for item in balanced_items(items, 96)]))[:96]
+    pool_ids = list(dict.fromkeys(value for value in previous + [item['id'] for item in relevant] + [item['id'] for item in recommended] + [item['id'] for item in balanced_items(items, 96)] if value in by_id))[:96]
     keys = ('id', 'name', 'category', 'colors', 'color_hex', 'colors_source', 'color_code', 'brand', 'subtype', 'warmth', 'gender')
     pool = [{key: by_id[value][key] for key in keys if key in by_id[value]} for value in pool_ids if value in by_id]
     system = (
@@ -63,7 +64,7 @@ async def plan_tryon(provider, store, text, *, selected_ids=(), requested_ids=()
     try:
         raw = await asyncio.wait_for(provider.chat_json(
             model=conversation_model(), system=system,
-            content=[{'type': 'text', 'text': json.dumps({'current_request': text, 'selected_ids': previous, 'recent_conversation': list(history), 'wardrobe': pool}, ensure_ascii=False)}],
+            content=[{'type': 'text', 'text': json.dumps({'current_request': text, 'gender_filter': gender, 'selected_ids': previous, 'recent_conversation': list(history), 'wardrobe': pool}, ensure_ascii=False)}],
             max_tokens=240, temperature=0,
         ), timeout=14)
     except asyncio.TimeoutError:

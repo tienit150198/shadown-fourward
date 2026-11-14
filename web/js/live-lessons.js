@@ -36,5 +36,5 @@ export function lessonPanel(state, { onConfirm, onDismiss }) {
     h('h2',null,state.title),
     h('p',{role:'status'},state.message),
     state.mode==='teaching'?h('small',null,`${state.lines || 0} câu hướng dẫn · ${state.frames || 0} khung hình`):null,
-    h('small',{class:'live-outfit-hint'},state.mode==='teaching'?'Làm mẫu và nói tự nhiên. Khi xong, nói “Dạy xong, cho xem lại”.':'Bạn có thể tiếp tục trò chuyện trong lúc chờ.'));
+    h('small',{class:'live-outfit-hint'},state.mode==='teaching'?'Nói “Dạy xong, lưu lại đi” để lưu; hoặc “Cho xem lại” để kiểm tra trước.':'Bạn có thể tiếp tục trò chuyện trong lúc chờ.'));
 }

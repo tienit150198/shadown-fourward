@@ -3,7 +3,7 @@ import { wardrobeApi, itemImageUrl } from '../wardrobe-api.js';
 import { h, icon, toast, errorToast, navigate, createScope, openSheet, confirmSheet, actionSheet } from '../ui.js';
 import {
   CATEGORIES, OCCASIONS, STYLES, WARMTH_LABELS, COLOR_PRESETS, categoryLabel, colorDots, colorChip, itemThumb,
-  fileToJpeg, pickImageFile, fill, itemKindLabel,
+  fileToJpeg, pickImageFile, fill, itemKindLabel, GENDERS, genderLabel,
 } from '../wardrobe-ui.js';
 
 const TAB_KEY = 'shadow.wd.tab';
@@ -34,17 +34,20 @@ export function mount(el, { query = new URLSearchParams() } = {}) {
   let items = null; // null = loading
   let rulesCount = null;
   let searchText = '', visibleLimit = 36;
+  let genderFilter = 'all';
   let tab = (() => { try { return sessionStorage.getItem(TAB_KEY) || 'all'; } catch { return 'all'; } })();
 
   const itemsCount = h('span', { class: 'wd-hub-count' }, '…');
   const rulesCountEl = h('span', { class: 'wd-hub-count' }, '…');
   const tabs = h('div', { class: 'wd-tabs', role: 'tablist', 'aria-label': 'Loại đồ' });
   const grid = h('div', { class: 'wd-grid' });
+  const genderSelect = h('select', {class:'input wd-select','aria-label':'Lọc nhóm đồ',onChange:event=>{genderFilter=event.target.value;visibleLimit=36;render();}},
+    h('option',{value:'all'},'Tất cả nhóm đồ'),...GENDERS.map(g=>h('option',{value:g.id},g.label)));
   const search = h('input', { type: 'search', class: 'input', placeholder: 'Tìm trong tủ đồ SKI: áo len, UNIQLO…', 'aria-label': 'Tìm trong tủ đồ SKI', onInput: event => { searchText = event.target.value; visibleLimit = 36; render(); } });
   const gridSection = h('section', { class: 'wd-closet', id: 'wd-closet' },
     h('div', { class: 'section-head wd-section-head' }, h('h2', null, 'Tủ đồ của bạn'),
       h('button', { class: 'btn btn-ghost btn-sm wd-add-inline', type: 'button', onClick: () => addItemFlow() }, icon('plus', 18), 'Thêm quần áo')),
-    search, tabs, grid);
+    search, genderSelect, tabs, grid);
 
   el.append(
     h('header', { class: 'app-bar' },
@@ -106,10 +109,10 @@ export function mount(el, { query = new URLSearchParams() } = {}) {
     }
     const fold = value => String(value).normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').toLowerCase();
     const words = fold(searchText).split(/\s+/).filter(Boolean);
-    const shown = list.filter(it => (tab === 'all' || it.category === tab) && words.every(word => fold(`${it.name} ${it.brand || ''} ${(it.seasons || []).join(' ')} ${(it.colors || []).join(' ')}`).includes(word)));
+    const shown = list.filter(it => (tab === 'all' || it.category === tab) && (genderFilter==='all' || (it.gender || 'unknown')===genderFilter) && words.every(word => fold(`${it.name} ${genderLabel(it.gender)} ${it.brand || ''} ${(it.seasons || []).join(' ')} ${(it.colors || []).join(' ')}`).includes(word)));
     if (!shown.length) {
       grid.replaceChildren(h('div', { class: 'wd-empty-tab' },
-        h('p', null, searchText ? 'Không có món nào khớp từ khóa trong tủ đồ SKI.' : `Chưa có ${categoryLabel(tab).toLowerCase()} nào.`),
+        h('p', null, 'Chưa có món đồ khớp bộ lọc này.'),
         h('button', { class: 'btn btn-ghost btn-sm', type: 'button', onClick: () => addItemFlow({ category: tab }) }, icon('plus', 18), `Thêm ${categoryLabel(tab).toLowerCase()}`)));
       return;
     }
@@ -125,6 +128,7 @@ export function mount(el, { query = new URLSearchParams() } = {}) {
       brand ? h('span', { class: 'wd-card-brand' }, brand) : null,
       h('span', { class: 'wd-card-body' },
         h('span', { class: 'wd-card-name' }, it.name || categoryLabel(it.category)),
+        h('span', { class: 'wd-card-cat' }, genderLabel(it.gender)),
         h('span', { class: 'wd-card-meta' }, colorDots(it.colors), h('span', { class: 'wd-card-cat' }, itemKindLabel(it)))));
   }
 
@@ -228,6 +232,7 @@ export function mount(el, { query = new URLSearchParams() } = {}) {
     const catSel = h('select', { class: 'input wd-select' },
       CATEGORIES.map((c) => h('option', { value: c.id, selected: c.id === it.category }, `${c.emoji} ${c.label}`)));
     if (!CATEGORIES.some((c) => c.id === it.category)) catSel.value = 'top';
+    const genderSel = h('select',{class:'input wd-select'},GENDERS.map(g=>h('option',{value:g.id,selected:g.id===(it.gender || 'unknown')},g.label)));
     const styleList = h('datalist', { id: 'wd-style-list' }, STYLES.map((s) => h('option', { value: s })));
     const styleIn = h('input', { class: 'input', type: 'text', value: it.style || '', placeholder: 'công sở, thường ngày…', list: 'wd-style-list' });
 
@@ -285,6 +290,7 @@ export function mount(el, { query = new URLSearchParams() } = {}) {
       h('div', { class: 'wd-grid2' },
         h('label', { class: 'field' }, h('span', { class: 'field-label' }, 'Loại'), catSel),
         h('label', { class: 'field' }, h('span', { class: 'field-label' }, 'Phong cách'), styleIn, styleList)),
+      h('label', {class:'field'}, h('span',{class:'field-label'},'Nhóm đồ'),genderSel),
       h('div', { class: 'field' }, h('span', { class: 'field-label' }, 'Màu sắc'), colorWrap, presetWrap, colorIn),
       h('div', { class: 'field' }, h('span', { class: 'field-label' }, 'Độ ấm'),
         h('div', { class: 'wd-stepper' }, minus, warmthVal, plus)),
@@ -299,6 +305,7 @@ export function mount(el, { query = new URLSearchParams() } = {}) {
         ...it,
         name: nameIn.value.trim() || it.name || categoryLabel(catSel.value),
         category: catSel.value,
+        gender: genderSel.value,
         style: styleIn.value.trim(),
         warmth,
         colors: it.colors,

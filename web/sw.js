@@ -1,7 +1,7 @@
 // SKI service worker — caches the app shell only.
 // Cached shell renders immediately; refresh it in the background.
 // Never touches /api, /session or /skills-media, and ignores cross-origin requests (CDN, fonts).
-const CACHE = 'shadow-shell-v26-ski-brand';
+const CACHE = 'shadow-shell-v27-ski-pronunciation';
 const SHELL = [
   './',
   'index.html',

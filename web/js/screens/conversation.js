@@ -519,7 +519,7 @@ export function mount(el, {query=new URLSearchParams()}={}) {
     onTranscript: liveTranscript,
     onToolEvent: liveToolEvent,
     async onLessonControl(control,turn) {
-      if (tasks.recording && control.command==='finish_teaching' && !liveNarrated && liveQuestion) { tasks.narrate(liveQuestion); liveNarrated=true; }
+      if (tasks.recording && ['finish_teaching','finish_and_save','save'].includes(control.command) && !liveNarrated && liveQuestion) { tasks.narrate(liveQuestion); liveNarrated=true; }
       return runLessonControl(control,turn);
     },
     onLiveControl(control, {signal}) { if (disposed || signal.aborted) return null; return setLiveView(control.view); },
