@@ -55,8 +55,8 @@ function fittingFixture() {
   };
   const sdk = {
     XmaxClient: class { createRealtimeManager() { return manager; } createStorageService() { return {uploadImage:async()=>({url:'https://example.test/ref.jpg'})}; } },
-    XmaxConfiguration: class {}, RealtimeConfiguration: class {}, RealtimeVideoFormat: class {}, RealtimeContext: class {}, RealtimeModel:{x2_1:'x2.1'},
-    XmaxRealtimeVideoView: class { constructor() { view=this; this.element={style:{}}; } attach() {} detach() {} },
+    XmaxConfiguration: class {}, RealtimeConfiguration: class {}, RealtimeVideoFormat: class {}, RealtimeContext: class {}, RealtimeModel:{x2_1:'x2.1'}, VideoContentMode:{fill:'fill'},
+    XmaxRealtimeVideoView: class { constructor(options) { assert.equal(options.videoContentMode,'fill'); view=this; this.element={style:{}}; } attach() {} detach() {} },
   };
   const requests = [];
   const fetchImpl = async (path, options) => {

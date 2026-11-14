@@ -31,7 +31,7 @@ export async function connectXmaxVideo(manager, local, context, view, { check = 
   }
 }
 
-export async function startSharedXmax(itemIds, stream, container, { signal, onState = () => {}, onError = () => {}, fetchImpl = fetchWithAccess, loadSdk = () => import('/vendor/xmax/xmax.js') } = {}) {
+export async function startSharedXmax(itemIds, stream, container, { signal, onState = () => {}, onError = () => {}, fetchImpl = fetchWithAccess, loadSdk = () => import('/vendor/xmax/xmax.js?v=full-camera-2') } = {}) {
   const source = stream?.getVideoTracks().find(track => track.readyState === 'live');
   if (!source) throw new Error('Cần mở camera để thử đồ.');
   let session, manager, view, inputTrack, stopped = false, generating = false, timer, startupTimer;
@@ -90,9 +90,9 @@ export async function startSharedXmax(itemIds, stream, container, { signal, onSt
     check();
     // Keep the existing full-screen camera as the preview. The SDK owns only
     // the full-size result layer, never a second local camera/PiP layout.
-    view = new sdk.XmaxRealtimeVideoView({ isInteractionEnabled: false });
+    view = new sdk.XmaxRealtimeVideoView({ isInteractionEnabled: false, videoContentMode: sdk.VideoContentMode.fill });
     view.frameDisplayHandler = () => { if (!stopped) { generating = true; resolveReady(); } };
-    Object.assign(view.element.style, { width: '100%', height: '100%' });
+    Object.assign(view.element.style, { position: 'absolute', inset: '0', width: '100%', height: '100%' });
     view.attach(container);
     container.style.opacity = '0';
     container.hidden = false; // Mounted at full size so first-frame detection can run.
