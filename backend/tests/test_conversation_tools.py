@@ -490,3 +490,11 @@ def test_fallback_system_teaches_model_to_execute_guidance_and_correct_teaching_
     assert 'ý định mới' in TOOL_SYSTEM
     screen=next(t['function']['parameters']['properties']['screen']['enum'] for t in tool_schemas() if t['function']['name']=='open_screen')
     assert 'stylist' not in screen and 'guide' not in screen and 'teach' not in screen
+
+
+def test_typed_request_streams_wardrobe_images_instead_of_only_text(client, setup_chat):
+    setup_chat(tools(call('list_wardrobe', {'display': True})), answer())
+    events = post(client, text='Hiển thị tủ đồ của tôi')
+    gallery = next(event for event in events if event['type'] == 'wardrobe')
+    assert gallery['items'] and gallery['items'][0]['image_url']
+    assert gallery['total'] >= len(gallery['items'])

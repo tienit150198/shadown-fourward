@@ -196,3 +196,14 @@ def test_finish_and_save_is_a_single_voice_control_and_review_uses_client_revisi
     stale = invoke(client, key, 'lesson_control', {'command': 'save', 'revision': 2}, call='stale',
         lesson_state={'status': 'review', 'title': 'Gấp áo', 'revision': 4}).json()['result']
     assert stale['lesson_control']['revision'] == 2  # The client still rejects an explicitly stale edit.
+
+
+def test_requested_wardrobe_emits_actual_items_for_native_overlay(client, tool_session):
+    key, _ = tool_session
+    internal = invoke(client, key, 'list_wardrobe', call='internal').json()
+    assert not any(event['type'] == 'wardrobe' for event in internal['events'])
+    shown = invoke(client, key, 'list_wardrobe', {'display': True, 'limit': 2}, call='display').json()
+    gallery = next(event for event in shown['events'] if event['type'] == 'wardrobe')
+    assert gallery['items'] == shown['result']['items']
+    assert len(gallery['items']) == 2 and gallery['total'] == 70
+    assert gallery['items'][0]['image_url'].startswith('/wardrobe-media/')

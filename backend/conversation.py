@@ -156,6 +156,9 @@ async def mock_generate(payload: ConversationRequest, request: Request) -> Async
         if names:
             answer += f" Một số món: {names}."
         yield event("text", text=answer)
+        by_id = {item["id"]: item for item in wardrobe_store(request).list_items()}
+        gallery = [{**item, "image_url": by_id.get(item["id"], {}).get("image_url", ""), "gender": by_id.get(item["id"], {}).get("gender", "unknown")} for item in inventory["items"]]
+        yield event("wardrobe", items=gallery, total=inventory["total_items"])
         yield event("action", route="wardrobe", label="Xem tủ đồ trong SKI")
     elif intent == "weather":
         forecast = await resolve_weather(_weather(request), payload.text, location=payload.location, allow_scenario=False)
@@ -185,7 +188,7 @@ TOOL_SYSTEM = SYSTEM + VOICE_LESSON_INSTRUCTIONS + (
     "Không có trang hướng dẫn/dạy bài cần mở từ công cụ. Không dùng open_screen stylist/home để bắt đầu bài học. Các câu hoặc nút điều hướng cũ trong lịch sử không phải hành vi hiện tại; không nhắc người dùng bấm chúng. Phải GỌI công cụ thực thi, không chỉ nói đã mở/đã đưa nút. Nếu không có bài khớp, nói rõ và đưa hướng dẫn thông thường hoặc hỏi một câu làm rõ; không bịa bài đã lưu. "
     " Bạn có các công cụ để đọc tủ đồ, thời tiết, bài đã học và phân tích ảnh. "
     "Tự chọn công cụ dựa trên toàn bộ cuộc trò chuyện, không cần phân loại ý định riêng. "
-    "Dùng list_wardrobe khi cần biết đồ người dùng sở hữu; tự phối đồ từ dữ liệu thật, giữ các lớp bạn chọn. "
+    "Khi người dùng muốn xem hoặc mở tủ đồ, gọi list_wardrobe với display=true để hiển thị ảnh ngay trên camera; không chỉ đọc tên hoặc đưa nút mở. Dùng list_wardrobe khi cần biết đồ người dùng sở hữu; tự phối đồ từ dữ liệu thật, giữ các lớp bạn chọn. "
     "Dùng get_weather khi cần thời tiết thật, tái sử dụng kết quả đã có nếu không đổi nơi/ngày. "
     "Tự chọn các bộ từ list_wardrobe và ngữ cảnh hội thoại, rồi gọi showcase_outfits với outfits gồm item_ids, title, reason, tips và introduction ngắn. Không có công cụ phối đồ hay mô hình stylist riêng. Dùng get_weather nếu thời tiết cần thiết mà chưa biết; tái sử dụng kết quả đã có. Đặt lời giới thiệu vào introduction, không nói lặp lại trước hoặc sau công cụ. Thẻ đã có ảnh và nút thử đồ; không gọi open_screen cho cùng bộ và không nhắc lại cách bấm nút. "
     "Khi sửa bộ vừa gợi ý, dùng item IDs và ngữ cảnh bộ trước; đừng coi là cuộc trò chuyện mới. "
@@ -393,6 +396,8 @@ async def generate(payload: ConversationRequest, request: Request) -> AsyncItera
                             action=None
                         if show_status:
                             yield event('tool_status', id=call['id'], state='done' if tool_ok else 'error', label=labels[1] if tool_ok else 'Chưa hoàn tất thao tác')
+                        if tool_ok and name == 'list_wardrobe' and result.get('display') is True:
+                            yield event('wardrobe', items=result['items'], total=result['total'], gender_filter=result['gender_filter'])
                         if tool_ok and isinstance(result, dict) and name in ('showcase_outfits', 'open_screen') and result.get('outfits'):
                             if name == 'showcase_outfits':
                                 showcased_intro = result['introduction']

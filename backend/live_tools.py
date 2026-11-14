@@ -200,6 +200,8 @@ async def run(payload: LiveToolRequest, request: Request) -> dict:
             result={'error':'Invalid tool arguments. Check the function schema.'}
         except Exception:
             result={'error':'Tool failed or timed out. Do not invent a result.'}
+        if payload.name == 'list_wardrobe' and result.get('display') is True and not result.get('error'):
+            events.append({'type': 'wardrobe', 'items': result['items'], 'total': result['total'], 'gender_filter': result['gender_filter']})
         if payload.name=='showcase_outfits' and not result.get('error'):
             result['message']='Outfits are displayed over the live video. Give a short spoken invitation. If fitting was requested, call camera_task with the chosen IDs now; a voice confirmation is sufficient, no button required.'
         if len(json.dumps(result,ensure_ascii=False))>MAX_TOOL_RESULT:

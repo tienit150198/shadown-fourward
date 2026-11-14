@@ -24,6 +24,7 @@ class Empty(Arguments):
 
 
 class InventoryArgs(Arguments):
+    display: bool = Field(default=False, description="Set true when the user asks to see/open/show their wardrobe or clothing list. The app displays actual item photos on the camera. Leave false for internal inventory lookup while styling.")
     category: Literal['top', 'bottom', 'dress', 'outerwear', 'shoes', 'accessory'] | None = None
     gender: CatalogGender | None = Field(default=None, description='Explicitly requested clothing audience: men/women include unisex, unisex only, or all to remove filtering. Omit to reuse the current clothing choice or self-described profile gender. Never infer from camera. Unknown item labels are excluded when filtering.')
     offset: int = Field(default=0, ge=0, le=10000)
@@ -142,7 +143,7 @@ async def execute(name, raw_args, *, request, context, image):
         counts = {label: sum(catalog_gender(it.get('gender')) == label for it in candidates) for label in ('men', 'women', 'unisex')}
         counts['unknown'] = len(candidates) - sum(counts.values())
         end = args.offset + args.limit
-        return {'items': public_items(filtered[args.offset:end]), 'total': len(filtered), 'has_more': end < len(filtered),
+        return {'items': public_items(filtered[args.offset:end]), 'display': args.display, 'total': len(filtered), 'has_more': end < len(filtered),
                 'gender_filter': gender, 'available_gender_counts': counts,
                 'next_offset': end if end < len(filtered) else None, 'rules': store.list_rules()[:40]}, None
     if name == 'get_weather':
