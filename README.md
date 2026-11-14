@@ -38,7 +38,7 @@ ngay ở `localhost`.
 | Chế độ | Khi nào | Hoạt động thế nào |
 |---|---|---|
 | **Demo** (mock) | Không có `.env` / không có `LLM_API_KEY`, hoặc chạy `SHADOW_MODE=mock ./run.sh` | AI giả lập, không cần mạng. Mỗi bước tự "xong" sau vài khung hình; **bước 2 cố tình báo sai một lần** để thấy cảnh AI sửa lỗi. Trợ lý tủ đồ cũng có kết quả giả lập. |
-| **AI thật** | Có `.env` với `LLM_API_KEY` | Gọi model Qwen qua gateway của nhóm. Huy hiệu trên trang chủ ghi `AI · qwen3-vl-8b-instruct`. |
+| **AI thật** | Có `.env` với `LLM_API_KEY` | Gọi model Qwen qua gateway của nhóm. Kiểm tra model chấm ảnh ở trường `vision_model` của `/api/health`. |
 
 Xem chế độ đang chạy: mở http://localhost:8000/api/health → `"mode":"ai"` hoặc `"mode":"mock"`.
 
@@ -51,7 +51,7 @@ Mẫu đầy đủ ở [.env.example](.env.example). Máy của trưởng nhóm 
 | Biến | Bắt buộc? | Dùng để làm gì |
 |---|---|---|
 | `LLM_BASE_URL`, `LLM_API_KEY` | Có (cho AI thật) | Địa chỉ + khoá của gateway LLM. Nhóm dùng gateway Qwen `https://llm.hypertek.vn/v1` (đã cấu hình). |
-| `VISION_MODEL` | Có | Model nhìn ảnh: `qwen3-vl-8b-instruct` (chấm từng khung hình, gắn nhãn quần áo). |
+| `VISION_MODEL` | Có | Model nhìn ảnh: `qwen3.6-35b-a3b` (chấm từng khung hình, tự kiểm tra bài dạy, gắn nhãn quần áo). Gemini Live phụ trách hội thoại riêng. |
 | `COMPILER_MODEL`, `CONVERSATION_MODEL` | Có | `qwen3.6-35b-a3b` cho sinh kỹ năng và trò chuyện. |
 | `LLM_EXTRA_BODY` | Nên có | `'{"chat_template_kwargs": {"enable_thinking": false}}'` — tắt chế độ "suy nghĩ" cho nhanh. **Phải để trong dấu nháy đơn.** |
 | `COMPLETE_CONFIRM_FRAMES` | Không (mặc định 2) | Phải 2 khung hình liên tiếp báo "xong" mới chuyển bước (chống nhảy bước nhầm). |
@@ -196,7 +196,18 @@ Khi bật cổng truy cập demo, client native gửi mã qua header `X-Shadow-A
 
 ---
 
-## Mô hình AI và tốc độ (đo ngày 09/11/2026)
+## Mô hình AI và tốc độ
+
+Cấu hình chấm ảnh từ ngày 14/11/2026: **Qwen3.6-35B-A3B** (`qwen3.6-35b-a3b`),
+đã kiểm tra nhận ảnh qua gateway Hypertek. Sáu lượt thử trên ảnh bài đóng hộp mất khoảng
+0,75–1,1 giây/lượt. Đây là phép thử nhỏ: ảnh cuối bài dạy vẫn bị cả 8B và 35B chấm chưa hoàn thành,
+nên chưa thể kết luận đổi model đã sửa được nhận diện. Bước gấp mép hộp cũng có phần cần kiểm tra
+bị che khuất; cần kiểm tra lại ảnh mẫu và điều kiện hoàn thành của từng bài.
+
+`VISION_MODEL` dùng chung cho chấm camera, tự kiểm tra bài dạy và đọc ảnh quần áo.
+Đổi model không biên soạn lại bài đã lưu, không cập nhật điểm tự kiểm tra cũ và không thay Gemini Live.
+
+Số liệu lịch sử dưới đây đo ngày 09/11/2026, trước khi đổi model chấm ảnh:
 
 | Việc | Model / dịch vụ | Thời gian đo được |
 |---|---|---|
@@ -211,7 +222,8 @@ Khi bật cổng truy cập demo, client native gửi mã qua header `X-Shadow-A
 | Mặc thử ảnh và video trực tiếp | Vidu Q2 và Vidu S2-Editing | Phụ thuộc thời gian xử lý và kết nối Vidu |
 
 Độ chính xác: trên bộ 20 ảnh thật (kỹ năng "pha trà"), Qwen3-VL-8B chấm **đúng 90%** (trung vị 0,84 giây),
-Qwen3.8 cũng 90% nhưng chậm hơn (1,37 giây) → giữ VL-8B để chấm. Thêm luật **2 khung hình liên tiếp** mới chuyển bước.
+model đối chiếu cũng 90% nhưng chậm hơn (1,37 giây). Kết quả trên bài pha trà không đại diện cho bài đóng hộp.
+Vẫn cần **2 khung hình liên tiếp** báo xong mới chuyển bước.
 
 ---
 

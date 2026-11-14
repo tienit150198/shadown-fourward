@@ -38,7 +38,7 @@ caffeinate -d &             # không cho laptop ngủ
 
 ```bash
 curl -s http://localhost:8000/api/health
-#   phải có "mode":"ai" và "vision_model":"qwen3-vl-8b-instruct"
+#   phải có "mode":"ai" và "vision_model":"qwen3.6-35b-a3b"
 
 curl -s http://localhost:8000/api/skills | grep -o lap-gia-do-dien-thoai
 #   phải in ra: lap-gia-do-dien-thoai  (kỹ năng dự phòng)
@@ -86,7 +86,7 @@ Chi tiết + xử lý sự cố: [../tryon-worker/README.md](../tryon-worker/REA
 ## 5. Điện thoại demo
 
 - [ ] Mở link ngrok → **Visit Site** (nếu hiện trang cảnh báo của ngrok) → cho phép **camera** và **micro**.
-- [ ] Trang chủ: huy hiệu **"AI · qwen3-vl-8b-instruct"**; có thẻ **👗 Trợ lý tủ đồ** và kỹ năng "Lắp giá đỡ điện thoại".
+- [ ] `/api/health` trả `vision_model: qwen3.6-35b-a3b`; tủ đồ và kỹ năng "Lắp giá đỡ điện thoại" mở được.
 - [ ] Âm lượng tối đa, tắt im lặng, bật "Không làm phiền", tắt khoá màn hình tự động, pin > 80%.
 - [ ] Chạm màn hình một lần cho giọng đọc chạy (iPhone).
 

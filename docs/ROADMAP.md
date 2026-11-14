@@ -40,7 +40,7 @@ git clone https://github.com/tienit150198/shadown-fourward.git shadow && cd shad
 cp .env.example .env        # rồi điền LLM_API_KEY (gateway Qwen) — hỏi người giữ key, KHÔNG gửi key lên chat/nhóm công khai
 ./run.sh                    # lần đầu tự tạo .venv và cài thư viện
 ```
-Mở http://localhost:8000 → badge góc trên phải ghi **"AI · qwen3-vl-8b-instruct"** là đang chạy AI thật
+Mở http://localhost:8000/api/health → `mode: ai`, `vision_model: qwen3.6-35b-a3b` là đang chạy cấu hình AI hiện tại.
 (ghi "Demo" = chưa có key, AI giả lập).
 
 Kiểm tra nhanh:
@@ -188,7 +188,7 @@ khi `confirming=true` gửi frame kế tiếp ngay (chuyển bước nhanh hơn 
 | 3.2 | **Đưa server lên cloud** | Không phụ thuộc laptop + ngrok | Đóng gói Docker (FastAPI + uvicorn), deploy lên VPS/Cloud Run; HTTPS thật; giữ `SHADOW_ACCESS_CODE` hoặc thay bằng đăng nhập |
 | 3.3 | **Tài khoản & lưu dữ liệu** | Mỗi người có kỹ năng, tủ đồ, gu riêng | Thay file JSON (`backend/skills`, `backend/wardrobe`) bằng database (PostgreSQL) + lưu ảnh (S3) |
 | 3.4 | **Model chạy ngay trên Mac mini / máy chủ riêng** | Nhanh hơn (bỏ đường mạng), riêng tư, không tốn phí | Thử Qwen3-VL nhỏ qua MLX trên M4; đo bằng `eval_detectors.py --models <model-mới>` trước khi đổi `VISION_MODEL` |
-| 3.5 | **Thử Qwen3.8 cho việc chấm frame** | Có thể chính xác hơn với bài khó | `eval_detectors.py <skill> --models qwen3-vl-8b-instruct,qwen3.6-35b-a3b` |
+| 3.5 | **Đánh giá Qwen3.6-35B-A3B trên nhiều bài** | Đã chuyển model chấm ảnh; cần đo lỗi bỏ sót và báo xong sai trên từng bài | `eval_detectors.py <skill> --models qwen3-vl-8b-instruct,qwen3.6-35b-a3b` |
 | 3.6 | **Chia sẻ kỹ năng** | Người giỏi dạy 1 lần, nhiều người học | Xuất/nhập file skill JSON + ảnh; sau đó là "chợ kỹ năng" |
 | 3.7 | **Đo chất lượng liên tục** | Biết AI có tệ đi khi đổi model/prompt | Mỗi skill đã có bộ eval tự tạo khi dạy → chạy `eval_detectors.py` định kỳ, lưu báo cáo trong `backend/evals/reports/` |
 | 3.8 | **Đa ngôn ngữ** | Mở rộng người dùng | Prompt đang viết cho tiếng Việt; thêm tham số ngôn ngữ cho câu nói/TTS |
@@ -201,7 +201,7 @@ khi `confirming=true` gửi frame kế tiếp ngay (chuyển bước nhanh hơn 
 | Biến | Ý nghĩa |
 |---|---|
 | `LLM_BASE_URL`, `LLM_API_KEY` | Gateway AI (đang dùng Qwen tại llm.hypertek.vn) |
-| `VISION_MODEL` / `COMPILER_MODEL` | Model chấm frame (qwen3-vl-8b-instruct) / model sinh skill & phối đồ (qwen3.6-35b-a3b) |
+| `VISION_MODEL` / `COMPILER_MODEL` | Model chấm frame / model sinh skill & phối đồ (cả hai đang dùng qwen3.6-35b-a3b) |
 | `LLM_EXTRA_BODY` | Tắt "suy nghĩ" của Qwen cho nhanh — để trong nháy đơn |
 | `SHADOW_MODE` | `auto` / `mock` (Demo, không cần AI) / `ai` |
 | `COMPLETE_CONFIRM_FRAMES` | Số frame liên tiếp phải báo xong mới chuyển bước (mặc định 2) |
