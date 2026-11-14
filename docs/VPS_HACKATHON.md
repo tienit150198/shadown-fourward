@@ -57,9 +57,14 @@ Deploy future releases with the same Compose project name to retain the volumes.
 
 ## Verified 2026-11-14
 
-Container healthy; HTTP through Nginx passes health, 262-item wardrobe, image and
-web-page checks. Streaming conversation returns real wardrobe outfits for summer,
-15°C/rain and tomorrow's GPS forecast. WebSocket upgrades and receives
-`session.ready`. The AI integrations are configured, but no paid voice/try-on
-session was created during deployment verification. DNS/HTTPS remains pending
-until the Cloudflare record is added and the HTTPS setup succeeds.
+Cloudflare DNS now resolves to `103.195.238.178`. HTTPS is live at
+`https://hackathon.trioxstudios.com`, with HTTP redirected to HTTPS. The certificate
+expires on 2027-02-11; `certbot.timer` is active and renewal reloads Nginx.
+The Nginx TLS listener uses HTTP/2 consistently with the host's other sites.
+
+Container healthy; public HTTPS passes health, 262-item wardrobe, image and
+web-page checks with normal DNS and certificate validation. Streaming conversation
+returns real wardrobe outfits for summer, 15°C/rain and tomorrow's GPS forecast.
+The public WSS connection upgrades and receives `session.ready`. The AI
+integrations are configured, but no paid voice/try-on session was created during
+deployment verification.
