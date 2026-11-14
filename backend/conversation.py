@@ -5,10 +5,8 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-import re
 from collections.abc import AsyncIterator
 from contextlib import aclosing
-from datetime import datetime, timedelta, timezone
 from typing import Literal
 
 from fastapi import APIRouter, Request
@@ -23,6 +21,7 @@ from stylist import suggest_outfits
 from wardrobe_api import _store as wardrobe_store, _weather
 from wardrobe_store import WardrobeError, decode_image_data_url, jpeg_data_url, to_jpeg
 from wardrobe_context import inventory_context
+from styling_context import StylingLocation, contextual_request, resolve_weather, requested_date, requested_conditions
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -34,7 +33,6 @@ ACTIONS = {
     "teach_skill": ("teach", "Quay bài hướng dẫn", "Bạn mở phần dạy kỹ năng để mình ghi lại từng bước bạn làm nhé."),
     "generate_image": ("image-studio", "Tạo ảnh", "Mình mở phần tạo ảnh với mô tả của bạn nhé."),
 }
-CITY_FOLLOWUP = "Bạn muốn xem thời tiết ở thành phố nào?"
 GUIDE_FOLLOWUP = "Bạn muốn mình hướng dẫn kỹ năng nào?"
 GENERIC_GUIDE_REQUESTS = {"ban chi toi cach lam", "chi toi cach lam", "huong dan toi", "huong dan minh"}
 SYSTEM = (
@@ -55,42 +53,19 @@ class ConversationRequest(BaseModel):
     text: TurnText
     history: list[ConversationTurn] = Field(default_factory=list, max_length=6)
     image: str | None = Field(None, max_length=500_000)
+    location: StylingLocation | None = None
 
 
 def event(kind: str, **data: object) -> str:
     return json.dumps({"type": kind, **data}, ensure_ascii=False) + "\n"
 
 
-def city_and_date(payload: ConversationRequest) -> tuple[str | None, str | None]:
-    city = None
-    text = payload.text
-    followup = bool(payload.history and payload.history[-1].text == CITY_FOLLOWUP)
-    if followup:
-        text = re.sub(r"^(?:ở|tại|cho)\s+", "", text, flags=re.IGNORECASE)
-        city = text
-        if len(payload.history) >= 2:
-            text = payload.history[-2].text + " " + text
-    else:
-        location = re.search(r"\b(?:ở|tại|cho)\s+(.+)$", text, re.IGNORECASE)
-        if location:
-            city = location[1]
-    date = None
-    today = datetime.now(timezone(timedelta(hours=7))).date()
-    if "ngay mai" in normalize(text):
-        date = (today + timedelta(days=1)).isoformat()
-    elif "hom nay" in normalize(text):
-        date = today.isoformat()
-    if city:
-        city = re.split(r"\s+(?:hôm nay|ngày mai|thế nào|ra sao|có mưa|như nào)\b", city, flags=re.I)[0]
-        city = city.strip(" ,.!?")[:80] or None
-    return city, date
-
-
 async def resolve_intent(payload: ConversationRequest, request: Request) -> IntentResult:
+    contextual = contextual_request(payload.text, [turn.model_dump() for turn in payload.history])
+    if contextual != payload.text and (requested_date(payload.text) != (None, None) or requested_conditions(payload.text)):
+        return IntentResult(intent="outfit_suggest")
     if match := local_intent(payload.text):
         return IntentResult(intent=match)
-    if payload.history and payload.history[-1].text == CITY_FOLLOWUP:
-        return IntentResult(intent="weather")
     if payload.history and payload.history[-1].text.startswith(GUIDE_FOLLOWUP):
         return IntentResult(intent="guide_skill")
     try:
@@ -128,8 +103,10 @@ async def outfit_reply(payload: ConversationRequest, request: Request) -> AsyncI
         yield event("text", text="Tủ đồ chưa có món nào. Bạn có thể thêm quần áo, giày hoặc phụ kiện trước nhé.")
         yield event("action", route="wardrobe", label="Mở tủ đồ")
         return
+    prompt = contextual_request(payload.text, [turn.model_dump() for turn in payload.history])
+    weather = await resolve_weather(_weather(request), prompt, location=payload.location)
     result = await suggest_outfits(
-        request.app.state.provider, items, weather=None, event=payload.text[:200],
+        request.app.state.provider, items, weather=weather, event=prompt[:200], notes=prompt[-300:],
         rules=store.list_rules(), memory=style_memory.load_memory(store.root), prefer_rules=True,
     )
     if result["outfits"]:
@@ -137,7 +114,9 @@ async def outfit_reply(payload: ConversationRequest, request: Request) -> AsyncI
         by_id = {item["id"]: item["name"] for item in items}
         names = [by_id[item_id] for item_id in outfit["item_ids"] if item_id in by_id]
         if names:
-            yield event("text", text=f"Mình gợi ý phối {', '.join(names)}.")
+            reasons = "; ".join(why["detail_vi"] for why in outfit.get("why", [])
+                                if why.get("code") in ("color_harmony", "occasion_fit", "weather_fit"))
+            yield event("text", text=f"{weather.get('summary_vi') or weather.get('message') or ''} Mình gợi ý phối {', '.join(names)}. {reasons}.")
             yield event("action", route="tryon-photo", label="Thử bộ này bằng ảnh", items=outfit["item_ids"])
             yield event("action", route="tryon-live", label="Thử trực tiếp", items=outfit["item_ids"])
             return
@@ -169,14 +148,8 @@ async def generate(payload: ConversationRequest, request: Request) -> AsyncItera
         yield event("text", text=answer)
         yield event("action", route="wardrobe", label="Xem tủ đồ trong SHADOW")
     elif intent == "weather":
-        city, date = city_and_date(payload)
-        answer = CITY_FOLLOWUP
-        if city:
-            try:
-                forecast = await asyncio.wait_for(_weather(request).get(city=city, date=date), timeout=6)
-                answer = forecast.get("summary_vi") or forecast.get("message") or "Mình chưa lấy được dự báo."
-            except asyncio.TimeoutError:
-                answer = "Dịch vụ thời tiết đang phản hồi chậm. Bạn thử lại sau nhé."
+        forecast = await resolve_weather(_weather(request), payload.text, location=payload.location, allow_scenario=False)
+        answer = forecast.get("summary_vi") or forecast.get("message") or "Mình chưa lấy được dự báo."
         yield event("text", text=answer)
     elif intent == "guide_skill" and (skill or normalize(payload.text) in GENERIC_GUIDE_REQUESTS):
         if skill:

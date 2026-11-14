@@ -43,6 +43,7 @@ test('leaving the screen while Decisions is pending does not apply a stale resul
   live.status = 'listening';
   live.socket = { readyState: 1, send() { events.push('stale-response'); }, close() {} };
   const pending = live.handleTool(call);
+  await Promise.resolve();
   live.stop();
   resolve(Response.json(decision()));
   await pending;
@@ -182,6 +183,7 @@ test('an old tool cancellation cannot abort a newer typed follow-up', async () =
   live.status = 'listening';
   live.socket = { readyState: 1, send() {}, close() {} };
   const pending = live.handleTool(call);
+  await Promise.resolve();
   live.sendText('Tôi muốn thêm áo vào tủ đồ.');
   const newerTurn = live.turn;
   live.handleMessage({ toolCallCancellation: { ids: [call.id] } });
@@ -220,4 +222,30 @@ test('PCM playback reads signed little-endian samples and capture clamps safely'
   assert.deepEqual([...new Int16Array(frame)], [-32768, -32768, 16384, 32767]);
   assert.deepEqual([...decodePcm16(pcmBase64(frame))], [-1, -1, .5, 32767 / 32768]);
   assert.throws(() => decodePcm16(btoa('x')));
+});
+
+
+test('Live supplies device coordinates to the shared weather context', async () => {
+  let body;
+  const live = new GeminiLiveSession({}, {
+    getLocation: async () => ({ lat: 10.8, lon: 106.6 }),
+    fetchImpl: async (_, init) => { body = JSON.parse(init.body); return Response.json(decision()); },
+  });
+  await live.classify('Phối đồ ngày mai');
+  assert.deepEqual(body.location, { lat: 10.8, lon: 106.6 });
+  live.stop();
+});
+
+test('cancelling while GPS permission is pending never sends an obsolete turn', async () => {
+  let locate;
+  let requests = 0;
+  const live = new GeminiLiveSession({}, {
+    getLocation: () => new Promise(resolve => { locate = resolve; }),
+    fetchImpl: async () => { requests++; return Response.json(decision()); },
+  });
+  const pending = live.classify('Phối đồ hôm nay');
+  live.stop();
+  locate({ lat: 10.8, lon: 106.6 });
+  await pending;
+  assert.equal(requests, 0);
 });

@@ -72,6 +72,9 @@ def local_intent(text: str) -> str | None:
     line = normalize(text)
     if line in COMMANDS:
         return COMMANDS[line]
+    if (re.search(r"\b(?:phoi (?:do|ao|quan)|mac (?:gi|the nao)|tu van (?:do|trang phuc)|ao nay .*phoi|phoi .*trong tu)\b", line)
+            and not re.search(r"\b(?:mac thu|thu do|day|ghi nho)\b", line)):
+        return "outfit_suggest"
     if re.match(r"^(?:thoi tiet|du bao thoi tiet)(?: |$)", line) or re.search(r"\b(?:hom nay|ngay mai)\b.*\bco mua\b", line):
         return "weather"
     command = re.sub(r"^(?:(?:minh|toi|em) (?:muon|can)|(?:giup|cho) (?:minh|toi|em)) ", "", line)

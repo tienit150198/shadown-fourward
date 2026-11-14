@@ -2,7 +2,8 @@
 import { wardrobeApi } from '../wardrobe-api.js';
 import { h, icon, toast, errorToast, navigate, createScope, openSheet } from '../ui.js';
 import { speak, cancelSpeech, unlockTTS, setMuted, ttsSupported } from '../speech.js';
-import { getSettings, updateSettings } from '../store.js';
+import { getSettings } from '../store.js';
+import { currentLocation, requestLocation, locationForRequest } from '../location.js';
 import {
   EVENTS, CATEGORIES, categoryLabel, itemThumb, colorDots, micButton, openCameraCapture, outfitHash,
   resolveRule, ruleBadge, localDate, weatherEmoji,
@@ -40,9 +41,7 @@ export function mount(el) {
     text: saved.text || '',
     dateMode: saved.dateMode || 'today',
     customDate: saved.customDate || localDate(2),
-    city: saved.city || settings.wardrobeCity || 'Hà Nội',
-    useGeo: !!settings.wardrobeUseGeo,
-    coords: null,
+    coords: currentLocation(),
     currentImage: saved.currentImage || null,
     anchorId: saved.anchorId || null,
     result: saved.result || null,
@@ -56,7 +55,7 @@ export function mount(el) {
   let controller = null;
 
   const persist = () => writeState({
-    event: st.event, text: st.text, dateMode: st.dateMode, customDate: st.customDate, city: st.city,
+    event: st.event, text: st.text, dateMode: st.dateMode, customDate: st.customDate,
     currentImage: st.currentImage, anchorId: st.anchorId, result: st.result,
   });
   const dateValue = () => (st.dateMode === 'today' ? localDate(0) : st.dateMode === 'tomorrow' ? localDate(1) : st.customDate);
@@ -79,7 +78,7 @@ export function mount(el) {
 
   // ---------- date ----------
   const dateSeg = h('div', { class: 'wd-seg', role: 'radiogroup', 'aria-label': 'Ngày' });
-  const dateIn = h('input', { class: 'input wd-date', type: 'date', value: st.customDate, min: localDate(0), max: localDate(15) });
+  const dateIn = h('input', { class: 'input wd-date', type: 'date', value: st.customDate, min: localDate(0), max: localDate(14) });
   dateIn.addEventListener('change', () => { if (dateIn.value) { st.customDate = dateIn.value; persist(); loadWeather(); } });
   const renderDate = () => {
     dateSeg.replaceChildren(...[['today', 'Hôm nay'], ['tomorrow', 'Ngày mai'], ['custom', 'Chọn ngày']].map(([id, label]) => h('button', {
@@ -96,25 +95,28 @@ export function mount(el) {
   // ---------- weather ----------
   const weatherCard = h('div', { class: 'wd-weather' });
   function renderWeather(state, err) {
-    const cityBtn = h('button', { class: 'wd-city', type: 'button', onClick: editCity }, icon('edit', 14),
-      st.coords ? (weather?.city || 'Vị trí của bạn') : st.city);
-    const geoBtn = !st.coords ? h('button', { class: 'wd-geo', type: 'button', onClick: () => useLocation(true) }, '📍 Dùng vị trí') : null;
+    const cityBtn = h('span', { class: 'wd-city' }, st.coords ? 'Vị trí GPS của bạn' : 'Chưa có GPS');
+    const geoBtn = h('button', { class: 'wd-geo', type: 'button', onClick: () => useLocation(true) }, st.coords ? 'Cập nhật GPS' : '📍 Bật GPS');
     if (state === 'loading') {
       weatherCard.replaceChildren(h('div', { class: 'wd-weather-emoji sk' }), h('div', { class: 'wd-weather-body' },
         h('div', { class: 'wd-weather-top' }, cityBtn, geoBtn), h('div', { class: 'sk-line w70' })));
       return;
     }
     if (state === 'error') {
-      const notFound = /không tìm thấy/i.test(err || '');
       weatherCard.replaceChildren(h('div', { class: 'wd-weather-emoji' }, '🌡️'), h('div', { class: 'wd-weather-body' },
         h('div', { class: 'wd-weather-top' }, cityBtn, geoBtn),
         h('div', { class: 'wd-weather-sum' }, err ? `${err} Trợ lý vẫn phối được.` : 'Chưa lấy được thời tiết — trợ lý vẫn phối được.'),
-        notFound
-          ? h('button', { class: 'wd-link', type: 'button', onClick: editCity }, 'Sửa tên thành phố')
-          : h('button', { class: 'wd-link', type: 'button', onClick: () => loadWeather() }, 'Thử lại')));
+        h('button', { class: 'wd-link', type: 'button', onClick: () => useLocation(true) }, 'Thử lại GPS')));
       return;
     }
     const w = weather || {};
+    if (w.source === 'requested') {
+      weatherCard.replaceChildren(h('div', { class: 'wd-weather-emoji', 'aria-hidden': 'true' }, '👕'),
+        h('div', { class: 'wd-weather-body' }, h('div', { class: 'wd-weather-top' }, cityBtn, geoBtn),
+          h('div', { class: 'wd-weather-temp' }, 'Theo yêu cầu của bạn'),
+          h('div', { class: 'wd-weather-sum' }, [w.summary_vi, fmtDateVi(w.date)].filter(Boolean).join(' · '))));
+      return;
+    }
     const tmin = w.t_min ?? w.temp_min;
     const tmax = w.t_max ?? w.temp_max;
     const rain = w.rain_prob ?? w.precipitation_probability;
@@ -132,7 +134,8 @@ export function mount(el) {
     const seq = ++weatherSeq;
     renderWeather('loading');
     const params = { date: dateValue() };
-    if (st.coords) { params.lat = st.coords.lat.toFixed(4); params.lon = st.coords.lon.toFixed(4); } else params.city = st.city;
+    if (!st.coords) { weather = null; renderWeather('error', 'Chưa có GPS để xem thời tiết. Bạn vẫn có thể nói mùa hoặc nhiệt độ muốn phối.'); return; }
+    params.lat = st.coords.lat.toFixed(4); params.lon = st.coords.lon.toFixed(4);
     try {
       const w = await wardrobeApi.weather(params);
       if (scope.disposed || seq !== weatherSeq) return;
@@ -150,48 +153,13 @@ export function mount(el) {
     }
   }
 
-  function editCity() {
-    const input = h('input', { class: 'input', type: 'text', value: st.coords ? '' : st.city, placeholder: 'VD: Hà Nội, Đà Nẵng, TP HCM', enterkeyhint: 'search' });
-    const ok = h('button', { class: 'btn btn-primary block', type: 'submit' }, 'Xem thời tiết');
-    const form = h('form', { class: 'wd-city-form' }, input, ok,
-      h('button', { class: 'btn btn-ghost block', type: 'button', onClick: () => { sheet.close(); useLocation(true); } }, '📍 Dùng vị trí hiện tại'));
-    const sheet = openSheet(form, { title: 'Thành phố' });
-    form.addEventListener('submit', (e) => {
-      e.preventDefault();
-      const v = input.value.trim();
-      if (!v) return;
-      st.city = v;
-      st.coords = null;
-      updateSettings({ wardrobeCity: v, wardrobeUseGeo: false });
-      persist();
-      sheet.close();
-      loadWeather();
-    });
-    setTimeout(() => input.focus(), 320);
+  async function useLocation(retry) {
+    renderWeather('loading');
+    st.coords = await requestLocation({ retry });
+    if (!scope.disposed) await loadWeather();
   }
 
-  function useLocation(ask) {
-    if (!navigator.geolocation) { if (ask) toast('Máy không hỗ trợ định vị.'); loadWeather(); return; }
-    if (ask) renderWeather('loading');
-    navigator.geolocation.getCurrentPosition((pos) => {
-      if (scope.disposed) return;
-      st.coords = { lat: pos.coords.latitude, lon: pos.coords.longitude };
-      updateSettings({ wardrobeUseGeo: true });
-      loadWeather();
-    }, () => {
-      if (scope.disposed) return;
-      if (ask) toast('Không lấy được vị trí — dùng thành phố nhé.');
-      st.coords = null;
-      loadWeather();
-    }, { timeout: 8000, maximumAge: 30 * 60 * 1000, enableHighAccuracy: false });
-  }
-
-  async function initWeather() {
-    let granted = false;
-    try { granted = (await navigator.permissions?.query({ name: 'geolocation' }))?.state === 'granted'; } catch { /* ignore */ }
-    if (scope.disposed) return;
-    if (granted || (st.useGeo && navigator.geolocation)) useLocation(false); else loadWeather();
-  }
+  async function initWeather() { await useLocation(false); }
 
   // ---------- optional: wearing photo / anchor ----------
   const extrasEl = h('div', { class: 'wd-extras' });
@@ -329,7 +297,8 @@ export function mount(el) {
     if (!event) { toast('Chọn hoặc nói sự kiện bạn sắp đi nhé.'); return; }
     const body = { event, date: dateValue() };
     if (st.event && text) body.notes = text;
-    if (st.coords) { body.lat = st.coords.lat; body.lon = st.coords.lon; } else body.city = st.city;
+    st.coords = currentLocation();
+    if (st.coords) { body.lat = st.coords.lat; body.lon = st.coords.lon; }
     if (st.currentImage) body.current_image = st.currentImage;
     if (st.anchorId) body.anchor_item_id = st.anchorId;
     busy = true;
@@ -338,9 +307,12 @@ export function mount(el) {
     const stopLoading = renderLoading({ withPhoto: !!body.current_image, withRules: rules.length > 0 });
     resultsEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
     try {
+      const coords = await locationForRequest();
+      if (scope.disposed || controller.signal.aborted) return;
+      if (coords) { body.lat = coords.lat; body.lon = coords.lon; }
       const res = await wardrobeApi.suggest(body, { signal: controller.signal });
       if (scope.disposed) return;
-      if (res?.weather && typeof res.weather === 'object' && res.weather.available !== false && !weather) { weather = res.weather; renderWeather('ok'); }
+      if (res?.weather) { weather = res.weather; renderWeather(weather.available ? 'ok' : 'error', weather.message); }
       st.result = res;
       persist();
       renderResult(res, { speakFirst: getSettings().tts });

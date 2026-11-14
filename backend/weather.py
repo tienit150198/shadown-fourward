@@ -24,7 +24,6 @@ logger = logging.getLogger("uvicorn.error")
 GEOCODING_URL = "https://geocoding-api.open-meteo.com/v1/search"
 FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
 TIMEZONE_NAME = "Asia/Bangkok"
-DEFAULT_CITY = "Hà Nội"
 MAX_DAYS_AHEAD = 14
 CACHE_TTL_S = 30 * 60
 HTTP_TIMEOUT_S = 8.0
@@ -98,6 +97,8 @@ def parse_target_date(value: Any) -> date_cls:
 def is_rainy(weather: dict[str, Any] | None) -> bool:
     if not weather or not weather.get("available"):
         return False
+    if "rain" in weather.get("conditions", {}):
+        return weather["conditions"]["rain"]
     prob = weather.get("rain_prob")
     return (isinstance(prob, (int, float)) and prob >= 50) or weather.get("code") in RAIN_CODES
 
@@ -193,7 +194,9 @@ class WeatherService:
                     return unavailable("Toạ độ không hợp lệ.", date=target.isoformat())
                 place = {"name": (city or "").strip() or "Vị trí của bạn", "lat": lat, "lon": lon}
             else:
-                name = (city or "").strip() or DEFAULT_CITY
+                name = (city or "").strip()
+                if not name:
+                    return unavailable("Chưa có vị trí GPS để lấy thời tiết.", needs_location=True, date=target.isoformat())
                 place = await self.geocode(name)
                 if place is None:
                     return unavailable(f"Không tìm thấy thành phố “{name}”.", city=name, date=target.isoformat())
@@ -202,7 +205,7 @@ class WeatherService:
             logger.warning("weather lookup failed: %r", error)
             return unavailable(
                 "Không lấy được thời tiết lúc này.",
-                city=(city or DEFAULT_CITY),
+                city=(city or "Vị trí của bạn"),
                 date=target.isoformat(),
             )
 

@@ -1,4 +1,5 @@
 import { api, conversationEvents, fetchWithAccess } from '../api.js';
+import { requestLocation, locationForRequest } from '../location.js';
 import { GeminiLiveSession } from '../gemini-live.js';
 import { CameraTasks } from '../camera-tasks.js';
 import { startSharedXmax } from '../xmax-camera.js';
@@ -50,6 +51,15 @@ export function mount(el) {
   let liveActions = [];
   let liveActionBox = null;
   const configRequest = new AbortController();
+  const locationButton = h('button', { type: 'button', class: 'chat-toggle', 'aria-label': 'Dùng GPS để tư vấn theo thời tiết',
+    onClick: () => updateLocation(true) }, 'GPS');
+  async function updateLocation(retry = false) {
+    const location = await requestLocation({ retry });
+    if (disposed) return;
+    locationButton.textContent = location ? 'GPS ✓' : 'Bật GPS';
+    locationButton.title = location ? 'Dùng vị trí hiện tại để xem thời tiết' : 'Cho phép vị trí để tư vấn theo thời tiết nơi bạn ở';
+  }
+  void updateLocation();
 
   const video = h('video', { class: 'chat-video', muted: true, playsinline: true, 'aria-label': 'Camera của bạn' });
   const status = h('p', { class: 'chat-status', role: 'status' }, 'Đang chuẩn bị camera và Live…');
@@ -131,7 +141,7 @@ export function mount(el) {
   el.append(
     h('header', { class: 'chat-nav' },
       h('a', { class: 'chat-brand', href: '#/conversation', 'aria-current': 'page' }, 'Shadow'),
-      h('nav', { 'aria-label': 'Tài nguyên đã lưu' },
+      h('nav', { 'aria-label': 'Tài nguyên đã lưu' }, locationButton,
         h('a', { href: '#/wardrobe?from=conversation' }, 'Tủ đồ'),
         h('a', { href: '#/home?from=conversation' }, 'Bài đã học'))),
     h('div', { class: 'chat-layout' }, stage, pane),
@@ -309,6 +319,7 @@ export function mount(el) {
     fetchImpl: fetchWithAccess,
     getFrame: () => tasks.ar?.getFrame?.() || (camera ? captureFrame(video, { maxSide: 448 }) : null),
     getTaskContext: () => tasks.context(),
+    getLocation: locationForRequest,
     getHistory: () => completedTurns.slice(-3).flatMap(({ question, answer }) => [
       { role: 'user', text: question }, { role: 'assistant', text: answer },
     ]),
@@ -629,7 +640,9 @@ export function mount(el) {
     }
 
     try {
-      for await (const item of conversationEvents({ text: question.slice(0, 500), history: context, image }, current.signal)) {
+      const location = await locationForRequest();
+      if (current.signal.aborted || disposed) return;
+      for await (const item of conversationEvents({ text: question.slice(0, 500), history: context, image, location }, current.signal)) {
         if (current.signal.aborted || disposed) return;
         if (item.type === 'text') {
           answer += item.text;

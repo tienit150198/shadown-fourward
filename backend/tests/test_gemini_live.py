@@ -98,7 +98,7 @@ def test_live_outfit_context_uses_the_existing_wardrobe_and_taught_rules(client,
     monkeypatch.setattr(client.app.state, "wardrobe_store", SimpleNamespace(
         root=wardrobe_root(),
         list_items=lambda: [{"id": "shirt-1", "name": "Sơ mi trắng", "colors": ["trắng"], "private_path": "/private/data"}],
-        list_rules=lambda: [{"text": "Đi làm mặc lịch sự", "taught_by": "Chị Lan"}],
+        list_rules=lambda: [{"id": "rule-1", "text": "Đi làm mặc lịch sự", "taught_by": "Chị Lan"}],
     ), raising=False)
     install_gemini(lambda _: httpx.Response(200, json=answer("outfit_suggest")))
     result = client.post("/api/live/classify", json={"text": "Mai tôi đi làm nên mặc gì?"}).json()
@@ -148,12 +148,35 @@ def test_live_classification_prepares_an_executable_fitting_from_spoken_words(cl
 
 def test_live_weather_uses_the_existing_forecast_service(client, install_gemini, monkeypatch):
     async def forecast(**kwargs):
-        assert kwargs["city"] == "Hà Nội"
-        return {"summary_vi": "Hà Nội 26 độ, trời nắng."}
+        assert kwargs["lat"] == 21.03 and kwargs["lon"] == 105.85
+        assert "city" not in kwargs
+        return {"available": True, "summary_vi": "Vị trí của bạn 26 độ, trời nắng."}
     monkeypatch.setattr(client.app.state, "wardrobe_weather", SimpleNamespace(get=forecast), raising=False)
     install_gemini(lambda _: httpx.Response(200, json=answer("weather")))
-    result = client.post("/api/live/classify", json={"text": "Thời tiết ở Hà Nội"}).json()
-    assert result["context"]["weather"]["summary_vi"] == "Hà Nội 26 độ, trời nắng."
+    result = client.post("/api/live/classify", json={"text": "Thời tiết ở đây", "location": {"lat": 21.03, "lon": 105.85}}).json()
+    assert "Vị trí của bạn 26 độ" in result["context"]["weather"]["summary_vi"]
+
+
+def test_live_summer_outfits_use_real_ids_and_ignore_current_cold_weather(client, install_gemini, monkeypatch, tmp_path):
+    from wardrobe_testlib import sample_wardrobe
+    items = sample_wardrobe()
+    monkeypatch.setenv("SHADOW_WARDROBE_DIR", str(tmp_path))
+    monkeypatch.setattr(client.app.state, "wardrobe_store", SimpleNamespace(
+        root=tmp_path, list_items=lambda: items, list_rules=lambda: [],
+    ), raising=False)
+    async def must_not_fetch(**kwargs):
+        pytest.fail("Summer styling must not use the current GPS forecast")
+    monkeypatch.setattr(client.app.state, "wardrobe_weather", SimpleNamespace(get=must_not_fetch), raising=False)
+    install_gemini(lambda _: httpx.Response(200, json=answer("outfit_suggest")))
+    result = client.post("/api/live/classify", json={"text": "Phối đồ mùa hè đi biển",
+        "location": {"lat": 21, "lon": 105}}).json()["context"]
+    assert result["weather"]["source"] == "requested" and not result["weather"]["is_forecast"]
+    assert result["outfits"]
+    known = {item["id"] for item in items}
+    for outfit in result["outfits"]:
+        assert set(outfit["item_ids"]) <= known
+        assert outfit["item_names"] and outfit["reason"]
+        assert not any(v["code"] == "too_hot" for v in outfit["violations"])
 
 
 @pytest.mark.parametrize("status", [400, 403, 429, 500])

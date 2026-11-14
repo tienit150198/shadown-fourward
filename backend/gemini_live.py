@@ -11,11 +11,14 @@ import httpx
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field, StringConstraints
 
-from conversation import ACTIONS, ConversationRequest, ConversationTurn, city_and_date, saved_guide
+from conversation import ACTIONS, ConversationRequest, ConversationTurn, saved_guide
 from intent_router import CRITERIA
 from wardrobe_api import _store as wardrobe_store, _weather
 from wardrobe_context import inventory_context
 from tryon_selection import plan_tryon
+from styling_context import StylingLocation, contextual_request, resolve_weather
+from stylist import suggest_outfits
+import style_memory
 
 router = APIRouter()
 LIVE_MODEL = "gemini-3.8-live"
@@ -121,6 +124,7 @@ def session_setup(*, with_history: bool = False) -> dict:
             "Ứng dụng có MỘT camera chung. Công cụ tự xử lý nhu cầu tại chỗ: trò chuyện, hướng dẫn từng bước, ghi bài dạy hoặc thử đồ bằng video. Không yêu cầu người dùng tự chọn chế độ hay mở trang Dạy kỹ năng/Thử áo. Ưu tiên bài học đã lưu nếu khớp. Chỉ dùng những món đồ và quy tắc có trong dữ liệu được cấp; không bịa đồ trong tủ hoặc thời tiết hiện tại.",
             "Mặc/thử/đổi đồ bằng giọng nói phải TỰ THỰC THI: gọi classify_request với lời yêu cầu đầy đủ. Backend tìm ID thật và ứng dụng tự thay đồ; không yêu cầu người dùng bấm nút Mặc thử hoặc chọn ảnh bằng tay. Nếu đã có ID thật từ ngữ cảnh, có thể truyền item_ids; không có thì bỏ trống để backend tìm. Khi người dùng nhờ tự chọn bộ, hệ thống chọn áo và quần thật trong tủ. Khi cần làm rõ, hỏi tên/màu/kiểu bằng giọng nói. Đổi quần giữ áo và ngược lại.",
             "Chỉ giới thiệu mình là Shadow. Khi phân tích yêu cầu, nói 'Đang phân tích yêu cầu'. Khi nói về thử đồ, chỉ gọi là 'thay đồ' hoặc 'thử đồ trong SHADOW'. Không nhắc tên nhà cung cấp dịch vụ, công cụ phân loại, model, SDK, API key hay cấu hình nội bộ. Khi loading, nói tự nhiên 'Chúng tôi đang thay đồ cho bạn, bạn chờ một chút nhé'. Quy tắc này áp dụng cả khi báo lỗi hoặc thông báo kết quả.",
+            "Khi phối đồ, dùng context.weather và context.outfits. Vị trí mặc định lấy từ GPS; không tự đoán thành phố. Mùa/nhiệt độ/điều kiện người dùng yêu cầu ưu tiên hơn thời tiết hiện tại. source=requested là tình huống phối đồ, KHÔNG phải dự báo: nói rõ 'theo mùa/điều kiện bạn muốn'. Ngày khác dùng đúng ngày trong dữ liệu. Khi chưa có dự báo hoặc GPS, nói rõ và vẫn có thể phối theo dịp; tuyệt đối không bịa nhiệt độ. Giải thích ngắn vì sao bộ phù hợp.",
             "Phải đọc context.execution: loading nghĩa là ĐANG TẠO VIDEO, chưa mặc xong; chỉ nói đã bật thử đồ khi status=live. selecting/needs_clarification nghĩa là CHƯA bắt đầu thay đồ, phải hỏi câu làm rõ trong message, không nói đang mặc. error/unavailable thì đọc đúng lỗi. Không hứa đã làm khi chỉ có danh sách đồ. Khi người dùng nói 'mặc đi', 'đổi sang quần xám', tiếp tục gọi công cụ để thực thi, không chỉ nói đồng ý.",
             "Các ví dụ thực hành: pha cà phê, đóng gói cốc/ly, gấp quần áo, nấu ăn, dọn dẹp, chăm cây, lắp giá đỡ. Phân biệt người nhờ hướng dẫn với người làm mẫu để dạy AI.",
             "Chỉ mô tả hình ảnh khi thực sự nhận được khung hình camera. Khi không có ảnh, hỏi người dùng mô tả đồ vật. Không nói đã mở màn hình, lưu tủ đồ, ghi nhớ quy tắc hay tạo ảnh khi mới chỉ đề xuất nút mở chức năng.",
@@ -178,6 +182,7 @@ class ClassifyRequest(BaseModel):
     selected_item_ids: list[Annotated[str, StringConstraints(min_length=1, max_length=100)]] = Field(default_factory=list, max_length=3)
     item_ids: list[Annotated[str, StringConstraints(min_length=1, max_length=100)]] = Field(default_factory=list, max_length=3)
     history: list[ConversationTurn] = Field(default_factory=list, max_length=6)
+    location: StylingLocation | None = None
 
 
 def valid_answer(data: dict, name: str = "intent", choices: dict = LABELS) -> dict:
@@ -196,7 +201,8 @@ def valid_answer(data: dict, name: str = "intent", choices: dict = LABELS) -> di
     return answer
 
 
-async def shadow_context(intent: str, text: str, request: Request) -> tuple[dict, list[dict]]:
+async def shadow_context(intent: str, text: str, request: Request, *, location: StylingLocation | None = None,
+                         history: list[dict] | None = None) -> tuple[dict, list[dict]]:
     context: dict = {}
     actions: list[dict] = []
     if intent in ACTIONS:
@@ -223,15 +229,18 @@ async def shadow_context(intent: str, text: str, request: Request) -> tuple[dict
                 "steps": [{key: step[key] for key in keys if key in step} for step in skill.get("steps", [])[:20]],
             }
             actions.append({"route": "guide", "id": skill["id"], "label": "Mở bài hướng dẫn đã học"})
-    if intent == "weather":
-        city, date = city_and_date(payload)
-        if city:
-            try:
-                context["weather"] = await asyncio.wait_for(_weather(request).get(city=city, date=date), timeout=6)
-            except (asyncio.TimeoutError, httpx.HTTPError):
-                context["weather"] = {"available": False, "message": "Chưa lấy được dự báo thực tế."}
-        else:
-            context["weather"] = {"needs_city": True}
+    if intent in ("weather", "outfit_suggest"):
+        prompt = contextual_request(text, history or [])
+        context["weather"] = await resolve_weather(_weather(request), prompt, location=location, allow_scenario=intent != "weather")
+        if intent == "outfit_suggest":
+            store = wardrobe_store(request)
+            items = store.list_items()
+            result = await suggest_outfits(request.app.state.provider, items, weather=context["weather"],
+                event=prompt[:200], notes=prompt[-300:], rules=store.list_rules(),
+                memory=style_memory.load_memory(store.root), prefer_rules=True)
+            by_id = {item["id"]: item["name"] for item in items}
+            context["outfits"] = [{**outfit, "item_names": [by_id[i] for i in outfit["item_ids"] if i in by_id]}
+                                  for outfit in result["outfits"]]
     return context, actions
 
 
@@ -261,7 +270,8 @@ async def classify(payload: ClassifyRequest, request: Request) -> dict:
     if answer["confidence"] < .5:
         context, actions = {"needs_clarification": True}, []
     else:
-        context, actions = await shadow_context(intent, payload.text, request)
+        context, actions = await shadow_context(intent, payload.text, request, location=payload.location,
+                                               history=[turn.model_dump() for turn in payload.history])
     command = "route_request"
     if "camera_command" in questions:
         control = valid_answer(data, "camera_command", CAMERA_COMMANDS)

@@ -37,6 +37,7 @@ from wardrobe_store import (
     wardrobe_root,
 )
 from weather import WeatherService
+from styling_context import StylingLocation, resolve_weather
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -284,8 +285,8 @@ async def weather(
 class SuggestRequest(BaseModel):
     event: str = Field("", max_length=200)
     city: str | None = Field(None, max_length=80)
-    lat: float | None = None
-    lon: float | None = None
+    lat: float | None = Field(None, ge=-90, le=90, allow_inf_nan=False)
+    lon: float | None = Field(None, ge=-180, le=180, allow_inf_nan=False)
     date: str | None = Field(None, max_length=10)
     current_image: str | None = Field(None, max_length=MAX_IMAGE_DATA_URL_CHARS)
     anchor_item_id: str | None = Field(None, max_length=64)
@@ -313,7 +314,9 @@ async def stylist_suggest(payload: SuggestRequest, request: Request) -> dict[str
             raise HTTPException(status_code=422, detail=str(error))
         current_image = jpeg_data_url(jpeg)
 
-    weather_task = _weather(request).get(city=payload.city, lat=payload.lat, lon=payload.lon, date=payload.date)
+    location = StylingLocation(lat=payload.lat, lon=payload.lon) if payload.lat is not None and payload.lon is not None else None
+    weather_task = resolve_weather(_weather(request), f"{payload.event}. {payload.notes}",
+                                   location=location, city=payload.city, date=payload.date)
     if current_image:
         weather_info, wearing = await asyncio.gather(
             weather_task, describe_wearing(provider, current_image, items)

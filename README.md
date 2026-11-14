@@ -304,6 +304,22 @@ shadow/
 
 ---
 
+## Phối đồ theo GPS, ngày và điều kiện người dùng yêu cầu
+
+Web và app native dùng tọa độ thiết bị để lấy thời tiết, không mặc định Hà Nội. Trên web cho phép quyền vị trí hoặc bấm **Bật GPS**; trên Android/iOS bấm **Bật GPS** trên camera và cấp quyền khi đang dùng ứng dụng. Không cần nhập thành phố. Tọa độ chỉ giữ trong bộ nhớ, tối đa 10 phút; không ghi vào lịch sử hội thoại.
+
+- “Hôm nay mặc gì?” / “Ngày mai đi làm mặc gì?”: lấy dự báo theo GPS và đúng ngày.
+- “Phối đồ mùa hè”, “Nếu trời mưa”, “Trời lạnh khoảng 15°C”: ưu tiên điều kiện đã nói. Phản hồi ghi rõ **không phải dự báo**, không tự gán nhiệt độ cho mùa.
+- “Còn ngày mai?” sau khi hỏi phối đồ: giữ ngữ cảnh dịp, thay điều kiện cũ bằng ngày mới.
+- Hỗ trợ hôm nay, mai, ngày kia/mốt, thứ trong tuần, cuối tuần, ngày/tháng và ngày ISO. Ngày không rõ cần làm rõ; ngày vượt phạm vi 14 ngày không được thay bằng dự báo hôm nay.
+- Thiếu GPS, từ chối quyền hoặc lỗi dịch vụ: vẫn phối theo dịp/mùa, nói rõ chưa có dự báo; không tự đoán thành phố, nhiệt độ hoặc mưa.
+
+`POST /api/conversation` và `POST /api/live/classify` nhận `location: {"lat": 10.8, "lon": 106.6}` (tùy chọn). `POST /api/stylist/suggest` nhận `lat`, `lon`, `date` (ISO), `event`, `notes`; mùa/nhiệt độ trong câu được ưu tiên hơn ngày mặc định của form. Cả ba luồng dùng `backend/styling_context.py`; dữ liệu thời tiết phân biệt `source: forecast | requested | unknown` và `is_forecast`. Live nhận các bộ từ ID thật trong tủ cùng lý do phối, quy tắc và sở thích đã lưu.
+
+Ngày tương đối hiện theo múi giờ Việt Nam (UTC+7). Nguồn dự báo: [Open-Meteo](https://open-meteo.com/en/docs). Phạm vi này không dự báo chính xác cả mùa hay bảo đảm kích cỡ trang phục.
+
+Kiểm tra local 14/11/2026: 133 kiểm thử backend liên quan, 36 kiểm thử JavaScript; API thật theo tọa độ thử nghiệm đã trả dự báo ngày mai, và các yêu cầu mùa hè/15°C đã dùng đúng điều kiện giả định. Không gọi model trả phí trong kiểm thử. Trình duyệt tự động trên máy đang lỗi khởi chạy (Chrome SIGABRT, headless shell SIGTRAP), nên chưa xác nhận giao diện bằng browser trong lượt này.
+
 ## Giấy phép (tóm tắt)
 
 Chi tiết: [NOTICE.md](NOTICE.md), [tryon-worker/README.md](tryon-worker/README.md#giấy-phép--chỉ-dùng-phi-thương-mại),

@@ -21,28 +21,23 @@ def test_manual_actions_are_links(client):
     assert result[2]["intent"] == "wardrobe_add"
 
 
-def test_weather_followup_uses_real_weather_service(client, monkeypatch):
-    from conversation import CITY_FOLLOWUP
+def test_weather_uses_gps_and_does_not_guess_a_city(client, monkeypatch):
+    from styling_context import LOCATION_MESSAGE
+    from weather import local_today
+    from datetime import timedelta
     calls = []
-
     async def forecast(**kwargs):
         calls.append(kwargs)
-        return {"summary_vi": "Hà Nội 26°C, có thể mưa."}
-
+        return {"available": True, "summary_vi": "Vị trí của bạn 26°C, có thể mưa."}
     monkeypatch.setattr(client.app.state, "wardrobe_weather", SimpleNamespace(get=forecast), raising=False)
     first = events(client.post("/api/conversation", json={"text": "Thời tiết ngày mai"}))
-    assert first[0]["text"] == CITY_FOLLOWUP
+    assert first[0]["text"] == LOCATION_MESSAGE
     assert not calls
     second = events(client.post("/api/conversation", json={
-        "text": "Hà Nội",
-        "history": [
-            {"role": "user", "text": "Thời tiết ngày mai"},
-            {"role": "assistant", "text": CITY_FOLLOWUP},
-        ],
+        "text": "Ngày mai có mưa không?", "location": {"lat": 10.8, "lon": 106.6},
     }))
-    assert second[0]["text"] == "Hà Nội 26°C, có thể mưa."
-    assert calls[0]["city"] == "Hà Nội"
-    assert calls[0]["date"]
+    assert "26°C" in second[0]["text"]
+    assert calls == [{"lat": 10.8, "lon": 106.6, "date": (local_today() + timedelta(days=1)).isoformat()}]
 
 
 def test_saved_guide_follows_up_with_exact_lesson(client):

@@ -652,7 +652,7 @@ STYLIST_SYSTEM_PROMPT = (
 
 def _weather_line(weather: dict[str, Any] | None) -> str:
     if not weather or not weather.get("available"):
-        return "Không có dữ liệu thời tiết (giả định 24–30°C, không mưa)."
+        return "Chưa có dự báo. Không tự giả định nhiệt độ hay mưa; phối theo dịp và ghi rõ giới hạn này."
     return str(weather.get("summary_vi") or "")
 
 

@@ -1,13 +1,14 @@
 import { pcmBase64, decodePcm16 } from './live-pcm.js';
 
 export class GeminiLiveSession {
-  constructor(callbacks = {}, { fetchImpl = globalThis.fetch, getFrame = () => null, getHistory = () => [], getTaskContext = () => ({}) } = {}) {
+  constructor(callbacks = {}, { fetchImpl = globalThis.fetch, getFrame = () => null, getHistory = () => [], getTaskContext = () => ({}), getLocation = () => null } = {}) {
     this.callbacks = callbacks;
     // Window.fetch requires the Window receiver in browsers.
     this.fetchImpl = fetchImpl.bind(globalThis);
     this.getFrame = getFrame;
     this.getHistory = getHistory;
     this.getTaskContext = getTaskContext;
+    this.getLocation = getLocation;
     this.notices = [];
     this.status = "idle";
     this.generation = 0;
@@ -207,9 +208,11 @@ export class GeminiLiveSession {
     const generation = this.generation;
     this.setState("classifying");
     turn.promise = (async () => {
+      const location = await this.getLocation();
+      if (turn.controller.signal.aborted || generation !== this.generation) return null;
       const response = await this.fetchImpl('/api/live/classify', {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: request, ...this.getTaskContext(),
+        body: JSON.stringify({ text: request, ...this.getTaskContext(), ...(location ? { location } : {}),
           ...(itemIds?.length || itemId ? { item_ids: itemIds?.length ? itemIds.slice(0, 3) : [itemId] } : {}),
           ...(this.getHistory().length ? { history: this.getHistory().slice(-6) } : {}),
         }),

@@ -102,11 +102,15 @@ def weather_profile(weather: dict[str, Any] | None) -> dict[str, Any]:
     sunny = bool(available and not rain and (code in (0, 1, 2) or code is None)
                  and isinstance(t_max, (int, float)) and t_max >= 30)
     hot = feel >= 29 or (isinstance(t_max, (int, float)) and t_max >= 32)
+    heat = (weather or {}).get("conditions", {}).get("heat")
+    cold, cool, warm = feel < 18, 18 <= feel < 22, 24 <= feel < 29 and not hot
+    if heat:
+        hot, cold, cool, warm = heat == "hot", heat == "cold", heat == "cool", heat == "mild"
     return {
         "available": available, "feel": feel, "t_min": t_min, "t_max": t_max, "rain": rain, "sunny": sunny,
-        "hot": hot, "warm": 24 <= feel < 29 and not hot, "cool": 18 <= feel < 22, "cold": feel < 18,
+        "hot": hot, "warm": warm, "cool": cool, "cold": cold,
         "chilly_morning": isinstance(t_min, (int, float)) and t_min < 20,
-        "temp_text": f"{round(t_min)}–{round(t_max)}°C" if nums else (f"{round(feel)}°C" if available else ""),
+        "temp_text": f"{round(t_min)}–{round(t_max)}°C" if nums else ({"hot": "trời nóng", "cold": "trời lạnh", "cool": "trời mát", "mild": "thời tiết ôn hòa"}.get(heat, "")),
     }
 
 
@@ -255,6 +259,8 @@ def _occasion(pieces: list[dict[str, Any]], ctx: dict[str, Any]) -> tuple[float,
 def _weather(pieces: list[dict[str, Any]], ctx: dict[str, Any]) -> tuple[float, str, str, list[dict[str, Any]], list[str]]:
     """→ (score, short label, detail, violations, tips)."""
     wp, ev = ctx["weather"], ctx["event"]
+    if not wp["available"]:
+        return 1.0, "Chưa có dự báo", "chưa đánh giá được độ phù hợp với thời tiết thực tế", [], []
     formal = ev["lo"] >= 3
     penalties: list[tuple[float, str, str]] = []  # (amount, short label, detail)
     violations: list[dict[str, Any]] = []
@@ -263,7 +269,7 @@ def _weather(pieces: list[dict[str, Any]], ctx: dict[str, Any]) -> tuple[float, 
     outers = [p for p in pieces if p["category"] == "outerwear"]
     shoes = [p for p in pieces if p["category"] == "shoes"]
     body = [p for p in pieces if p["category"] in ("top", "bottom", "dress")]
-    t = wp["temp_text"] or "trời nóng"
+    t = wp["temp_text"] or ("trời mưa" if wp["rain"] else "điều kiện đã chọn")
     if wp["hot"]:
         for p in outers:
             if p.get("uv_protect") and not wp["rain"]:
@@ -293,7 +299,7 @@ def _weather(pieces: list[dict[str, Any]], ctx: dict[str, Any]) -> tuple[float, 
     if not wp["hot"]:
         needs_layer = wp["rain"] or wp["cold"] or wp["cool"] or wp["chilly_morning"]
         for p in outers:
-            if p["warmth"] >= 4 and wp["feel"] >= 22:
+            if p["warmth"] >= 4 and not (wp["cold"] or wp["cool"]) and wp["feel"] >= 22:
                 penalties.append((0.4 if wp["feel"] >= 25 else 0.2, "Hơi nóng", f"{_lower(p['name'])} quá ấm"))
             elif not needs_layer and not (p.get("uv_protect") and wp["sunny"]) and p.get("subtype") != "blazer":
                 penalties.append((0.05, "Hợp thời tiết", "không cần áo khoác"))
@@ -351,7 +357,7 @@ def _weather(pieces: list[dict[str, Any]], ctx: dict[str, Any]) -> tuple[float, 
                 extra.append("có lớp chống nắng")
             detail = f"hợp {t}" + (f", {', '.join(extra)}" if extra else "")
         else:
-            detail = "không có dữ liệu thời tiết (giả định 24–30°C)"
+            label, detail = "Chưa có dự báo", "chưa đánh giá được độ phù hợp với thời tiết thực tế"
         if penalties:
             detail += "; " + "; ".join(dict.fromkeys(d for _, _, d in penalties))
     return score, label, detail, violations, tips
