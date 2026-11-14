@@ -98,7 +98,13 @@ export class GeminiLiveSession {
       await new Promise((resolve, reject) => {
         const timeout = setTimeout(() => reject(new Error("Chưa kết nối được cuộc trò chuyện. Bạn thử lại nhé.")), 15000);
         this.setupReject = reject;
-        socket.onopen = () => this.send({ setup: { model: "models/" + session.model } });
+        socket.onopen = () => this.send({ setup: {
+          model: "models/" + session.model,
+          generationConfig: session.generationConfig || {
+            responseModalities: ['AUDIO'], maxOutputTokens: 1024,
+            speechConfig: { languageCode: 'vi-VN', voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } } },
+          },
+        } });
         socket.onmessage = (event) => {
           if (generation !== this.generation) return;
           try {

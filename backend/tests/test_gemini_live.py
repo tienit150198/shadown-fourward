@@ -62,6 +62,8 @@ def test_live_token_locks_setup_uses_short_expiry_and_keeps_permanent_key_on_ser
     assert response.status_code == 200
     assert response.json()["token"] == "short-lived-token"
     assert response.json()["maxSeconds"] == 300
+    speech = response.json()["generationConfig"]["speechConfig"]
+    assert speech == {"languageCode": "vi-VN", "voiceConfig": {"prebuiltVoiceConfig": {"voiceName": "Kore"}}}
     assert "private-test-key" not in response.text
 
 

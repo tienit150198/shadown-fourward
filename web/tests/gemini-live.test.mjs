@@ -126,7 +126,7 @@ test('spoken fitting sends selection and recent recommendations to the real reso
 test('autoplay-blocked audio cannot prevent microphone permission, Live setup, or cleanup', async () => {
   const originals = Object.fromEntries(['navigator', 'AudioContext', 'AudioWorkletNode', 'WebSocket'].map(key => [key, Object.getOwnPropertyDescriptor(globalThis, key)]));
   let microphoneRequests = 0, stopped = 0, tokenRequests = 0;
-  const contexts = [], audioStates = [];
+  const contexts = [], audioStates = [], setups = [];
   class Node {
     connect(target) { return target; }
     disconnect() {}
@@ -140,7 +140,7 @@ test('autoplay-blocked audio cannot prevent microphone permission, Live setup, o
   }
   class Socket {
     constructor() { this.readyState = 1; queueMicrotask(() => this.onopen()); }
-    send(raw) { if (JSON.parse(raw).setup) queueMicrotask(() => this.onmessage({ data: '{"setupComplete":{}}' })); }
+    send(raw) { if (JSON.parse(raw).setup) { setups.push(JSON.parse(raw).setup); queueMicrotask(() => this.onmessage({ data: '{"setupComplete":{}}' })); } }
     close() {}
   }
   const live = new GeminiLiveSession({ onAudioBlocked: value => audioStates.push(value) }, {
@@ -157,6 +157,8 @@ test('autoplay-blocked audio cannot prevent microphone permission, Live setup, o
     assert.equal(microphoneRequests, 1);
     assert.equal(tokenRequests, 1);
     assert.equal(live.status, 'listening');
+    assert.equal(setups[0].generationConfig.speechConfig.voiceConfig.prebuiltVoiceConfig.voiceName, 'Kore');
+    assert.equal(setups[0].generationConfig.speechConfig.languageCode, 'vi-VN');
     assert.equal(live.audioBlocked, true);
     // A user gesture resumes the existing session, rather than minting a new one.
     for (const context of contexts) { context.resume = async () => { context.state = 'running'; }; }
@@ -168,6 +170,8 @@ test('autoplay-blocked audio cannot prevent microphone permission, Live setup, o
     assert.equal(stopped, 1);
     assert.ok(contexts.every(context => context.state === 'closed'));
     assert.ok(audioStates.includes(true) && audioStates.includes(false));
+    await live.start();
+    assert.deepEqual(setups[1].generationConfig, setups[0].generationConfig, 'Reconnecting must send the same voice again');
   } finally {
     live.stop();
     for (const [key, descriptor] of Object.entries(originals)) {

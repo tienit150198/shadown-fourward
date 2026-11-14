@@ -186,15 +186,19 @@ class LiveSessionRequest(BaseModel):
 async def create_session(payload: LiveSessionRequest, request: Request) -> dict:
     now = datetime.now(timezone.utc)
     expire = now + timedelta(seconds=SESSION_SECONDS)
+    setup = session_setup(with_history=bool(payload.history), configured_city=payload.configured_city)
     data = await _post(_client(request), "/v1beta/auth_tokens", {
         "uses": 1, "expireTime": expire.isoformat(),
         "newSessionExpireTime": (now + timedelta(seconds=60)).isoformat(),
-        "bidiGenerateContentSetup": session_setup(with_history=bool(payload.history), configured_city=payload.configured_city),
+        "bidiGenerateContentSetup": setup,
     })
     if not isinstance(data.get("name"), str) or not data["name"]:
         raise HTTPException(502, "Chưa tạo được phiên trò chuyện hợp lệ. Bạn thử lại nhé.")
     session_id = sessions(request).create(payload.configured_city)
     return {"toolSessionId": session_id, "traceEnabled": trace_enabled(), "toolLabels": {**TOOL_LABELS, "camera_task": ["Đang thực hiện yêu cầu…", "Đã xử lý yêu cầu"]}, "token": data["name"], "model": LIVE_MODEL, "socketUrl": LIVE_SOCKET,
+            # Live also needs speechConfig in the initial WebSocket setup: some
+            # runtimes ignore the voice when it exists only on the auth token.
+            "generationConfig": setup["generationConfig"],
             "expireTime": expire.isoformat(), "maxSeconds": SESSION_SECONDS}
 
 

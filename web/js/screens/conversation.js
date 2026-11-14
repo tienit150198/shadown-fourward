@@ -246,8 +246,9 @@ export function mount(el, {query=new URLSearchParams()}={}) {
   pane.append(audioUnlock);
   el.append(
     h('header', { class: 'chat-nav' },
-      h('a', { class: 'chat-brand', href: '#/conversation', 'aria-current': 'page' }, h('img', { class: 'chat-brand-logo', src: 'icons/icon-192.png?v=ski-1', alt: '', width: 34, height: 34 }), 'SKI'),
-      h('nav', { 'aria-label': 'Tài nguyên đã lưu' }, locationButton,
+      h('div', { class: 'chat-topline' },
+        h('a', { class: 'chat-brand', href: '#/conversation', 'aria-current': 'page' }, h('img', { class: 'chat-brand-logo', src: 'icons/icon-192.png?v=ski-1', alt: '', width: 34, height: 34 }), 'SKI'), locationButton),
+      h('nav', { 'aria-label': 'Tài nguyên đã lưu' },
         h('a', {href:'#/wardrobe?from=conversation'}, 'Tủ đồ'),
         h('a', {href:'#/home?from=conversation'}, 'Bài đã học'),
         h('button', {type:'button', onClick:()=>{
