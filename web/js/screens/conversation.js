@@ -223,8 +223,7 @@ export function mount(el, {query=new URLSearchParams()}={}) {
       status.textContent = livePreferred ? 'Bấm micro để trò chuyện trực tiếp.' : 'Đã chọn chế độ hỏi từng câu.';
     },
   }, 'Live');
-  composer.prepend(liveMode);
-  composer.append(h('button', {type:'button', class:'chat-toggle chat-clear', 'aria-label':'Xóa trò chuyện', title:'Xóa trò chuyện', onClick:clearChat}, icon('trash',18)));
+  const clearButton = h('button', {type:'button', class:'chat-toggle chat-clear', 'aria-label':'Xóa trò chuyện', title:'Xóa trò chuyện', onClick:clearChat}, icon('trash',18));
   const intentBadge = h('div', { class: 'chat-intent', hidden: true, role: 'status', 'aria-live': 'polite' });
   const transcriptToggle = h('button', {
     type: 'button', class: 'chat-history-toggle', 'aria-expanded': 'false', 'aria-controls': 'shadow-transcript',
@@ -237,7 +236,7 @@ export function mount(el, {query=new URLSearchParams()}={}) {
   }, 'Mở rộng', icon('up', 14));
   const fallbackNotice=h('p',{class:'chat-fallback-notice',hidden:true,role:'status'});
   const pane = h('div', { class: 'chat-pane' },
-    h('div', { class: 'chat-pane-head' }, transcriptToggle),
+    h('div', { class: 'chat-pane-head' }, h('div', {class:'chat-pane-tools'}, liveMode, locationButton), h('div', {class:'chat-pane-tools'}, transcriptToggle, clearButton)),
     h('div', { class: 'chat-routing' }, intentBadge), transcript, fallbackNotice, status, composer);
   const audioUnlock = h('button', {
     type: 'button', class: 'chat-audio-unlock', hidden: true,
@@ -247,7 +246,7 @@ export function mount(el, {query=new URLSearchParams()}={}) {
   el.append(
     h('header', { class: 'chat-nav' },
       h('a', { class: 'chat-brand', href: '#/conversation', 'aria-current': 'page' }, h('img', { class: 'chat-brand-logo', src: 'icons/icon-192.png?v=ski-1', alt: '', width: 34, height: 34 }), 'SKI'),
-      h('nav', { 'aria-label': 'Tài nguyên đã lưu' }, locationButton,
+      h('nav', { 'aria-label': 'Tài nguyên đã lưu' },
         h('a', {href:'#/wardrobe?from=conversation'}, 'Tủ đồ'),
         h('a', {href:'#/home?from=conversation'}, 'Bài đã học'),
         h('button', {type:'button', onClick:()=>{

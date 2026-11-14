@@ -277,3 +277,69 @@ def test_malformed_pool_env_does_not_echo_credentials(monkeypatch, raw):
     with pytest.raises(ValueError) as error:
         client_from_env()
     assert raw not in str(error.value)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('payload,status', [
+    ({'success':False,'code':46017},200),
+    ({'success':False,'code':'46003'},400),
+    ({'success':False,'error':{'code':'46017'}},400),
+    ({'success':False,'message':'Insufficient account credits private-key'},400),
+    ({'success':False,'message':'积分不足'},200),
+    ({'success':False},402),
+])
+async def test_credit_errors_rotate_to_healthy_key_and_skip_depleted_account(payload,status):
+    used=[]
+    def respond(request):
+        if request.method=='PUT': return httpx.Response(200,json={'success':True,'data':{}})
+        key=request.headers['X-Api-Key'];used.append(key)
+        if key=='depleted': return httpx.Response(status,json=payload)
+        return httpx.Response(200,json={'success':True,'data':{'temporaryApiKey':f'tk-good-{len(used)}'}})
+    pool=XmaxClient(['depleted','healthy'],transport=httpx.MockTransport(respond))
+    try:
+        await pool.issue();await pool.issue()
+        assert used==['depleted','healthy','healthy']
+        assert pool.cooldowns[0]-time.monotonic()>250
+    finally: await pool.aclose()
+
+
+def test_sdk_credit_report_only_cools_own_key_and_allows_next_account(client):
+    used=[]
+    def respond(request):
+        if request.method=='PUT':return httpx.Response(200,json={'success':True,'data':{}})
+        used.append(request.headers['X-Api-Key'])
+        return httpx.Response(200,json={'success':True,'data':{'temporaryApiKey':f'tk-test-{len(used)}'}})
+    pool=XmaxClient(['first','second'],transport=httpx.MockTransport(respond))
+    previous=client.app.state.xmax_client;client.app.state.xmax_client=pool
+    try:
+        token=client.portal.call(pool.issue)['temporaryApiKey']
+        assert client.post('/api/tryon/xmax/credit-failure',json={'token':'tk-unowned','code':46017}).status_code==410
+        assert not any(pool.cooldowns)
+        assert client.post('/api/tryon/xmax/credit-failure',json={'token':token,'code':46019}).status_code==422
+        assert not any(pool.cooldowns)
+        response=client.post('/api/tryon/xmax/credit-failure',json={'token':token,'code':46017})
+        assert response.status_code==200
+        assert response.json()=={'retryable':True,'keyPoolSize':2}
+        assert 'first' not in response.text and 'second' not in response.text
+        client.portal.call(pool.close_token,token)
+        client.portal.call(pool.issue)
+        assert used==['first','second']
+        assert pool.cooldowns[0]>time.monotonic()
+    finally:
+        client.app.state.xmax_client=previous
+        client.portal.call(pool.aclose)
+
+
+@pytest.mark.asyncio
+async def test_temporary_spending_cap_does_not_rotate_to_another_paid_key():
+    used=[]
+    def respond(request):
+        used.append(request.headers['X-Api-Key'])
+        return httpx.Response(400,json={'success':False,'code':46019,'message':'Insufficient credits: temporary key points limit reached'})
+    pool=XmaxClient(['first','second'],transport=httpx.MockTransport(respond))
+    try:
+        from fastapi import HTTPException
+        with pytest.raises(HTTPException):await pool.issue()
+        assert used==['first']
+        assert not any(pool.cooldowns)
+    finally:await pool.aclose()

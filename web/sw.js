@@ -1,7 +1,7 @@
 // SKI service worker — caches the app shell only.
 // Cached shell renders immediately; refresh it in the background.
 // Never touches /api, /session or /skills-media, and ignores cross-origin requests (CDN, fonts).
-const CACHE = 'shadow-shell-v28-soki-live-trace';
+const CACHE = 'shadow-shell-v32-mobile-camera-home';
 const SHELL = [
   './',
   'index.html',

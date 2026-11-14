@@ -22,8 +22,19 @@ export function geminiLiveError(value, status = 0) {
     provider_timeout:'Gemini Live phản hồi quá lâu. Bạn thử kết nối lại nhé.',
     provider_unavailable:'Chưa kết nối được Gemini Live. Bạn có thể nhập câu hỏi trong lúc chờ.',
   };
+  if (upstream?.service === 'openai_live') {
+    Object.assign(messages, {
+      insufficient_credits:'OpenAI không đủ API credit. Hãy kiểm tra thanh toán API.',
+      billing_required:'OpenAI cần cấu hình thanh toán API.',
+      provider_auth_failed:'OpenAI từ chối khóa API hoặc quyền truy cập.',
+      missing_api_key:'Chưa cấu hình khóa API cho OpenAI Live trên máy chủ.',
+      rate_limited:'OpenAI Live đã vượt giới hạn lượt gọi. Bạn thử lại nhé.',
+      provider_timeout:'OpenAI Live phản hồi quá lâu. Bạn thử kết nối lại nhé.',
+      provider_unavailable:'Chưa kết nối được OpenAI Live. Bạn có thể nhập câu hỏi trong lúc chờ.',
+    });
+  }
   const error=new Error(messages[code]);
-  error.code=code; error.service='gemini_live';
+  error.code=code; error.service=upstream?.service || 'gemini_live';
   error.retryable=['rate_limited','provider_timeout','provider_unavailable'].includes(code);
   return error;
 }

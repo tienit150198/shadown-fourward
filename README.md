@@ -1,9 +1,23 @@
+## OpenAI demo setup
+
+Copy `.env.example` to `.env`, set `OPENAI_API_KEY` privately, then run `./run.sh` (or `docker compose up --build -d`). The demo configuration uses `gpt-6.1-sol` for vision, lesson compilation, text chat and delegated reasoning, `gpt-live-1` for Vietnamese full duplex voice through the Live API, and OpenAI transcription/speech for the fallback voice controls. No Gemini key is needed. `OPENAI_LIVE_MODEL` selects the Live voice model. `OPENAI_REASONING_EFFORT=low` is the minimum supported setting for Sol; Sol does not accept `none`. Camera images go to its delegated Responses backend, while GPT Live handles audio.
+
+For an existing deployment, set `LLM_BASE_URL=https://api.openai.com/v1`, clear the old `LLM_API_KEY` to use `OPENAI_API_KEY`, set `VISION_MODEL`, `COMPILER_MODEL` and `CONVERSATION_MODEL` to `gpt-6.1-sol`, set `OPENAI_LIVE_API=live`, `OPENAI_LIVE_MODEL=gpt-live-1` and `OPENAI_REASONING_EFFORT=low`, clear Qwen-specific `LLM_EXTRA_BODY` to `{}`, set `SHADOW_LIVE_PROVIDER=openai`, `SHADOW_VOICE_PROVIDER=openai` and `SHADOW_INTENT_PROVIDER=local`, then restart/rebuild. Keep your existing Xmax/Vidu keys for virtual try-on; those services are separate from the Gemini migration.
+
+Demo smoke check: open the app on localhost or HTTPS, allow microphone/camera, greet SKI, ask what is in the saved wardrobe, request an outfit, then try teaching and saving a short lesson. Confirm real tool results appear and that barge-in stops speech. `/api/live/config` should show `provider: "openai_live"` and `model: "gpt-live-1"` and `available: true`. A real API request is needed to confirm account credit and model access.
+
+For an explicit Realtime rollback, set `OPENAI_LIVE_API=realtime` and `OPENAI_REALTIME_MODEL=gpt-realtime`. Legacy Gemini Live can be selected with `SHADOW_LIVE_PROVIDER=gemini` and `GEMINI_API_KEY`.
+
 # SKI
 
 **Làm mẫu một lần, AI hướng dẫn người sau.** (*Show it once. AI can guide the next person.*)
 
 Làm cho Codex Community Hackathon – Hanoi (thứ Bảy 14/11/2026, chủ đề "AI in Your Palm").
 Dự án dựa trên GlassKit (MIT). Phần dùng lại và phần làm mới ghi rõ trong [NOTICE.md](NOTICE.md).
+
+## Xmax key pool
+
+Set `XMAX_API_KEYS` to a JSON list in `.env`; keys stay on the server. `XMAX_KEY_STRATEGY=round_robin` rotates sessions across healthy keys. Insufficient account-credit responses cool down that key for five minutes and retry another key. The browser also catches account-credit failures during upload, connection, and generation, reports the temporary key to the server, and reconnects using another healthy account. Recovery is bounded by the configured pool (at most eight attempts), one 90-second startup deadline and one two-minute generation window. Temporary-key spending caps (`46019`) are final and never trigger a new paid session.
 
 ## SKI là gì?
 

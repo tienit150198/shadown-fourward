@@ -25,7 +25,15 @@ FORMATS = {
 }
 
 
+def openai_voice() -> bool:
+    provider = os.getenv("SHADOW_VOICE_PROVIDER", "").strip().lower()
+    return provider == "openai" or (not provider and bool(os.getenv("OPENAI_API_KEY", "").strip()))
+
+
 def voice_client_from_env() -> httpx.AsyncClient | None:
+    if openai_voice():
+        key = os.getenv("OPENAI_API_KEY", "").strip()
+        return httpx.AsyncClient(base_url="https://api.openai.com/v1", headers={"Authorization": f"Bearer {key}"}, timeout=18) if key else None
     if os.getenv("SHADOW_VOICE_PROVIDER", "").strip().lower() != "hypertek":
         return None
     key = os.getenv("HYPERTEK_API_KEY", "").strip()
@@ -44,7 +52,7 @@ def config(request: Request) -> dict[str, bool]:
 async def send_audio(request: Request, endpoint: str, **body) -> httpx.Response:
     client = request.app.state.voice_client
     if client is None:
-        raise HTTPException(503, "Máy chủ chưa cấu hình giọng nói Hypertek.")
+        raise HTTPException(503, "Máy chủ chưa cấu hình dịch vụ giọng nói.")
     try:
         response = await client.post(endpoint, **body)
         response.raise_for_status()
@@ -74,7 +82,7 @@ async def transcribe(request: Request) -> dict[str, str]:
     response = await send_audio(
         request, "/audio/transcriptions",
         files={"file": (f"recording.{ext}", bytes(audio), content_type)},
-        data={"model": "large-v3-turbo", "language": "vi"},
+        data={"model": "gpt-4o-mini-transcribe" if openai_voice() else "large-v3-turbo", "language": "vi"},
     )
     try:
         text = response.json()["text"]
@@ -88,7 +96,7 @@ async def transcribe(request: Request) -> dict[str, str]:
 @router.post("/speech")
 async def speech(payload: IntentRequest, request: Request) -> Response:
     response = await send_audio(request, "/audio/speech", json={
-        "model": "vieneu-v3-turbo", "voice": "Mai Anh", "input": payload.text, "response_format": "wav",
+        "model": "gpt-4o-mini-tts" if openai_voice() else "vieneu-v3-turbo", "voice": "marin" if openai_voice() else "Mai Anh", "input": payload.text, "response_format": "wav",
     })
     if not response.content.startswith(b"RIFF"):
         raise HTTPException(502, "Dịch vụ giọng nói trả audio không hợp lệ.")

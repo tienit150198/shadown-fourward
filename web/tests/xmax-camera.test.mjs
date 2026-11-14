@@ -40,3 +40,60 @@ test('invalid credentials are reported immediately instead of opening another se
   await assert.rejects(connectXmaxVideo(manager, {}, {}, {}), /Invalid API key/);
   assert.equal(attempts, 1);
 });
+
+import { xmaxCreditCode, recoverXmaxSession } from '../js/xmax-camera.js';
+
+test('credit detection handles SDK codes and balance errors without bypassing token caps', () => {
+  assert.equal(xmaxCreditCode({apiCode:46003}),46003);
+  assert.equal(xmaxCreditCode({apiCode:'46017'}),46017);
+  assert.equal(xmaxCreditCode({httpStatus:402}),402);
+  assert.equal(xmaxCreditCode(Error('Insufficient balance')),46017);
+  assert.equal(xmaxCreditCode({apiCode:46019,message:'Insufficient credits'}),null);
+  assert.equal(xmaxCreditCode(Error('Temporary key points limit reached')),null);
+  assert.equal(xmaxCreditCode(Error('Invalid API key')),null);
+});
+
+test('startup credit failure retries with another session and stops at pool size', async () => {
+  let attempts=0, stopped=0;
+  const handle=await recoverXmaxSession(async ({onPoolSize}) => {
+    onPoolSize(4);
+    if (++attempts<4)throw Object.assign(Error('Insufficient credit'),{creditRetryable:true});
+    return {stop:async()=>stopped++,getFrame:()=> 'frame'};
+  });
+  assert.equal(attempts,4);
+  assert.equal(handle.getFrame(),'frame');
+  await handle.stop();
+  assert.equal(stopped,1);
+  attempts=0;
+  await assert.rejects(recoverXmaxSession(async ({onPoolSize})=>{
+    onPoolSize(2);attempts++;
+    throw Object.assign(Error('Insufficient credits'),{creditRetryable:true});
+  }),/Insufficient/);
+  assert.equal(attempts,2);
+});
+
+test('credit exhaustion during generation recovers and returns frames from the new session', async () => {
+  let attempts=0, fail;
+  const errors=[];
+  const handle=await recoverXmaxSession(async ({onPoolSize,onFailure})=>{
+    onPoolSize(2);fail=onFailure;
+    const id=++attempts;
+    return {stop:async()=>{},getFrame:()=>id};
+  },{onError:error=>errors.push(error)});
+  assert.equal(handle.getFrame(),1);
+  await fail(Object.assign(Error('Insufficient credit'),{creditRetryable:true}));
+  assert.equal(handle.getFrame(),2);
+  assert.deepEqual(errors,[]);
+  await handle.stop();
+});
+
+test('cancellation and noncredit failures never rotate keys', async () => {
+  let attempts=0;
+  await assert.rejects(recoverXmaxSession(async ({onPoolSize})=>{
+    onPoolSize(4);attempts++;throw Error('Invalid API key');
+  }),/Invalid/);
+  assert.equal(attempts,1);
+  const controller=new AbortController();controller.abort();
+  await assert.rejects(recoverXmaxSession(async()=>{attempts++;},{signal:controller.signal}),{name:'AbortError'});
+  assert.equal(attempts,1);
+});

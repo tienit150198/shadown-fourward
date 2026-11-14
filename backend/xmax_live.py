@@ -22,7 +22,28 @@ MAX_SECONDS = 120
 POINTS_LIMIT = 200
 ISSUE_TIMEOUT = 25
 KEY_ATTEMPT_TIMEOUT = 8
+CREDIT_COOLDOWN = 300
+ACCOUNT_CREDIT_CODES = {46003, 46017}
+TEMPORARY_LIMIT_CODES = {46019}
 BASES = {'global': 'https://api.xmax.cloud/open/api/v1', 'china': 'https://cloud.xmax.22duck.cn/open/api/v1'}
+
+
+def error_code(data) -> int | None:
+    if not isinstance(data, dict): return None
+    value = data.get('code')
+    if value is None and isinstance(data.get('error'), dict): value = data['error'].get('code')
+    try: return int(value) if not isinstance(value, bool) else None
+    except (ValueError, TypeError): return None
+
+
+def insufficient_credits(data, status=0) -> bool:
+    code = error_code(data)
+    if code in TEMPORARY_LIMIT_CODES: return False
+    if code in ACCOUNT_CREDIT_CODES or status == 402: return True
+    if not isinstance(data, dict): return False
+    message = ' '.join(str(data.get(name, '')) for name in ('message', 'msg'))
+    if isinstance(data.get('error'), dict): message += ' ' + str(data['error'].get('message', ''))
+    return bool(re.search(r'insufficient[ _-]*(?:account[ _-]*)?(?:credits?|balance|funds|points)|not enough (?:credits?|balance|funds|points)|(?:credits?|balance|funds|points)[ _-]*(?:are |is )?(?:insufficient|depleted|exhausted)|余额不足|积分不足', message, re.I))
 
 
 class ProviderFailure(HTTPException):
@@ -56,10 +77,12 @@ class XmaxClient:
         except ValueError:
             raise ProviderFailure(502, 'Dịch vụ thay đồ trả về dữ liệu không hợp lệ.', cooldown=15) from None
         if not response.is_success or not isinstance(data, dict) or data.get('success') is not True:
-            code = data.get('code') if isinstance(data, dict) else None
+            code = error_code(data)
+            if insufficient_credits(data, response.status_code):
+                raise ProviderFailure(429, 'Hiện chưa thể thay đồ. Bạn thử lại sau ít phút nhé.', cooldown=CREDIT_COOLDOWN)
             if response.status_code == 429 or code in (46003, 46032):
                 raise ProviderFailure(429, 'Hiện chưa thể thay đồ. Bạn thử lại sau ít phút nhé.', cooldown=10 if code == 46032 else 60)
-            if response.status_code in (401, 403):
+            if response.status_code in (401, 403) or code in (46001, 46002):
                 raise ProviderFailure(502, 'Chức năng thay đồ tạm chưa sẵn sàng. Bạn thử lại sau nhé.', cooldown=300)
             raise ProviderFailure(502, 'Chưa thể thay đồ lúc này. Bạn thử lại nhé.', cooldown=15 if response.status_code >= 500 else 0)
         if not isinstance(data.get('data'), dict):
@@ -79,6 +102,8 @@ class XmaxClient:
         deadline = now + ISSUE_TIMEOUT
         last_error = None
         for owner in candidates:
+            if self.cooldowns[owner] > time.monotonic():
+                continue
             remaining = deadline - time.monotonic()
             if remaining <= 0:
                 break
@@ -108,6 +133,9 @@ class XmaxClient:
             self.owners[token] = owner
             return data
         if last_error:
+            if last_error.status_code == 429:
+                delay = max(1, math.ceil(min(self.cooldowns) - time.monotonic()))
+                last_error.headers = {'Retry-After': str(delay)}
             raise last_error
         raise HTTPException(504, 'Thay đồ mất nhiều thời gian hơn dự kiến. Bạn thử lại nhé.')
 
@@ -157,7 +185,8 @@ def client(request: Request) -> XmaxClient:
 async def config(request: Request):
     value = getattr(request.app.state, 'xmax_client', None)
     return JSONResponse({'available': value is not None, 'provider': 'xmax', 'model': MODEL,
-                         'environment': value.environment if value else 'global', 'maxSeconds': MAX_SECONDS}, headers={'Cache-Control': 'no-store'})
+                         'environment': value.environment if value else 'global', 'maxSeconds': MAX_SECONDS,
+                         'keyPoolSize': len(value.clients) if value else 0, 'keyStrategy': value.strategy if value else 'round_robin'}, headers={'Cache-Control': 'no-store'})
 
 
 class SessionRequest(BaseModel):
@@ -213,7 +242,7 @@ async def session(payload: SessionRequest, request: Request):
     data = await upstream.issue()
     token = data['temporaryApiKey']
     return JSONResponse({'token': token, 'provider': 'xmax', 'model': MODEL, 'environment': upstream.environment,
-                         'maxSeconds': MAX_SECONDS, 'expireTime': data.get('expireTimestamp'),
+                         'maxSeconds': MAX_SECONDS, 'expireTime': data.get('expireTimestamp'), 'keyPoolSize': len(upstream.clients),
                          'item': {'id': items[0]['id'], 'name': items[0].get('name', 'Trang phục'), 'image_url': image},
                          'items': [{'id': item['id'], 'name': item.get('name'), 'category': item.get('category')} for item in items],
                          'reference_image_url': image, 'prompt': prompt},
@@ -229,3 +258,22 @@ async def close(payload: CloseRequest, request: Request):
     upstream = client(request)
     await upstream.close_token(payload.token)
     return {'ok': True}
+
+
+class CreditFailureRequest(BaseModel):
+    token: str = Field(..., min_length=4, max_length=200)
+    code: int | None = None
+
+
+@router.post('/api/tryon/xmax/credit-failure')
+async def credit_failure(payload: CreditFailureRequest, request: Request):
+    upstream = client(request)
+    owner = upstream.owners.get(payload.token)
+    # A report only applies to a temporary key that this server issued and still owns.
+    if owner is None or upstream.issued.get(payload.token, 0) <= time.monotonic():
+        raise HTTPException(410, 'Phiên thay đồ đã hết hạn.')
+    if payload.code not in ACCOUNT_CREDIT_CODES | {402}:
+        raise HTTPException(422, 'Lỗi này không hỗ trợ tự động đổi phiên.')
+    upstream.cooldowns[owner] = max(upstream.cooldowns[owner], time.monotonic() + CREDIT_COOLDOWN)
+    available = any(expiry <= time.monotonic() for expiry in upstream.cooldowns)
+    return JSONResponse({'retryable': available, 'keyPoolSize': len(upstream.clients)}, headers={'Cache-Control':'no-store'})

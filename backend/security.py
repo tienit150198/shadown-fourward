@@ -213,6 +213,12 @@ GUARD = GuardState()
 def rate_rule_for(method: str, path: str) -> str | None:
     if path == "/api/access":
         return "access"
+    if (path == "/api/live/session" and _env("OPENAI_API_KEY")
+            and _env("SHADOW_LIVE_PROVIDER", "openai").lower() != "gemini"
+            and _env("OPENAI_LIVE_API", "live").lower() != "realtime"):
+        # GPT Live allocates a local tool context here. Only /connect creates
+        # the billable upstream session, so count that paid operation once.
+        return "conversation"
     if path == "/api/ask":
         return "ask"
     if path in ("/api/conversation", "/api/intent", "/api/live/classify", "/api/live/tool"):
@@ -235,7 +241,7 @@ def rate_rule_for(method: str, path: str) -> str | None:
         return "weather"
     if path in ("/api/tryon/photo", "/api/images/generate"):
         return "tryon_photo"
-    if path in ("/api/tryon/live-token", "/api/tryon/live-session", "/api/live/session", "/api/tryon/xmax/session"):
+    if path in ("/api/tryon/live-token", "/api/tryon/live-session", "/api/live/session", "/api/live/connect", "/api/tryon/xmax/session"):
         return "live_token"
     if path == "/api/eval/capture":
         return "eval"

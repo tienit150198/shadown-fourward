@@ -1,3 +1,5 @@
+import { GPTLiveTransport } from './gpt-live.js';
+import { OpenAILiveTransport } from './openai-live.js';
 import { geminiLiveError } from './gemini-errors.js';
 import { pcmBase64, decodePcm16 } from './live-pcm.js';
 import { LiveTrace } from './live-trace.js';
@@ -52,6 +54,7 @@ export class GeminiLiveSession {
   }
 
   resumeAudio() {
+    this.openaiTransport?.resumeAudio()?.then(() => this.callbacks.onAudioBlocked?.(false)).catch(() => this.callbacks.onAudioBlocked?.(true));
     // A page load can leave resume() pending until a gesture. Never let that
     // prevent requesting media permission or connecting the Live session.
     const contexts = [this.inputContext, this.outputContext].filter(context => context && context.state !== 'closed');
@@ -92,6 +95,16 @@ export class GeminiLiveSession {
       this.trace = session.traceEnabled ? new LiveTrace(session.toolSessionId, this.fetchImpl) : null;
       this.toolLabels = session.toolLabels || {};
       this.completedTools.clear();
+      if (['openai','openai_live'].includes(session.provider)) {
+        const transport = session.provider === 'openai_live' ? new GPTLiveTransport(this) : new OpenAILiveTransport(this);
+        this.openaiTransport = transport;
+        this.socket = transport;
+        await transport.connect(session, stream, AbortSignal.any([this.abort.signal, AbortSignal.timeout(20000)]));
+        if (generation !== this.generation) return;
+        this.limit = setTimeout(() => this.stop("Đã hết phiên 5 phút. Bấm micro để trò chuyện tiếp."), session.maxSeconds * 1000);
+        this.setState('listening');
+        return;
+      }
       const socket = new WebSocket(session.socketUrl + "?access_token=" + encodeURIComponent(session.token));
       this.socket = socket;
       socket.binaryType = "arraybuffer";
@@ -395,6 +408,7 @@ export class GeminiLiveSession {
     this.setupReject = null;
     this.socket?.close();
     this.socket = null;
+    this.openaiTransport = null;
     this.capture?.disconnect();
     if (this.capture) this.capture.port.onmessage = null;
     this.input?.disconnect();

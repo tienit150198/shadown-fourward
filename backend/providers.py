@@ -20,8 +20,8 @@ import httpx
 
 logger = logging.getLogger("uvicorn.error")
 
-DEFAULT_LLM_BASE_URL = "https://openrouter.ai/api/v1"
-DEFAULT_MODEL = "google/gemini-2.5-flash"
+DEFAULT_LLM_BASE_URL = "https://api.openai.com/v1"
+DEFAULT_MODEL = "gpt-4.1-mini"
 DEFAULT_VISION_MIN_INTERVAL_MS = 1200
 # HTTP-level ceiling for any single LLM request. Callers bound each kind of call more
 # tightly with `asyncio.wait_for` (see vision_timeout_s / compile_timeout_s / ask_timeout_s),
@@ -54,6 +54,37 @@ def compiler_model() -> str:
 
 def conversation_model() -> str:
     return _env("CONVERSATION_MODEL", compiler_model())
+
+
+def openai_reasoning_effort() -> str:
+    # GPT-6.1 Sol has no "none" setting; low is its minimum supported effort.
+    effort = _env("OPENAI_REASONING_EFFORT", "low").lower()
+    return effort if effort in {"low", "medium", "high", "xhigh"} else "low"
+
+
+def _responses_input(messages: list[dict]) -> list[dict]:
+    items = []
+    for message in messages:
+        role = message.get('role', 'user')
+        if role == 'tool':
+            items.append({'type': 'function_call_output', 'call_id': message['tool_call_id'], 'output': message.get('content') or ''})
+            continue
+        content = message.get('content')
+        if content:
+            if isinstance(content, str):
+                parts = [{'type': 'output_text' if role == 'assistant' else 'input_text', 'text': content}]
+            else:
+                parts = []
+                for part in content:
+                    if part['type'] == 'text':
+                        parts.append({'type': 'output_text' if role == 'assistant' else 'input_text', 'text': part['text']})
+                    elif part['type'] == 'image_url':
+                        image = part['image_url']
+                        parts.append({'type': 'input_image', 'image_url': image['url'], 'detail': image.get('detail', 'auto')})
+            items.append({'role': 'developer' if role == 'system' else role, 'content': parts})
+        for call in message.get('tool_calls', []):
+            items.append({'type': 'function_call', 'call_id': call['id'], **call['function']})
+    return items
 
 
 def vision_min_interval_ms() -> int:
@@ -324,8 +355,61 @@ class OpenAICompatibleProvider(LLMProvider):
     async def aclose(self) -> None:
         await self._client.aclose()
 
+    def _uses_responses(self, model: str) -> bool:
+        return self.base_url == "https://api.openai.com/v1" and model.startswith("gpt-6")
+
+    def _responses_body(self, body: dict) -> dict:
+        result = {"model": body['model'], "input": _responses_input(body['messages']),
+            "reasoning": {"effort": openai_reasoning_effort()},
+            "max_output_tokens": max(4096, body.get('max_tokens', 400)), "store": False}
+        if body.get('response_format', {}).get('type') == 'json_object':
+            result['text'] = {'format': {'type': 'json_object'}}
+        if body.get('tools'):
+            result['tools'] = [{'type': 'function', **tool['function'], 'strict': False} for tool in body['tools']]
+        return result
+
+    async def _stream_responses(self, body: dict) -> AsyncIterator[dict]:
+        content = ''
+        calls = []
+        payload = {**self._responses_body(body), 'stream': True}
+        try:
+            async with self._client.stream('POST', f'{self.base_url}/responses', json=payload) as response:
+                response.raise_for_status()
+                async for line in response.aiter_lines():
+                    if not line.startswith('data:'): continue
+                    event = json.loads(line[5:].strip())
+                    kind = event.get('type')
+                    if kind == 'response.output_text.delta':
+                        delta = event['delta']
+                        content += delta
+                        if len(content) > 131072: raise ProviderError('LLM stream output exceeds limit')
+                        yield {'type': 'text', 'text': delta}
+                    elif kind == 'response.output_item.done' and event.get('item', {}).get('type') == 'function_call':
+                        item = event['item']
+                        if len(calls) >= 32 or not isinstance(json.loads(item['arguments']), dict):
+                            raise ProviderError('Invalid tool call')
+                        calls.append({'id': item['call_id'], 'type': 'function',
+                            'function': {'name': item['name'], 'arguments': item['arguments']}})
+                    elif kind == 'response.completed':
+                        message = {'role': 'assistant', 'content': content or None}
+                        if calls: message['tool_calls'] = calls
+                        yield {'type': 'message', 'message': message}
+                        return
+                    elif kind in ('response.failed', 'response.incomplete', 'error'):
+                        raise ProviderError('Responses request did not complete')
+                raise ProviderError('Responses stream closed before completion')
+        except (httpx.HTTPError, ValueError, KeyError, TypeError) as error:
+            raise ProviderError('Responses streaming request failed') from error
+
     async def _post(self, body: dict[str, Any]) -> httpx.Response:
         try:
+            if self._uses_responses(body['model']):
+                response = await self._client.post(f"{self.base_url}/responses", json=self._responses_body(body))
+                if not response.is_success:
+                    return response
+                data = response.json()
+                text = ''.join(part.get('text', '') for item in data.get('output', []) if item.get('type') == 'message' for part in item.get('content', []) if part.get('type') == 'output_text')
+                return httpx.Response(200, request=response.request, json={'choices': [{'message': {'content': text}, 'finish_reason': 'length' if data.get('status') == 'incomplete' else 'stop'}]})
             return await self._client.post(f"{self.base_url}/chat/completions", json=body)
         except httpx.HTTPError as error:
             raise ProviderError(f"LLM request failed: {error!r}") from error
@@ -333,6 +417,10 @@ class OpenAICompatibleProvider(LLMProvider):
     async def stream_text(
         self, *, model: str, messages: list[dict[str, Any]], max_tokens: int = 180
     ) -> AsyncIterator[str]:
+        if self._uses_responses(model):
+            async for event in self._stream_responses({'model': model, 'messages': messages, 'max_tokens': max_tokens}):
+                if event['type'] == 'text': yield event['text']
+            return
         body = {
             **self._extra_body,
             "model": model,
@@ -370,6 +458,10 @@ class OpenAICompatibleProvider(LLMProvider):
         tools: list[dict[str, Any]], max_tokens: int = 800,
     ) -> AsyncIterator[dict[str, Any]]:
         """Stream visible text and a complete assistant message with function calls."""
+        if self._uses_responses(model):
+            async for event in self._stream_responses({'model': model, 'messages': messages, 'tools': tools, 'max_tokens': max_tokens}):
+                yield event
+            return
         body = {**self._extra_body, "model": model, "messages": messages,
                 "tools": tools, "max_tokens": max_tokens, "stream": True}
         content = ""
@@ -522,6 +614,8 @@ class OpenAICompatibleProvider(LLMProvider):
         choices: list[str],
         top_logprobs: int = 10,
     ) -> dict[str, float]:
+        if self._uses_responses(model):
+            raise LogprobsUnsupported("GPT-6 reasoning uses JSON decisions, not token logprobs")
         body: dict[str, Any] = {
             "model": model,
             "messages": [
@@ -559,7 +653,7 @@ class OpenAICompatibleProvider(LLMProvider):
 
 def resolve_mode() -> str:
     requested = _env("SHADOW_MODE", "auto").lower()
-    has_key = bool(_env("LLM_API_KEY"))
+    has_key = bool(_env("LLM_API_KEY") or _env("OPENAI_API_KEY"))
     if requested == "mock":
         return "mock"
     if requested == "ai":
@@ -588,6 +682,6 @@ def build_provider_from_env() -> LLMProvider:
     logger.info("SKI provider: ai base_url=%s", base_url)
     return OpenAICompatibleProvider(
         base_url=base_url,
-        api_key=_env("LLM_API_KEY"),
+        api_key=_env("LLM_API_KEY") or _env("OPENAI_API_KEY"),
         extra_body=extra_body,
     )
