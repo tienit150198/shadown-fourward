@@ -1,5 +1,6 @@
 import { geminiLiveError } from './gemini-errors.js';
 import { pcmBase64, decodePcm16 } from './live-pcm.js';
+import { LiveTrace } from './live-trace.js';
 
 export class GeminiLiveSession {
   constructor(callbacks = {}, { fetchImpl = globalThis.fetch, getFrame = () => null, getHistory = () => [], getTaskContext = () => ({}), getCity = () => "", getLocation = () => null } = {}) {
@@ -22,9 +23,14 @@ export class GeminiLiveSession {
   }
 
   setState(status, detail = "") {
+    if (status !== this.status) this.recordTrace('state', {status});
     this.status = status;
     this.callbacks.onState?.(status, detail);
     if (status === 'listening') queueMicrotask(() => this.flushNotice());
+  }
+
+  recordTrace(kind, fields = {}) {
+    this.trace?.record(kind, {turn:this.turn?.id || 0, ...fields});
   }
 
   newTurn() {
@@ -83,6 +89,7 @@ export class GeminiLiveSession {
       if (!response.ok) throw geminiLiveError(session,response.status);
       if (generation !== this.generation) return;
       this.toolSessionId = session.toolSessionId;
+      this.trace = session.traceEnabled ? new LiveTrace(session.toolSessionId, this.fetchImpl) : null;
       this.toolLabels = session.toolLabels || {};
       this.completedTools.clear();
       const socket = new WebSocket(session.socketUrl + "?access_token=" + encodeURIComponent(session.token));
@@ -155,6 +162,7 @@ export class GeminiLiveSession {
     this.turn.input = text;
     this.turn.clientTextPending = true;
     this.callbacks.onTranscript?.('user', text);
+    this.recordTrace('transcript', {role:'user', text});
     this.send({ realtimeInput: { text } });
     this.setState('thinking');
     return true;
@@ -162,6 +170,8 @@ export class GeminiLiveSession {
 
   notifyTaskResult(execution) {
     if (this.status === 'idle') return;
+    this.recordTrace('task_queued', {text:execution.speech || execution.message, status:execution.status,
+      guide_session_id:execution.guide_session_id, step:execution.step});
     this.notices.push(execution);
     this.notices = this.notices.slice(-3);
     this.flushNotice();
@@ -173,6 +183,8 @@ export class GeminiLiveSession {
     const turn = this.newTurn();
     turn.classified = true;
     turn.notification = execution;
+    this.recordTrace('task_sent', {text:execution.speech || execution.message, status:execution.status,
+      guide_session_id:execution.guide_session_id, step:execution.step});
     this.send({ realtimeInput: { text: '[SHADOW_TASK_RESULT] ' + JSON.stringify(execution) } });
     this.setState('thinking');
   }
@@ -193,10 +205,14 @@ export class GeminiLiveSession {
       const text = content.inputTranscription.text;
       this.turn.input += text;
       this.callbacks.onTranscript?.("user", text);
+      this.recordTrace('transcript', {role:'user', text});
 
     }
     for (const call of message.toolCall?.functionCalls || []) this.handleTool(call).catch((error) => this.fail(error));
-    if (content?.outputTranscription?.text) this.callbacks.onTranscript?.("assistant", content.outputTranscription.text);
+    if (content?.outputTranscription?.text) {
+      this.callbacks.onTranscript?.("assistant", content.outputTranscription.text);
+      this.recordTrace('transcript', {role:'assistant', text:content.outputTranscription.text});
+    }
     for (const part of content?.modelTurn?.parts || []) {
       if (!part.inlineData?.data || !part.inlineData.mimeType?.startsWith("audio/pcm")) continue;
       // Tools are on demand. Ordinary speech is never held behind a classifier.
@@ -280,6 +296,7 @@ export class GeminiLiveSession {
     this.turn.toolCount = (this.turn.toolCount || 0) + 1;
     if (this.turn.toolCount > 12) throw new Error('Đã đạt giới hạn công cụ của lượt.');
     const turn = this.turn, generation = this.generation;
+    this.recordTrace('tool_start', {name:call.name, text:call.name === 'lesson_control' ? call.args.command : ''});
     const controller = new AbortController();
     const signal = AbortSignal.any([controller.signal, turn.controller.signal, this.abort?.signal || controller.signal, AbortSignal.timeout(95000)]);
     this.tools ??= new Map();
@@ -321,6 +338,7 @@ export class GeminiLiveSession {
       if (visible) emit({type:'tool_status',id:call.id,state:result.error ? 'error':'done',label:result.error ? 'Chưa hoàn tất thao tác':labels[1]});
       for (const event of data.events || []) emit(event);
       const toolResponse={id:call.id,name:call.name,response:result.camera_decision || result};
+      this.recordTrace('tool_result', {name:call.name, status:result.error ? 'error' : result.execution?.status || 'done'});
       this.completedTools.set(call.id,{fingerprint,response:toolResponse});
       if (this.completedTools.size > 60) this.completedTools.delete(this.completedTools.keys().next().value);
       this.send({toolResponse:{functionResponses:[toolResponse]}});
@@ -359,11 +377,14 @@ export class GeminiLiveSession {
   }
 
   fail(error) {
+    this.recordTrace('error', {text:error?.message});
     this.stop();
     this.callbacks.onError?.(error);
   }
 
   stop(detail = "Đã dừng. Bấm micro để bắt đầu cuộc trò chuyện mới.") {
+    this.trace?.close();
+    this.trace = null;
     ++this.generation;
     clearTimeout(this.limit);
     clearInterval(this.videoTimer);

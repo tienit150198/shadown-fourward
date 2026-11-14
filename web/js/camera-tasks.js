@@ -15,8 +15,8 @@ export class CameraTasks {
   context() { return { current_task: this.state.mode, task_title: this.state.title.slice(0, 200), selected_item_ids: this.state.selected_ids || [], lesson_state:this.lessonContext() }; }
   update(state) { this.state = { ...this.state, ...state }; this.render(this.state); }
   execution() {
-    const { mode, status, message, saved_skill, selected_ids, applied_ids } = this.state;
-    return { mode, status, message, lesson_state:this.lessonContext(), ...(saved_skill ? { saved_skill } : {}), ...(mode === 'tryon' ? { selected_ids, applied_ids } : {}) };
+    const { mode, status, message, saved_skill, selected_ids, applied_ids, guide_session_id, step } = this.state;
+    return { mode, status, message, lesson_state:this.lessonContext(), ...(mode === 'guiding' && guide_session_id ? {guide_session_id,step} : {}), ...(saved_skill ? { saved_skill } : {}), ...(mode === 'tryon' ? { selected_ids, applied_ids } : {}) };
   }
 
   capture(reason = 'interval') {
@@ -247,7 +247,7 @@ export class CameraTasks {
       await this.openCamera();
       if (signal?.aborted || revision!==this.revision) return null;
       this.stopAr(); this.stopGuide(); this.draft=null;
-      this.update({mode:'guiding',status:'connecting',title:lesson.display_name || lesson.name,lesson,step:0,message:'Đang mở bài học trong camera…'});
+      this.update({mode:'guiding',status:'connecting',title:lesson.display_name || lesson.name,lesson,step:0,guide_session_id:null,message:'Đang mở bài học trong camera…'});
       this.guide=this.guideFactory({skillId:control.skill_id,getFrame:this.getFrame,
         onState:state=>{if(revision===this.revision && this.state.mode==='guiding') this.update(state);},
         onSpeech:text=>{if(revision===this.revision && this.state.mode==='guiding') this.notify({...this.execution(),speech:text,message:text});}});

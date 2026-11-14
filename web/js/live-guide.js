@@ -17,6 +17,8 @@ export class LiveGuide {
   receive(msg) {
     if (this.closed) return;
     if (msg.type==='session.ready') {
+      this.sessionId=msg.session_id;
+      this.onState({status:'connecting',guide_session_id:this.sessionId});
       this.resume=this.index; this.pending=false;
       this.socket.send({type:'session.start',skill_id:this.skillId});
     } else if (msg.type==='hud.state' && ['GUIDING','COMPLETED'].includes(msg.phase)) {
@@ -27,7 +29,7 @@ export class LiveGuide {
         return;
       }
       this.index=msg.step?.index ?? this.index;
-      this.onState({status:msg.phase==='COMPLETED'?'completed':'guiding',step:this.index,
+      this.onState({status:msg.phase==='COMPLETED'?'completed':'guiding',step:this.index,guide_session_id:this.sessionId,
         message:msg.phase==='COMPLETED'?'Bạn đã hoàn thành bài học.':'SKI đang quan sát thao tác của bạn.'});
     } else if (msg.type==='vision.result') this.pending=false;
     else if (msg.type==='speech' && msg.text) this.onSpeech(msg.text);

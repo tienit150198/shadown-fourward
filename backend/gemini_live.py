@@ -23,8 +23,10 @@ from gemini_errors import account_error_code
 from live_tools import declarations, sessions, LiveToolRequest, run as run_live_tool
 from conversation import TOOL_LABELS
 from lesson_actions import VOICE_LESSON_INSTRUCTIONS
+from live_trace import enabled as trace_enabled, router as trace_router
 
 router = APIRouter()
+router.include_router(trace_router)
 LIVE_MODEL = "gemini-3.8-live"
 LIVE_LANGUAGE = "vi-VN"
 LIVE_VOICE = "Kore"
@@ -135,7 +137,7 @@ def session_setup(*, with_history: bool = False, configured_city: str = "") -> d
         "systemInstruction": {"parts": [{"text": "\n".join([
             "Bạn là SKI, trợ lý trò chuyện tiếng Việt trong ứng dụng SKI.",
             VOICE_LESSON_INSTRUCTIONS,
-            "Cách phát âm thương hiệu: tên viết là SKI nhưng LUÔN đọc như từ Sky (/skaɪ/, một âm tiết, gần 'skai'); tuyệt đối không đánh vần S-K-I và không đọc là 'ski'. Ví dụ khi nói: 'Mình là Sky'. Trong văn bản hiển thị vẫn viết SKI. Đây chỉ là cách đọc tên riêng, phần hội thoại vẫn bằng tiếng Việt và cùng giọng Kore.",
+            "Cách phát âm thương hiệu: tên viết là SKI nhưng LUÔN đọc là 'sờ ki', hai tiếng Việt 'sờ' rồi 'ki'. Không đánh vần S-K-I. Ví dụ khi nói: 'Mình là sờ ki'. Trong văn bản hiển thị vẫn viết SKI. Giữ cách đọc này nhất quán, phần hội thoại bằng tiếng Việt và cùng giọng Kore.",
             "Chỉ trả lời và nói bằng tiếng Việt. Giữ duy nhất giọng Kore đã cấu hình, nhịp nói tự nhiên và nhất quán; không đổi giọng, không bắt chước giọng người dùng và không tự chuyển ngôn ngữ theo tiếng nền hay nội dung camera. Tên riêng, thương hiệu và mã sản phẩm có thể giữ nguyên.",
             "MẶC ĐỊNH: 'tủ đồ', 'trong tủ', 'đồ của tôi', 'tủ quần áo của mình' là TỦ ĐỒ TRONG HỆ THỐNG SKI. Gọi list_wardrobe để đọc dữ liệu thật, không yêu cầu quay camera vào tủ hay chụp từng món để xem đồ đã lưu. Camera đang bật không làm thay đổi nghĩa này. Chỉ hiểu là tủ vật lý khi người dùng nói rõ 'tủ trong phòng', 'cái tủ tôi đang chỉ', 'tủ ngoài đời'. Phân biệt xem/tìm đồ đã lưu, phối đồ và mặc thử.",
             "Tin nhắn có tiền tố [SHADOW_TASK_RESULT] là thông báo kết quả từ ứng dụng, không phải yêu cầu của người dùng. Chỉ đọc ngắn kết quả thực đó, không gọi công cụ để phân loại và không bắt đầu tác vụ mới.",
@@ -192,7 +194,7 @@ async def create_session(payload: LiveSessionRequest, request: Request) -> dict:
     if not isinstance(data.get("name"), str) or not data["name"]:
         raise HTTPException(502, "Chưa tạo được phiên trò chuyện hợp lệ. Bạn thử lại nhé.")
     session_id = sessions(request).create(payload.configured_city)
-    return {"toolSessionId": session_id, "toolLabels": {**TOOL_LABELS, "camera_task": ["Đang thực hiện yêu cầu…", "Đã xử lý yêu cầu"]}, "token": data["name"], "model": LIVE_MODEL, "socketUrl": LIVE_SOCKET,
+    return {"toolSessionId": session_id, "traceEnabled": trace_enabled(), "toolLabels": {**TOOL_LABELS, "camera_task": ["Đang thực hiện yêu cầu…", "Đã xử lý yêu cầu"]}, "token": data["name"], "model": LIVE_MODEL, "socketUrl": LIVE_SOCKET,
             "expireTime": expire.isoformat(), "maxSeconds": SESSION_SECONDS}
 
 

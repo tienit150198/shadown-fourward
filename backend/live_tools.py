@@ -75,6 +75,8 @@ class ToolSession:
     expires: float = field(default_factory=lambda:time.monotonic()+300)
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
     results: dict = field(default_factory=dict)
+    trace_seen: set[int] = field(default_factory=set)
+    trace_bytes: int = 0
 
 
 class LiveToolStore:

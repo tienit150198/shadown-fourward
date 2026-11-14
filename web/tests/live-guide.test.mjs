@@ -13,8 +13,9 @@ test('live guide uses existing sessions and bounded frames without opening a sec
   const guide=new LiveGuide({skillId:'fold-shirt',Socket,getFrame:()=> 'frame',onState:s=>states.push(s),onSpeech:s=>speech.push(s)});
   guide.start();
   try {
-    guide.receive({type:'session.ready'});
+    guide.receive({type:'session.ready',session_id:'guide-session'});
     assert.equal(sent[0].type,'session.start');
+    assert.equal(states.at(-1).guide_session_id,'guide-session');
     guide.receive({type:'hud.state',phase:'GUIDING',step:{index:0}});
     guide.frame();guide.frame();
     assert.equal(sent.filter(m=>m.type==='vision.frame').length,1);

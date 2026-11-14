@@ -81,7 +81,7 @@ export function isSpeaking() {
  */
 export function speak(text, { rate = 1.05 } = {}) {
   // Change only the spoken copy; the brand remains SKI in the transcript/UI.
-  const line = String(text || '').trim().replace(/\bSKI\b/g, 'Sky');
+  const line = String(text || '').trim().replace(/\bSKI\b/g, 'sờ ki');
   if (!line || muted || !ttsSupported()) return Promise.resolve();
   const wasBusy = synth.speaking || synth.pending;
   cancelSpeech();
