@@ -25,6 +25,8 @@ from conversation import TOOL_LABELS
 
 router = APIRouter()
 LIVE_MODEL = "gemini-3.8-live"
+LIVE_LANGUAGE = "vi-VN"
+LIVE_VOICE = "Kore"
 DECISION_MODEL = "gemini-decision-1"
 SESSION_SECONDS = 300
 LIVE_SOCKET = "wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContentConstrained"
@@ -127,10 +129,11 @@ def session_setup(*, with_history: bool = False, configured_city: str = "") -> d
         "model": f"models/{LIVE_MODEL}",
         "generationConfig": {
             "responseModalities": ["AUDIO"], "maxOutputTokens": 1024,
-            "speechConfig": {"voiceConfig": {"prebuiltVoiceConfig": {"voiceName": "Kore"}}},
+            "speechConfig": {"languageCode": LIVE_LANGUAGE, "voiceConfig": {"prebuiltVoiceConfig": {"voiceName": LIVE_VOICE}}},
         },
         "systemInstruction": {"parts": [{"text": "\n".join([
             "Bạn là SKI, trợ lý trò chuyện tiếng Việt trong ứng dụng SKI.",
+            "Chỉ trả lời và nói bằng tiếng Việt. Giữ duy nhất giọng Kore đã cấu hình, nhịp nói tự nhiên và nhất quán; không đổi giọng, không bắt chước giọng người dùng và không tự chuyển ngôn ngữ theo tiếng nền hay nội dung camera. Tên riêng, thương hiệu và mã sản phẩm có thể giữ nguyên.",
             "MẶC ĐỊNH: 'tủ đồ', 'trong tủ', 'đồ của tôi', 'tủ quần áo của mình' là TỦ ĐỒ TRONG HỆ THỐNG SKI. Gọi list_wardrobe để đọc dữ liệu thật, không yêu cầu quay camera vào tủ hay chụp từng món để xem đồ đã lưu. Camera đang bật không làm thay đổi nghĩa này. Chỉ hiểu là tủ vật lý khi người dùng nói rõ 'tủ trong phòng', 'cái tủ tôi đang chỉ', 'tủ ngoài đời'. Phân biệt xem/tìm đồ đã lưu, phối đồ và mặc thử.",
             "Tin nhắn có tiền tố [SHADOW_TASK_RESULT] là thông báo kết quả từ ứng dụng, không phải yêu cầu của người dùng. Chỉ đọc ngắn kết quả thực đó, không gọi công cụ để phân loại và không bắt đầu tác vụ mới.",
             "Sở thích ăn mặc, độ ôm, giới tính và tuổi là thông tin tùy chọn do người dùng tự cung cấp. Dùng get_style_profile/update_style_profile; không suy đoán tuổi hay giới tính từ camera hoặc tên. Chỉ hỏi về gu hoặc độ ôm khi thật sự cần để đáp ứng yêu cầu cụ thể; không dùng làm bước bắt buộc.",
@@ -152,7 +155,7 @@ def session_setup(*, with_history: bool = False, configured_city: str = "") -> d
             "Nếu công cụ báo needs_clarification, hỏi người dùng nói rõ yêu cầu trước khi hướng dẫn. Nếu chỉ là lời chào hay trò chuyện xã giao thì trả lời tự nhiên.",
         ])}]},
         "tools": [{"functionDeclarations": declarations()}],
-        "inputAudioTranscription": {}, "outputAudioTranscription": {},
+        "inputAudioTranscription": {"languageCodes": [LIVE_LANGUAGE]}, "outputAudioTranscription": {},
         "realtimeInputConfig": {"automaticActivityDetection": {"silenceDurationMs": 700, "prefixPaddingMs": 200}},
     }
     import json

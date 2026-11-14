@@ -24,6 +24,9 @@ function scoreVoice(v) {
 
 function pickVoice() {
   if (!synth) return null;
+  // Once chosen, keep this Vietnamese voice throughout the page's lifetime.
+  // Loading another voice pack must not change the assistant mid-conversation.
+  if (voice) return voice;
   const vi = synth.getVoices().filter((v) => (v.lang || '').toLowerCase().replace('_', '-').startsWith('vi'));
   vi.sort((a, b) => scoreVoice(b) - scoreVoice(a));
   voice = vi[0] || null;
@@ -85,10 +88,11 @@ export function speak(text, { rate = 1.05 } = {}) {
   return new Promise((resolve) => {
     const run = () => {
       if (token !== speakToken) return resolve();
+      const v = voice || pickVoice();
+      if (!v) return resolve(); // Do not fall back to an English/system-default voice.
       const u = new SpeechSynthesisUtterance(line);
       u.lang = LANG;
-      const v = voice || pickVoice();
-      if (v) u.voice = v;
+      u.voice = v;
       u.rate = rate;
       u.pitch = 1;
       let done = false;
