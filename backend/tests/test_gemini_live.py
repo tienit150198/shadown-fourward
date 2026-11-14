@@ -201,7 +201,7 @@ def test_live_routes_use_the_existing_access_code_and_token_limits(client, insta
     install_gemini(lambda _: httpx.Response(200, json={"name": "ephemeral"}))
     assert client.post("/api/live/session", json={}).status_code == 401
     assert client.post("/api/live/session", json={}, headers={"X-Shadow-Access": "private-code"}).status_code == 200
-    assert security.rate_rule_for("POST", "/api/live/session") == "live_token"
+    assert security.rate_rule_for("POST", "/api/live/session") == "chat_session"
     assert security.rate_rule_for("POST", "/api/live/classify") == "conversation"
 
 

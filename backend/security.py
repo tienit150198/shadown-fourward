@@ -14,7 +14,8 @@ One pure-ASGI middleware (`SecurityMiddleware`, installed in main.py) that, befo
 * **Per-IP rate limits** (in-memory token buckets, ``SHADOW_RATE_LIMIT=off`` disables) with tight
   buckets for the endpoints that spend money (LLM calls, Decart live tokens, photo try-on) → 429.
 * **Global caps**: at most ``SHADOW_TRYON_MAX_CONCURRENT`` (default 2) photo try-ons at once and
-  ``SHADOW_LIVE_TOKENS_PER_HOUR`` (default 60) Decart tokens per hour for the whole server.
+  independent hourly budgets for try-on (``SHADOW_LIVE_TOKENS_PER_HOUR``, 60) and voice
+  (``SHADOW_CHAT_SESSIONS_PER_HOUR``, 60). Failed session requests release their reserved slot.
 * **WebSocket** ``/session/control``: same-origin check, ≤ ``SHADOW_WS_MAX_PER_IP`` (3) concurrent
   sockets per IP and ``SHADOW_WS_MAX_TOTAL`` (30) overall, and a per-socket message-rate limit
   (a flood closes the socket with 1008).
@@ -30,6 +31,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import json
+import logging
 import os
 import threading
 import time
@@ -65,6 +67,7 @@ RATE_RULES: dict[str, tuple[float, float]] = {
     "weather": (60, 20),
     "tryon_photo": (6, 4),
     "live_token": (6, 3),
+    "chat_session": (6, 3),
     "ws_connect": (12, 6),
 }
 WS_MSG_RATE = (30.0, 60.0)  # per socket: messages / second, burst
@@ -189,22 +192,35 @@ class GuardState:
         self.max_body = max(1, _env_int("SHADOW_MAX_BODY_MB", 16)) * 1024 * 1024
         self.tryon_max = max(1, _env_int("SHADOW_TRYON_MAX_CONCURRENT", 2))
         self.tryon_active = 0
-        self.live_tokens_per_hour = max(0, _env_int("SHADOW_LIVE_TOKENS_PER_HOUR", 60))
-        self.live_token_times: list[float] = []
+        self.session_limits = {
+            "live_token": max(0, _env_int("SHADOW_LIVE_TOKENS_PER_HOUR", 60)),
+            "chat_session": max(0, _env_int("SHADOW_CHAT_SESSIONS_PER_HOUR", 60)),
+        }
+        self.session_slots: dict[str, dict[object, float]] = {kind: {} for kind in self.session_limits}
         self.ws_max_per_ip = max(1, _env_int("SHADOW_WS_MAX_PER_IP", 3))
         self.ws_max_total = max(1, _env_int("SHADOW_WS_MAX_TOTAL", 30))
         self.ws_by_ip: dict[str, int] = {}
         self.ws_total = 0
 
-    def take_live_token_slot(self) -> bool:
+    def reserve_session(self, kind: str) -> object | None:
+        reservation = object()
         if not self.limiter.enabled:
-            return True
+            return reservation
         now = time.monotonic()
-        self.live_token_times = [t for t in self.live_token_times if now - t < 3600]
-        if len(self.live_token_times) >= self.live_tokens_per_hour:
-            return False
-        self.live_token_times.append(now)
-        return True
+        slots = self.session_slots[kind]
+        for token in [token for token, created in slots.items() if now - created >= 3600]:
+            del slots[token]
+        if len(slots) >= self.session_limits[kind]:
+            return None
+        slots[reservation] = now
+        return reservation
+
+    def release_session(self, kind: str, reservation: object) -> None:
+        self.session_slots[kind].pop(reservation, None)
+
+    def session_retry_after(self, kind: str) -> int:
+        oldest = min(self.session_slots[kind].values(), default=time.monotonic())
+        return max(1, min(3600, int(oldest + 3600 - time.monotonic()) + 1))
 
 
 GUARD = GuardState()
@@ -235,7 +251,9 @@ def rate_rule_for(method: str, path: str) -> str | None:
         return "weather"
     if path in ("/api/tryon/photo", "/api/images/generate"):
         return "tryon_photo"
-    if path in ("/api/tryon/live-token", "/api/tryon/live-session", "/api/live/session", "/api/tryon/xmax/session"):
+    if path == "/api/live/session":
+        return "chat_session"
+    if path in ("/api/tryon/live-token", "/api/tryon/live-session", "/api/tryon/xmax/session"):
         return "live_token"
     if path == "/api/eval/capture":
         return "eval"
@@ -320,6 +338,7 @@ async def _send_json(send: Send, status: int, payload: dict[str, Any], extra: li
 ACCESS_REQUIRED = {"detail": "Cần mã truy cập để dùng SKI.", "code": "access_required"}
 RATE_LIMITED = {"detail": "Bạn thao tác nhanh quá — đợi một chút rồi thử lại nhé.", "code": "rate_limited"}
 TRYON_BUSY = {"detail": "Máy đang mặc thử cho người khác — đợi khoảng 30 giây rồi thử lại nhé.", "code": "busy"}
+CHAT_QUOTA = {"detail": "Đã đạt giới hạn mở phiên trò chuyện trong giờ này. Vui lòng thử lại sau.", "code": "chat_quota"}
 LIVE_QUOTA = {"detail": "Đã hết lượt mặc thử trực tiếp trong giờ này — thử lại sau nhé.", "code": "quota"}
 TOO_LARGE = {"detail": "Dữ liệu gửi lên quá lớn.", "code": "too_large"}
 
@@ -358,6 +377,8 @@ class SecurityMiddleware:
         method = scope.get("method") or "GET"
         ip = _client_ip(scope)
         set_cookie = False
+        reservation = None
+        rule = None
 
         if is_gated(path):
             allowed, set_cookie = access_state(scope)
@@ -378,9 +399,14 @@ class SecurityMiddleware:
                 if not state.limiter.allow(rule, ip):
                     await _send_json(send, 429, RATE_LIMITED, [(b"retry-after", b"20")])
                     return
-            if rule == "live_token" and method == "POST" and not state.take_live_token_slot():
-                await _send_json(send, 429, LIVE_QUOTA, [(b"retry-after", b"600")])
-                return
+            if rule in ("live_token", "chat_session") and method == "POST":
+                reservation = state.reserve_session(rule)
+                if reservation is None:
+                    retry_after = state.session_retry_after(rule)
+                    logging.getLogger(__name__).warning("session_quota_reached kind=%s retry_after_s=%s", rule, retry_after)
+                    payload = CHAT_QUOTA if rule == "chat_session" else LIVE_QUOTA
+                    await _send_json(send, 429, payload, [(b"retry-after", str(retry_after).encode())])
+                    return
 
         headers = _headers(scope)
         try:
@@ -388,6 +414,8 @@ class SecurityMiddleware:
         except ValueError:
             declared = 0
         if declared > state.max_body:
+            if reservation is not None:
+                state.release_session(rule, reservation)
             await _send_json(send, 413, TOO_LARGE)
             return
 
@@ -400,6 +428,7 @@ class SecurityMiddleware:
 
         received = 0
         started = False
+        session_created = False
         cut_off = False  # body cap hit mid-stream: 413 already sent, app output is dropped
 
         async def limited_receive() -> dict[str, Any]:
@@ -425,11 +454,12 @@ class SecurityMiddleware:
             cookie_header = access_cookie_header(access_code(), secure=secure)
 
         async def wrapped_send(message: dict[str, Any]) -> None:
-            nonlocal started
+            nonlocal started, session_created
             if cut_off:
                 return
             if message["type"] == "http.response.start":
                 started = True
+                session_created = 200 <= message["status"] < 300
                 extra = list(SECURITY_HEADERS)
                 if cookie_header:
                     extra.append((b"set-cookie", cookie_header))
@@ -447,6 +477,8 @@ class SecurityMiddleware:
             if not cut_off:
                 raise
         finally:
+            if reservation is not None and not session_created:
+                state.release_session(rule, reservation)
             if tryon_slot:
                 state.tryon_active -= 1
 

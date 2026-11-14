@@ -225,11 +225,62 @@ def test_live_token_is_rate_limited_per_ip(limited):
     assert limited.post("/api/tryon/live-token").json()["code"] == "rate_limited"
 
 
-def test_live_token_global_hourly_quota(monkeypatch, skills_dir):
+def test_failed_session_requests_do_not_use_the_hourly_budget(monkeypatch, skills_dir):
     with make_client(monkeypatch, SHADOW_RATE_LIMIT="on", SHADOW_LIVE_TOKENS_PER_HOUR="2") as client:
-        assert [client.post("/api/tryon/live-token").status_code for _ in range(2)] == [503, 503]
-        third = client.post("/api/tryon/live-token")
-        assert third.status_code == 429 and third.json()["code"] == "quota"
+        assert [client.post("/api/tryon/live-token").status_code for _ in range(3)] == [503, 503, 503]
+        # Failed requests still obey the short-term per-IP limiter.
+        assert client.post("/api/tryon/live-token").json()["code"] == "rate_limited"
+
+
+def test_chat_and_tryon_have_separate_budgets_and_failed_reservations_are_released(monkeypatch):
+    from fastapi import FastAPI
+    from fastapi.responses import JSONResponse
+    from security import GuardState, SecurityMiddleware
+    monkeypatch.setenv("SHADOW_RATE_LIMIT", "on")
+    monkeypatch.setenv("SHADOW_LIVE_TOKENS_PER_HOUR", "1")
+    monkeypatch.setenv("SHADOW_CHAT_SESSIONS_PER_HOUR", "1")
+    monkeypatch.delenv("SHADOW_ACCESS_CODE", raising=False)
+    app = FastAPI()
+    status = [503]
+    @app.post("/api/live/session")
+    @app.post("/api/tryon/xmax/session")
+    async def issue():
+        return JSONResponse({"ok": status[0] == 200}, status_code=status[0])
+    state = GuardState()
+    with TestClient(SecurityMiddleware(app, state)) as client:
+        assert client.post("/api/live/session").status_code == 503
+        assert not state.session_slots["chat_session"]
+        status[0] = 200
+        assert client.post("/api/tryon/xmax/session").status_code == 200
+        assert client.post("/api/tryon/xmax/session").json()["code"] == "quota"
+        # A full try-on budget must not stop voice on the same phone/IP.
+        assert client.post("/api/live/session").status_code == 200
+        blocked = client.post("/api/live/session")
+        assert blocked.status_code == 429 and blocked.json()["code"] == "chat_quota"
+        assert 0 < int(blocked.headers["retry-after"]) <= 3600
+
+
+def test_inflight_sessions_reserve_slots_until_failure_or_hourly_expiry(monkeypatch):
+    import security
+    monkeypatch.setenv("SHADOW_RATE_LIMIT", "on")
+    monkeypatch.setenv("SHADOW_CHAT_SESSIONS_PER_HOUR", "1")
+    clock = [100.0]
+    monkeypatch.setattr(security.time, "monotonic", lambda: clock[0])
+    state = security.GuardState()
+    first = state.reserve_session("chat_session")
+    assert first is not None
+    assert state.reserve_session("chat_session") is None
+    state.release_session("chat_session", first)
+    assert state.reserve_session("chat_session") is not None
+    clock[0] += 3600
+    assert state.reserve_session("chat_session") is not None
+
+
+def test_session_per_ip_bursts_are_independent(limited):
+    for _ in range(3):
+        assert limited.post("/api/tryon/live-token").status_code == 503
+    assert limited.post("/api/tryon/live-token").json()["code"] == "rate_limited"
+    assert limited.post("/api/live/session", json={}).status_code == 503
 
 
 def test_ask_rate_limit_and_get_not_limited_by_llm_bucket(limited):
