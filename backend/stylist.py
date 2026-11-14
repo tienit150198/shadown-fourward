@@ -1,4 +1,4 @@
-"""AI parts of "Trợ lý tủ đồ" (new in SHADOW): auto-tagging, "what am I wearing", outfit picking.
+"""AI parts of "Trợ lý tủ đồ" (new in SKI): auto-tagging, "what am I wearing", outfit picking.
 
 - tag_item():       Qwen-VL (VISION_MODEL) → item fields (Vietnamese), strictly normalized.
 - describe_wearing(): Qwen-VL describes the person's current outfit, optionally matching a wardrobe item.

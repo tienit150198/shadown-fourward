@@ -1,4 +1,4 @@
-"""Labelled frames for measuring detector accuracy (SHADOW eval).
+"""Labelled frames for measuring detector accuracy (SKI eval).
 
 Layout: <evals_root>/<skill_id>/<step_id>/<label>/<timestamp>.jpg, label in {done, not_done}.
 Frames are captured from the phone in Guide → "Thu mẫu eval", then scored with eval_detectors.py.

@@ -1,7 +1,7 @@
-// SHADOW service worker — caches the app shell only.
+// SKI service worker — caches the app shell only.
 // Cached shell renders immediately; refresh it in the background.
 // Never touches /api, /session or /skills-media, and ignores cross-origin requests (CDN, fonts).
-const CACHE = 'shadow-shell-v25-lesson-intent';
+const CACHE = 'shadow-shell-v26-ski-brand';
 const SHELL = [
   './',
   'index.html',
@@ -9,10 +9,10 @@ const SHELL = [
   'app.js',
   'manifest.webmanifest',
   'js/live-pcm-worklet.js',
-  'icons/icon.svg',
-  'icons/icon-180.png',
-  'icons/icon-192.png',
-  'icons/icon-512.png',
+  'icons/icon-32.png?v=ski-1',
+  'icons/icon-180.png?v=ski-1',
+  'icons/icon-192.png?v=ski-1',
+  'icons/icon-512.png?v=ski-1',
 ];
 
 self.addEventListener('install', (event) => {

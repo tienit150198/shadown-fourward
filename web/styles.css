@@ -1,4 +1,4 @@
-/* SHADOW — dark camera-app aesthetic, one accent, mobile first. */
+/* SKI — dark camera-app aesthetic, one accent, mobile first. */
 :root {
   --bg: #0b0b0f;
   --bg-2: #111118;
@@ -61,10 +61,7 @@ a { color: var(--accent); }
 .boot { min-height: 100dvh; display: grid; place-content: center; justify-items: center; gap: 14px; }
 .boot-logo, .brand-mark {
   width: 56px; height: 56px; border-radius: 18px;
-  background:
-    radial-gradient(circle at 62% 38%, var(--accent) 0 26%, transparent 27%),
-    radial-gradient(circle at 42% 58%, rgba(255, 210, 63, 0.35) 0 30%, transparent 31%),
-    var(--surface-2);
+  background: #0b0b0f url('icons/icon-192.png?v=ski-1') center / cover no-repeat;
   box-shadow: inset 0 0 0 1px var(--line-strong);
 }
 .boot-logo { animation: breathe 1.6s var(--ease) infinite; }
@@ -438,7 +435,7 @@ a { color: var(--accent); }
   background: rgba(255, 255, 255, 0.94); color: #111; box-shadow: var(--shadow); max-width: 560px;
 }
 .speech-bubble.pop { animation: bubbleIn 0.35s var(--ease); }
-.bubble-avatar { width: 34px; height: 34px; border-radius: 50%; flex: none; background: radial-gradient(circle at 62% 38%, var(--accent) 0 30%, #222 31%); }
+.bubble-avatar { width: 34px; height: 34px; border-radius: 50%; flex: none; background: #0b0b0f url('icons/icon-192.png?v=ski-1') center / cover no-repeat; }
 .bubble-body { min-width: 0; }
 .bubble-who { font-size: 12px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: #6a6a6a; }
 .bubble-text { font-size: 17px; font-weight: 600; line-height: 1.35; overflow-wrap: anywhere; }

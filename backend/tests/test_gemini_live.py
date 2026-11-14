@@ -127,7 +127,7 @@ def test_system_wardrobe_meaning_and_lookup_are_preserved_beyond_first_page(clie
     assert wardrobe['category_counts']['bottom'] == 1
     assert wardrobe['items'][0]['id'] == 'winter-pants'
     assert wardrobe['items_are_excerpt'] is True
-    assert 'TỦ ĐỒ TRONG HỆ THỐNG SHADOW' in session_setup()['systemInstruction']['parts'][0]['text']
+    assert 'TỦ ĐỒ TRONG HỆ THỐNG SKI' in session_setup()['systemInstruction']['parts'][0]['text']
 
 
 def test_live_classification_prepares_an_executable_fitting_from_spoken_words(client, install_gemini, monkeypatch):

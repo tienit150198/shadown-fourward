@@ -1,7 +1,7 @@
-"""Vision + speech runtime for SHADOW (new; replaces GlassKit session_runtime.py).
+"""Vision + speech runtime for SKI (new; replaces GlassKit session_runtime.py).
 
 GlassKit streamed video to Overshoot over WebRTC and spoke through OpenAI Realtime.
-SHADOW instead receives JPEG frames over the control WebSocket (`vision.frame`), asks a
+SKI instead receives JPEG frames over the control WebSocket (`vision.frame`), asks a
 vision LLM (OpenAI-compatible provider) to judge the active step's detector, and sends
 speech to the phone as text (`speech` messages) for browser TTS.
 
@@ -51,7 +51,7 @@ MOCK_WRONG_STRING = "khác"
 REFERENCE_IMAGE_LABEL = "Ảnh mẫu của người dạy khi hoàn thành bước này"
 
 VISION_SYSTEM_PROMPT = """
-Bạn là "Shadow", giám khảo thị giác cho một ứng dụng dạy kỹ năng thực hành bằng camera điện thoại.
+Bạn là "SKI", giám khảo thị giác cho một ứng dụng dạy kỹ năng thực hành bằng camera điện thoại.
 Người học (thường nói tiếng Việt) đang làm theo từng bước mà một người dạy đã làm mẫu.
 Nhiệm vụ: nhìn ẢNH HIỆN TẠI từ camera của người học và trả lời đúng câu hỏi của bộ nhận diện (detector).
 Quy tắc:
@@ -63,7 +63,7 @@ Quy tắc:
 """.strip()
 
 ASK_SYSTEM_PROMPT = """
-Bạn là "Shadow", trợ lý hướng dẫn kỹ năng thực hành qua camera điện thoại.
+Bạn là "SKI", trợ lý hướng dẫn kỹ năng thực hành qua camera điện thoại.
 Trả lời câu hỏi của người học bằng tiếng Việt, tối đa 2 câu ngắn, cụ thể, thân thiện, dễ đọc thành tiếng.
 Dựa vào bước hiện tại, danh sách các bước, mẹo/cảnh báo của người dạy, ảnh hiện tại từ camera và ảnh mẫu (nếu có).
 Ưu tiên đúng lời người dạy; không bịa thông tin trái với hướng dẫn.
@@ -223,7 +223,7 @@ def should_include_reference(mode: str, state: StepRuntimeState) -> bool:
 # ---- logprob decision (VISION_DECISION=logprob) -----------------------------------
 
 LOGPROB_SYSTEM_PROMPT = """
-Bạn là "Shadow", giám khảo thị giác cho một ứng dụng dạy kỹ năng thực hành bằng camera điện thoại.
+Bạn là "SKI", giám khảo thị giác cho một ứng dụng dạy kỹ năng thực hành bằng camera điện thoại.
 Nhìn ẢNH HIỆN TẠI từ camera của người học và trả lời câu hỏi của bộ nhận diện.
 Ảnh mẫu của người dạy (nếu có) chỉ để so sánh, không bao giờ chấm ảnh mẫu.
 Thận trọng: nếu không chắc chắn hoặc không nhìn rõ, coi như bước CHƯA hoàn thành.
@@ -889,7 +889,7 @@ class VisionRuntimeMixin:
         self._ref_image_cache[key] = (mtime, data_url)
         return data_url
 
-    # ---- "Hỏi Shadow" --------------------------------------------------------
+    # ---- "Hỏi SKI" --------------------------------------------------------
 
     async def answer_question(
         self,

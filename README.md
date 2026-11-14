@@ -1,16 +1,16 @@
-# SHADOW
+# SKI
 
 **Làm mẫu một lần, AI hướng dẫn người sau.** (*Show it once. AI can guide the next person.*)
 
 Làm cho Codex Community Hackathon – Hanoi (thứ Bảy 14/11/2026, chủ đề "AI in Your Palm").
 Dự án dựa trên GlassKit (MIT). Phần dùng lại và phần làm mới ghi rõ trong [NOTICE.md](NOTICE.md).
 
-## SHADOW là gì?
+## SKI là gì?
 
-SHADOW là trợ lý AI cho web và điện thoại. Màn hình chính dùng giọng nói, văn bản và camera để trò chuyện, xem thời tiết, phối đồ và hướng dẫn bài đã học. Hai lối vào riêng dành cho việc thêm đồ và quay bài hướng dẫn.
+SKI là trợ lý AI cho web và điện thoại. Màn hình chính dùng giọng nói, văn bản và camera để trò chuyện, xem thời tiết, phối đồ và hướng dẫn bài đã học. Hai lối vào riêng dành cho việc thêm đồ và quay bài hướng dẫn.
 
 1. **Kỹ năng do người thật dạy.** Người giỏi vừa làm vừa nói trước camera một lần (Dạy). AI tự chia việc đó thành
-   từng bước, có câu hướng dẫn, mẹo, cảnh báo và ảnh mẫu. Sau đó người mới mở camera làm lại (Hướng dẫn): SHADOW nhìn
+   từng bước, có câu hướng dẫn, mẹo, cảnh báo và ảnh mẫu. Sau đó người mới mở camera làm lại (Hướng dẫn): SKI nhìn
    từng bước, khen khi đúng, nhắc ngay khi sai, và trả lời khi được hỏi.
 2. **Kỹ năng làm sẵn "Trợ lý tủ đồ".** Trợ lý nhìn xem bạn đang mặc gì, phối đồ từ chính tủ đồ của bạn theo thời tiết
    và sự kiện, rồi cho bạn **mặc thử** bằng Vidu S2-Editing trên camera hoặc Vidu Q2 trên ảnh.
@@ -101,9 +101,9 @@ Camera chung dùng **Xmax X2.1** cho yêu cầu mặc thử trực tiếp. Đặ
 
 Giao diện và lời nói chỉ dùng “thử đồ”, “Chúng tôi đang thay đồ cho bạn…” và “Đang phân tích yêu cầu…”. Tên dịch vụ, model và đường dẫn tạo API key được giữ trong tài liệu vận hành, không xuất hiện trong luồng người dùng.
 
-Nói **“Chọn một bộ đồ nam và mặc thử luôn”** hoặc **“Mặc áo thun trắng với quần nỉ xám cho tôi”**: backend tìm đồ thật trong tủ và tự mở Xmax, không cần bấm nút mặc thử. Nói **“mặc bộ đó đi”** dùng bộ đã chọn hoặc bộ vừa được gợi ý trong hội thoại; **“đổi sang quần jeans xanh”** giữ áo hiện tại. Nếu chưa tìm được món phù hợp, Shadow hỏi lại bằng giọng nói. Chỉ xem danh sách khi người dùng yêu cầu xem/chọn trước. Các ảnh và nút **Mặc thử bộ đã chọn** vẫn dùng được tùy ý. Nếu chưa có ảnh, dùng **Thêm ảnh trang phục vào bộ**. Backend ghép ảnh của tất cả món đã chọn và yêu cầu Xmax mặc đồng thời trong một phiên. Để camera thấy cả người khi thử áo và quần. SHADOW dùng lại camera đang mở. Trong lúc Xmax tải, vẫn có thể trò chuyện; chỉ báo video đã chạy khi nhận được khung hình kết quả đầu tiên.
+Nói **“Chọn một bộ đồ nam và mặc thử luôn”** hoặc **“Mặc áo thun trắng với quần nỉ xám cho tôi”**: backend tìm đồ thật trong tủ và tự mở Xmax, không cần bấm nút mặc thử. Nói **“mặc bộ đó đi”** dùng bộ đã chọn hoặc bộ vừa được gợi ý trong hội thoại; **“đổi sang quần jeans xanh”** giữ áo hiện tại. Nếu chưa tìm được món phù hợp, SKI hỏi lại bằng giọng nói. Chỉ xem danh sách khi người dùng yêu cầu xem/chọn trước. Các ảnh và nút **Mặc thử bộ đã chọn** vẫn dùng được tùy ý. Nếu chưa có ảnh, dùng **Thêm ảnh trang phục vào bộ**. Backend ghép ảnh của tất cả món đã chọn và yêu cầu Xmax mặc đồng thời trong một phiên. Để camera thấy cả người khi thử áo và quần. SKI dùng lại camera đang mở. Trong lúc Xmax tải, vẫn có thể trò chuyện; chỉ báo video đã chạy khi nhận được khung hình kết quả đầu tiên.
 
-Trong hội thoại, **“tủ đồ”, “trong tủ”, “đồ của tôi” mặc định là tủ đồ trong SHADOW**. Live và chat chữ dùng công cụ đọc dữ liệu thật theo yêu cầu; không nạp toàn bộ tủ đồ vào mỗi lượt. Công cụ đọc tối đa 50 món mỗi trang, còn công cụ gợi ý tự đọc đầy đủ tủ đồ. Chỉ hiểu là tủ vật lý khi người dùng nói rõ tủ trong phòng/ngoài đời/đang chỉ qua camera.
+Trong hội thoại, **“tủ đồ”, “trong tủ”, “đồ của tôi” mặc định là tủ đồ trong SKI**. Live và chat chữ dùng công cụ đọc dữ liệu thật theo yêu cầu; không nạp toàn bộ tủ đồ vào mỗi lượt. Công cụ đọc tối đa 50 món mỗi trang, còn công cụ gợi ý tự đọc đầy đủ tủ đồ. Chỉ hiểu là tủ vật lý khi người dùng nói rõ tủ trong phòng/ngoài đời/đang chỉ qua camera.
 
 Chạy `npm ci`, `npm run build:xmax` và `npm run build:app` trong `web-sdk/` khi chạy backend trực tiếp bằng `uvicorn`. `./run.sh` và Docker chuẩn bị SDK theo cấu hình. [Web SDK chính thức](https://github.com/Xmax-AI/XmaxSDK-Web).
 
@@ -117,7 +117,7 @@ Màn **Tủ đồ → Thử áo AR** vẫn có thể mở riêng để kiểm tr
 4. Mở qua `localhost` hoặc HTTPS. Trong DevTools, `performance.getEntriesByName('shadow:snap-ar-startup')` cho biết thời gian mở phiên. Để đo độ trễ khi kéo áo, quay đồng thời bàn tay thật và màn hình bằng camera tốc độ cao, rồi đếm số khung hình giữa hai chuyển động.
 
 ### Trang chủ
-Trang mặc định là **một camera chung**. Khi vào trang, SHADOW tự mở camera và Gemini Live nếu đã có cấu hình. Cho phép camera/micro khi trình duyệt hỏi rồi nói nhu cầu tự nhiên. Nếu trình duyệt chặn tự phát âm thanh, chạm **Bật âm thanh** một lần để mở khóa; các lần dừng thủ công vẫn được giữ cho tới khi bạn bật lại hoặc vào lại trang. **Tủ đồ** và **Bài đã học** là tài nguyên phụ ở thanh điều hướng; không cần chọn chế độ trước.
+Trang mặc định là **một camera chung**. Khi vào trang, SKI tự mở camera và Gemini Live nếu đã có cấu hình. Cho phép camera/micro khi trình duyệt hỏi rồi nói nhu cầu tự nhiên. Nếu trình duyệt chặn tự phát âm thanh, chạm **Bật âm thanh** một lần để mở khóa; các lần dừng thủ công vẫn được giữ cho tới khi bạn bật lại hoặc vào lại trang. **Tủ đồ** và **Bài đã học** là tài nguyên phụ ở thanh điều hướng; không cần chọn chế độ trước.
 
 Camera phủ toàn màn hình. Chữ chat hiện trực tiếp trên hình camera, không có nền khung hay bong bóng; chữ có bóng nhẹ để dễ đọc. Ô nhập nằm phía dưới cùng. Bấm **Mở rộng / Thu gọn** để xem lại đoạn chat hoặc dành thêm chỗ nhìn thao tác. Ô nhập tự nâng lên khi bàn phím mở.
 
@@ -125,8 +125,8 @@ Khi có `GEMINI_API_KEY` (hoặc `GOOGLE_API_KEY`) trong `.env`, nút **Live** �
 
 Ví dụ dùng ngay trong camera:
 
-- **“Hướng dẫn tôi pha cà phê / đóng gói ly / gấp áo.”** Shadow hướng dẫn bằng giọng nói, xem hình ảnh nếu camera mở và ưu tiên bài đã học. Nếu có bài khớp, các bước hiện ngay trên camera; có thể bấm Trước/Tiếp để xem.
-- **“Tôi dạy bạn cách gấp áo để bạn học lại.”** Tự bắt đầu ghi khung hình và lời hướng dẫn từ cùng camera và micro Live. Có thể sửa tên bài ngay trên khung hình. Nói từng bước, rồi nói **“Tôi đã dạy xong toàn bộ bài, lưu lại”**, hoặc bấm **Lưu bài dạy**. Công cụ camera chỉ kết thúc khi người dùng yêu cầu lưu toàn bộ bài; “xong bước một” vẫn là lời mô tả. SHADOW biên soạn bằng API gốc, lưu thành bài mới với mã riêng, rồi thông báo kết quả. Không tự lưu bản compiler fallback/mock như bài đã học bằng AI.
+- **“Hướng dẫn tôi pha cà phê / đóng gói ly / gấp áo.”** SKI hướng dẫn bằng giọng nói, xem hình ảnh nếu camera mở và ưu tiên bài đã học. Nếu có bài khớp, các bước hiện ngay trên camera; có thể bấm Trước/Tiếp để xem.
+- **“Tôi dạy bạn cách gấp áo để bạn học lại.”** Tự bắt đầu ghi khung hình và lời hướng dẫn từ cùng camera và micro Live. Có thể sửa tên bài ngay trên khung hình. Nói từng bước, rồi nói **“Tôi đã dạy xong toàn bộ bài, lưu lại”**, hoặc bấm **Lưu bài dạy**. Công cụ camera chỉ kết thúc khi người dùng yêu cầu lưu toàn bộ bài; “xong bước một” vẫn là lời mô tả. SKI biên soạn bằng API gốc, lưu thành bài mới với mã riêng, rồi thông báo kết quả. Không tự lưu bản compiler fallback/mock như bài đã học bằng AI.
 - **“Tôi muốn thử áo.”** Hiện các món trong tủ để chọn, rồi tự bật video mặc thử Xmax X2.1 ngay trong camera. Khi thiếu key hoặc dịch vụ báo lỗi, hiện đúng trạng thái; không giả lập kết quả.
 - **“Tư vấn tôi mặc gì đi làm.”** Dùng đồ và quy tắc thực trong tủ để tư vấn bằng giọng nói. Các chức năng phụ như thêm/xóa đồ, tạo ảnh và mặc thử ảnh vẫn có đường dẫn tài nguyên riêng.
 
@@ -138,9 +138,9 @@ Nói **“Hủy bài / dừng thử áo”** để dừng tác vụ hiện tại
 
 `./run.sh` tự build frontend khi có Node/npm; Docker luôn build. Chạy `uvicorn` trực tiếp vẫn hỗ trợ mã nguồn chưa build; nếu sửa source sau khi build, backend tự bỏ qua bundle cũ để tránh hiện sai phiên bản. Build lại để giữ tốc độ tải tốt nhất. Tunnel miễn phí vẫn có độ trễ và đường dẫn riêng; số đo trên máy và trên mạng có thể khác nhau.
 
-Camera tự mở cùng phiên Live, gửi tối đa khoảng 1 ảnh/giây. Bản ghi bài dạy giữ tối đa 48 khung hình và chỉ lời người dạy, không thu lời Shadow vào bài. Tắt **Live** để dùng chế độ từng câu hiện có; chế độ đó gửi một ảnh camera cùng mỗi câu hỏi. Không có key Gemini thì luồng trò chuyện và giọng nói cũ vẫn dùng được, nhưng không có điều phối tác vụ tự động qua Live.
+Camera tự mở cùng phiên Live, gửi tối đa khoảng 1 ảnh/giây. Bản ghi bài dạy giữ tối đa 48 khung hình và chỉ lời người dạy, không thu lời SKI vào bài. Tắt **Live** để dùng chế độ từng câu hiện có; chế độ đó gửi một ảnh camera cùng mỗi câu hỏi. Không có key Gemini thì luồng trò chuyện và giọng nói cũ vẫn dùng được, nhưng không có điều phối tác vụ tự động qua Live.
 
-Backend giữ key lâu dài và cấp token Google dùng một lần, mở kết nối trong 60 giây, hết hạn sau 5 phút. Cấu hình model, công cụ phân loại và hướng dẫn được khóa trong token. Trình duyệt nối trực tiếp đến Google bằng token tạm; không cần chạy server demo Node riêng. Các endpoint mới dùng chung mã truy cập và giới hạn tần suất của SHADOW. Khi chuyển màn hình hoặc đưa trang vào nền, phiên Live giải phóng micro, âm thanh và kết nối.
+Backend giữ key lâu dài và cấp token Google dùng một lần, mở kết nối trong 60 giây, hết hạn sau 5 phút. Cấu hình model, công cụ phân loại và hướng dẫn được khóa trong token. Trình duyệt nối trực tiếp đến Google bằng token tạm; không cần chạy server demo Node riêng. Các endpoint mới dùng chung mã truy cập và giới hạn tần suất của SKI. Khi chuyển màn hình hoặc đưa trang vào nền, phiên Live giải phóng micro, âm thanh và kết nối.
 
 ### Backend cho app mobile
 
@@ -161,9 +161,9 @@ Khi bật cổng truy cập demo, client native gửi mã qua header `X-Shadow-A
 2. **Xem lại** ("AI đã học xong"): sửa tên, người dạy, mô tả; mỗi bước có ảnh mẫu, câu hướng dẫn, **mẹo**, **cảnh báo**,
    và câu AI sẽ nói khi bắt đầu / khi làm sai / khi làm đúng. Đổi thứ tự, xoá bước → **"Lưu kỹ năng"**.
 3. **Hướng dẫn**: người học bấm Bắt đầu, đặt điện thoại nhìn xuống chỗ làm. Trên cùng là "Bước 2/5" + câu hướng dẫn lớn,
-   ảnh "Mẫu" của người dạy (chạm để phóng to), bong bóng câu AI vừa nói. SHADOW đọc từng bước, nhìn camera,
+   ảnh "Mẫu" của người dạy (chạm để phóng to), bong bóng câu AI vừa nói. SKI đọc từng bước, nhìn camera,
    khen khi đúng, nhắc khi sai, đọc mẹo của người dạy.
-   - **Giữ nút 🎤 "Giữ để hỏi Shadow"** để hỏi bằng giọng ("cái chốt này vặn chiều nào?"); AI trả lời theo ảnh camera.
+   - **Giữ nút 🎤 "Giữ để hỏi SKI"** để hỏi bằng giọng ("cái chốt này vặn chiều nào?"); AI trả lời theo ảnh camera.
    - **Nút ◀ ▶ (cứu demo)**: nhấn giữ lâu vào khung hướng dẫn, hoặc bật trong ⚙️ Cài đặt → "Nút debug ◀ ▶".
    - ⚙️ Cài đặt còn có: bật/tắt giọng nói, **"Thu mẫu eval"** (xem mục Eval bên dưới).
    - Mất mạng / AI lỗi: chấm trạng thái chuyển vàng, có thông báo; tự kết nối lại và tiếp tục từ bước đang làm.
@@ -202,7 +202,7 @@ Khi bật cổng truy cập demo, client native gửi mã qua header `X-Shadow-A
 |---|---|---|
 | Chấm từng khung hình khi Hướng dẫn | Qwen3-VL-8B (`qwen3-vl-8b-instruct`) | ~0,4–0,8 giây / khung hình |
 | AI học kỹ năng từ lời nói + ảnh (Dạy) | Qwen3.8-27B (`qwen3.6-35b-a3b`, tắt thinking) | ~13–15 giây |
-| Hỏi Shadow | Qwen3.8 | ~1 giây (0,6–1,5 giây) |
+| Hỏi SKI | Qwen3.8 | ~1 giây (0,6–1,5 giây) |
 | Gắn nhãn món đồ mới | Qwen3-VL-8B | 2–4 giây |
 | Phối đồ (stylist) | Qwen3.8 | 9–14 giây |
 | Thời tiết | Open-Meteo (miễn phí, không cần key) | < 1 giây |

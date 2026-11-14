@@ -8,7 +8,7 @@ export function lessonPanel(state, { onConfirm, onDismiss }) {
   if (state.mode==='reviewing') {
     return h('div',{class:'live-lesson-review'},
       h('div',{class:'live-outfit-heading'},h('small',null,'BÀI HỌC CỦA BẠN'),close),
-      h('h2',null,'Xem lại cùng Shadow'),h('h3',null,lesson.display_name || state.title),
+      h('h2',null,'Xem lại cùng SKI'),h('h3',null,lesson.display_name || state.title),
       h('ol',{class:'live-lesson-steps'},(lesson.steps || []).map((step,i)=>{
         const image=stepImageUrl(step,lesson.id);
         return h('li',null,h('span',{class:'live-lesson-number'},String(i+1)),

@@ -1,6 +1,6 @@
 """Per-session state machine.
 
-Forked from GlassKit `session_workflow.py` (MIT). SHADOW changes:
+Forked from GlassKit `session_workflow.py` (MIT). SKI changes:
 - removed inventory scan, recipe selection and OpenAI Realtime tool calls;
 - `session.start` carries `skill_id` and goes straight to GUIDING at `start_step_id`;
 - vision results arrive as internal `vision.result` events from vision_runtime.py
@@ -142,7 +142,7 @@ class SessionWorkflowMixin:
         self, session: ControlSession, payload: dict[str, Any]
     ) -> None:
         skill_id = str(payload.get("skill_id") or "").strip()
-        # SHADOW: allow (re)starting from any phase, e.g. switching skills.
+        # SKI: allow (re)starting from any phase, e.g. switching skills.
         await self._reset_runtime_state(session)
         if not skill_id:
             await self._fail_session(session, "Chưa chọn kỹ năng. Hãy chọn một kỹ năng.")
@@ -196,7 +196,7 @@ class SessionWorkflowMixin:
             and session.phase == PHASE_GUIDING
             and current_index == len(session.recipe.steps) - 1
         ):
-            # SHADOW: ▶ on the last step finishes the skill (demo rescue when the camera
+            # SKI: ▶ on the last step finishes the skill (demo rescue when the camera
             # cannot confirm the final state).
             step = session.recipe.steps[current_index]
             await self._advance_step(
@@ -396,7 +396,7 @@ class SessionWorkflowMixin:
         lazy_hints: bool = False,
         image: str | None = None,
     ) -> None:
-        """SHADOW: speak the model's dynamic `hint`, or the teacher's tip when stuck."""
+        """SKI: speak the model's dynamic `hint`, or the teacher's tip when stuck."""
         state = session.step_state
         state.frames_evaluated += 1
         confirming = state.complete_hits > 0  # 'done', waiting for the confirmation frame
@@ -648,7 +648,7 @@ class SessionWorkflowMixin:
         session.step_state = StepRuntimeState()
         session.mock_frame_counts.clear()
         session.vision_error_streak = 0
-        # SHADOW: speech_epoch stays monotonic per connection so the client can always
+        # SKI: speech_epoch stays monotonic per connection so the client can always
         # treat a higher epoch as "newer" (GlassKit reset it to 0 here).
         session.current_speech_text = None
         session.last_hint_text = None

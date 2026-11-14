@@ -1,4 +1,4 @@
-"""Teachable + learning memory of "Trợ lý tủ đồ" (new in SHADOW).
+"""Teachable + learning memory of "Trợ lý tủ đồ" (new in SKI).
 
 Three ways the stylist learns, all persisted as JSON in the wardrobe dir (atomic writes):
 

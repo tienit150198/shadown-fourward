@@ -1,4 +1,4 @@
-"""Score a skill's vision detectors on labelled frames (SHADOW eval).
+"""Score a skill's vision detectors on labelled frames (SKI eval).
 
 Frames are collected on the phone (Guide → settings → "Thu mẫu eval") into
 backend/evals/<skill_id>/<step_id>/{done,not_done}/*.jpg.

@@ -1,7 +1,7 @@
 {
-  "name": "SHADOW — Trợ lý AI",
-  "short_name": "SHADOW",
-  "description": "Trò chuyện bằng tiếng Việt, phối đồ và học kỹ năng cùng Shadow.",
+  "name": "SKI — Trợ lý AI",
+  "short_name": "SKI",
+  "description": "Trò chuyện bằng tiếng Việt, phối đồ và học kỹ năng cùng SKI.",
   "lang": "vi",
   "start_url": "./#/conversation",
   "scope": "./",
@@ -10,9 +10,7 @@
   "background_color": "#0B0B0F",
   "theme_color": "#0B0B0F",
   "icons": [
-    { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
-    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "icons/maskable.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+    { "src": "icons/icon-192.png?v=ski-1", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png?v=ski-1", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
   ]
 }

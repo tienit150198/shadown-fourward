@@ -1,4 +1,4 @@
-"""REST routes of the built-in "Trợ lý tủ đồ" skill (new in SHADOW). Registered in main.py.
+"""REST routes of the built-in "Trợ lý tủ đồ" skill (new in SKI). Registered in main.py.
 
 Wardrobe/rules CRUD, demo seeding, weather, stylist suggestions, try-on (live token + photo)
 and /wardrobe-media/<rel> for item photos and try-on results. Services are created lazily on

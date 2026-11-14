@@ -24,13 +24,13 @@ export function mount(el) {
     h('header', { class: 'home-header' },
       h('div', { class: 'brand' },
         h('div', { class: 'brand-mark', 'aria-hidden': 'true' }),
-        h('div', { class: 'brand-text' }, h('div', { class: 'brand-name' }, 'SHADOW'), h('div', { class: 'brand-sub' }, 'AI in your palm'))),
+        h('div', { class: 'brand-text' }, h('div', { class: 'brand-name' }, 'SKI'), h('div', { class: 'brand-sub' }, 'AI in your palm'))),
       h('a', { class: 'btn btn-ghost', href: '#/conversation' }, 'Trò chuyện'),
       badgeSlot),
     h('div', { class: 'home-scroll' },
       h('section', { class: 'hero' },
         h('h1', { class: 'hero-title' }, 'Làm mẫu một lần.', h('br'), h('span', { class: 'accent' }, 'AI hướng dẫn người sau.')),
-        h('p', { class: 'hero-sub' }, 'Quay lại cách bạn làm và vừa làm vừa nói. SHADOW biến nó thành từng bước, rồi nhìn qua camera để kèm người tiếp theo bằng giọng nói.'),
+        h('p', { class: 'hero-sub' }, 'Quay lại cách bạn làm và vừa làm vừa nói. SKI biến nó thành từng bước, rồi nhìn qua camera để kèm người tiếp theo bằng giọng nói.'),
         h('button', { class: 'cta', type: 'button', onClick: () => navigate('#/conversation?lesson=teach') },
           h('span', { class: 'cta-icon' }, icon('camera', 26)),
           h('span', { class: 'cta-text' }, h('span', { class: 'cta-title' }, 'Dạy kỹ năng mới'), h('span', { class: 'cta-sub' }, 'Quay & nói — AI tự chia bước')),
@@ -76,7 +76,7 @@ export function mount(el) {
       list.replaceChildren(h('div', { class: 'empty' },
         h('div', { class: 'empty-icon' }, icon('sparkle', 30)),
         h('p', { class: 'empty-title' }, 'Chưa có kỹ năng nào'),
-        h('p', null, 'Bấm “Dạy kỹ năng mới”, làm mẫu một lần — SHADOW sẽ học thành các bước.')));
+        h('p', null, 'Bấm “Dạy kỹ năng mới”, làm mẫu một lần — SKI sẽ học thành các bước.')));
       return;
     }
     list.replaceChildren(...skills.map(skillCard));

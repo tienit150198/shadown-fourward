@@ -251,7 +251,7 @@ export class ContinuousTranscriber {
 }
 
 /**
- * Press-and-hold recognition of one utterance (Guide "Hỏi Shadow").
+ * Press-and-hold recognition of one utterance (Guide "Hỏi SKI").
  * Call inside the pointerdown handler. Returns {stop():Promise<string>, cancel()} or null if unsupported.
  */
 export function holdToTalk({ lang = LANG, onInterim, onEnd, continuous = true } = {}) {

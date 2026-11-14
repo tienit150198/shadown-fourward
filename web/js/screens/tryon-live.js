@@ -161,7 +161,7 @@ export function mount(el) {
     pfNote,
     h('p', { class: 'tl-ai-note' }, icon('alert', 14),
       h('span', null, mock ? 'Chế độ giả lập hiển thị camera gốc.'
-        : 'Vidu nhận hình camera và ảnh đồ bạn chọn để xử lý trực tiếp bằng AI. SHADOW không lưu video.')),
+        : 'Vidu nhận hình camera và ảnh đồ bạn chọn để xử lý trực tiếp bằng AI. SKI không lưu video.')),
     startBtn, photoLink);
 
   // message card (blocked / error / ended)
@@ -771,7 +771,7 @@ export function mount(el) {
     ctx.drawImage(v, 0, 0);
     const fs = Math.max(14, Math.round(c.width / 36));
     ctx.font = `600 ${fs}px "Be Vietnam Pro", system-ui, sans-serif`;
-    const label = mock ? 'Ảnh giả lập · SHADOW' : 'Ảnh do AI chỉnh · SHADOW × Vidu';
+    const label = mock ? 'Ảnh giả lập · SKI' : 'Ảnh do AI chỉnh · SKI × Vidu';
     const tw = ctx.measureText(label).width;
     ctx.fillStyle = 'rgba(0,0,0,0.45)';
     ctx.fillRect(fs * 0.6, c.height - fs * 2.4, tw + fs, fs * 1.7);

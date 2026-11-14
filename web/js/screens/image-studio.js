@@ -39,7 +39,7 @@ export function mount(el, { query }) {
     },
   }, prompt, submit);
   el.append(h('header', { class: 'chat-nav' },
-    h('a', { class: 'chat-brand', href: '#/conversation' }, icon('back', 21), 'Shadow')),
+    h('a', { class: 'chat-brand', href: '#/conversation' }, icon('back', 21), 'SKI')),
     h('div', { class: 'studio' }, h('h1', null, 'Tạo ảnh'), form, status, result));
   return () => active?.abort();
 }

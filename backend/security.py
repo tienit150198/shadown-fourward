@@ -1,4 +1,4 @@
-"""Demo hardening for SHADOW when it is exposed to the internet (ngrok tunnel).
+"""Demo hardening for SKI when it is exposed to the internet (ngrok tunnel).
 
 One pure-ASGI middleware (`SecurityMiddleware`, installed in main.py) that, before any route runs:
 
@@ -317,7 +317,7 @@ async def _send_json(send: Send, status: int, payload: dict[str, Any], extra: li
     await send({"type": "http.response.body", "body": body})
 
 
-ACCESS_REQUIRED = {"detail": "Cần mã truy cập để dùng SHADOW.", "code": "access_required"}
+ACCESS_REQUIRED = {"detail": "Cần mã truy cập để dùng SKI.", "code": "access_required"}
 RATE_LIMITED = {"detail": "Bạn thao tác nhanh quá — đợi một chút rồi thử lại nhé.", "code": "rate_limited"}
 TRYON_BUSY = {"detail": "Máy đang mặc thử cho người khác — đợi khoảng 30 giây rồi thử lại nhé.", "code": "busy"}
 LIVE_QUOTA = {"detail": "Đã hết lượt mặc thử trực tiếp trong giờ này — thử lại sau nhé.", "code": "quota"}

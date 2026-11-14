@@ -28,7 +28,7 @@ export class LiveGuide {
       }
       this.index=msg.step?.index ?? this.index;
       this.onState({status:msg.phase==='COMPLETED'?'completed':'guiding',step:this.index,
-        message:msg.phase==='COMPLETED'?'Bạn đã hoàn thành bài học.':'Shadow đang quan sát thao tác của bạn.'});
+        message:msg.phase==='COMPLETED'?'Bạn đã hoàn thành bài học.':'SKI đang quan sát thao tác của bạn.'});
     } else if (msg.type==='vision.result') this.pending=false;
     else if (msg.type==='speech' && msg.text) this.onSpeech(msg.text);
     else if (msg.type==='hud.error') { this.pending=false; this.onState({status:'error',message:msg.message || 'Chưa kiểm tra được thao tác. Bạn có thể yêu cầu chuyển bước bằng giọng nói.'}); }

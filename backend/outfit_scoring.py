@@ -1,4 +1,4 @@
-"""Explainable outfit scoring for "Trợ lý tủ đồ" (new in SHADOW).
+"""Explainable outfit scoring for "Trợ lý tủ đồ" (new in SKI).
 
 score_outfit(items, ctx) → {"score": 0-100, "ok": bool, "score_parts": {...}, "why": [...], "why_line": "...",
 "violations": [...]} with five components (weights):

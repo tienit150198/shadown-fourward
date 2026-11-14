@@ -1,4 +1,4 @@
-// REST client for the SHADOW backend (same origin; see PLAN.md §6).
+// REST client for the SKI backend (same origin; see PLAN.md §6).
 
 export class ApiError extends Error {
   constructor(message, { status = 0, userMessage } = {}) {
@@ -34,8 +34,8 @@ export function promptAccessCode() {
     accessPromise = (async () => {
       for (let attempt = 0; attempt < 3; attempt += 1) {
         const code = window.prompt(attempt
-          ? 'Mã chưa đúng. Nhập lại mã truy cập SHADOW:'
-          : 'SHADOW đang bật mã truy cập. Nhập mã (ban tổ chức cung cấp):');
+          ? 'Mã chưa đúng. Nhập lại mã truy cập SKI:'
+          : 'SKI đang bật mã truy cập. Nhập mã (ban tổ chức cung cấp):');
         if (code === null) return false;
         let res = null;
         try {
@@ -62,7 +62,7 @@ export async function fetchWithAccess(path, init) {
 
 /** Vietnamese message for an HTTP error status (null → use the server detail). */
 export function statusMessage(status, detail) {
-  if (status === 401) return 'Cần mã truy cập để dùng SHADOW. Tải lại trang rồi nhập mã nhé.';
+  if (status === 401) return 'Cần mã truy cập để dùng SKI. Tải lại trang rồi nhập mã nhé.';
   if (status === 429) return detail || 'Bạn thao tác nhanh quá — đợi một chút rồi thử lại nhé.';
   if (status === 413) return 'Dữ liệu gửi lên quá lớn (ảnh quá nặng?).';
   return null;
@@ -141,7 +141,7 @@ export async function* conversationEvents(body, signal) {
     signal,
   });
   if (!res.ok || !res.body) {
-    throw new ApiError('Conversation unavailable', { userMessage: statusMessage(res.status) || 'Chưa kết nối được với Shadow. Thử lại nhé.' });
+    throw new ApiError('Conversation unavailable', { userMessage: statusMessage(res.status) || 'Chưa kết nối được với SKI. Thử lại nhé.' });
   }
   const reader = res.body.getReader();
   const decoder = new TextDecoder();

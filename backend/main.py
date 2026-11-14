@@ -1,7 +1,7 @@
-"""SHADOW backend entrypoint (FastAPI).
+"""SKI backend entrypoint (FastAPI).
 
-Forked from GlassKit `main.py` (MIT). SHADOW: WebRTC/SDP routes removed; adds REST API for
-skills, teach-mode compilation and "Hỏi Shadow", plus static hosting of the web app.
+Forked from GlassKit `main.py` (MIT). SKI: WebRTC/SDP routes removed; adds REST API for
+skills, teach-mode compilation and "Hỏi SKI", plus static hosting of the web app.
 Runs without any API key (mock mode).
 """
 
@@ -74,7 +74,7 @@ def skills_root() -> Path:
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     security.GUARD.reset()  # re-read limits from env; fresh buckets per app start
     if security.access_code():
-        logger.info("SHADOW access gate ON (SHADOW_ACCESS_CODE set)")
+        logger.info("SKI access gate ON (SHADOW_ACCESS_CODE set)")
     provider = build_provider_from_env()
     root = skills_root()
     root.mkdir(parents=True, exist_ok=True)
@@ -89,7 +89,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     app.state.skill_store = store
     app.state.manager = manager
     logger.info(
-        "SHADOW ready mode=%s skills_dir=%s vision_model=%s",
+        "SKI ready mode=%s skills_dir=%s vision_model=%s",
         provider.mode,
         root,
         vision_model(),
@@ -108,7 +108,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             await app.state.xmax_client.aclose()
 
 
-app = FastAPI(title="SHADOW", lifespan=lifespan)
+app = FastAPI(title="SKI", lifespan=lifespan)
 # Access gate, body-size cap, per-IP rate limits, try-on concurrency, WS limits (see security.py).
 app.add_middleware(security.SecurityMiddleware)
 

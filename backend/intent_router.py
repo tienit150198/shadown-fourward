@@ -15,15 +15,15 @@ from wardrobe_store import fold_vi
 TurnText = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=500)]
 
 CRITERIA = {
-    "wardrobe_manage": "Browse, count, find, view or manage clothes in the SHADOW app wardrobe. Vietnamese 'tủ đồ', 'trong tủ', 'đồ của tôi' default to the app inventory, even while the camera is on. Only treat a wardrobe as physical when explicitly described as a room/cabinet shown on camera. Outfit combinations belong to outfit_suggest; virtual fitting to tryon_live.",
+    "wardrobe_manage": "Browse, count, find, view or manage clothes in the SKI app wardrobe. Vietnamese 'tủ đồ', 'trong tủ', 'đồ của tôi' default to the app inventory, even while the camera is on. Only treat a wardrobe as physical when explicitly described as a room/cabinet shown on camera. Outfit combinations belong to outfit_suggest; virtual fitting to tryon_live.",
     "wardrobe_add": "User wants to add a garment, shoes, or accessory to their own wardrobe.",
     "outfit_suggest": "User asks for outfit combinations or recommendations on what to wear.",
     "tryon_photo": "User explicitly wants a virtual try-on on a still image or photo.",
     "tryon_live": "User wants to see an outfit replaced live while moving on camera.",
-    "teach_skill": "User wants to demonstrate or record a lesson to teach Shadow a skill.",
-    "guide_skill": "User wants Shadow to coach or walk them through a skill.",
+    "teach_skill": "User wants to demonstrate or record a lesson to teach SKI a skill.",
+    "guide_skill": "User wants SKI to coach or walk them through a skill.",
     "weather": "User asks for real weather, temperature, or rain forecast.",
-    "visual": "User asks Shadow to inspect the current camera view, an object, or what they are wearing.",
+    "visual": "User asks SKI to inspect the current camera view, an object, or what they are wearing.",
     "generate_image": "User asks to generate or draw a new still image, unrelated to a virtual try-on.",
     "other": "Conversation, unclear purpose, or an intent that does not match any label above.",
 }

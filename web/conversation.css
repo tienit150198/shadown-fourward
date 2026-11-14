@@ -37,8 +37,9 @@ body[data-screen="conversation"] { overflow: hidden; }
   color: var(--text);
   font-weight: 800;
   font-size: 1.32rem;
-  letter-spacing: -.05em;
+  letter-spacing: .08em;
 }
+.chat-brand-logo { width: 34px; height: 34px; border-radius: 10px; flex: none; }
 .chat-layout {
   position: absolute;
   inset: 0;
@@ -122,7 +123,7 @@ body[data-screen="conversation"] { overflow: hidden; }
 .chat-user { align-self: flex-start; color: #ffffffb8; font-size: .83rem; font-weight: 400; }
 .chat-user::before { content: 'Bạn · '; }
 .chat-assistant { align-self: flex-start; color: #fff; }
-.chat-assistant::before { content: 'Shadow · '; color: var(--accent); font-size: .78rem; }
+.chat-assistant::before { content: 'SKI · '; color: var(--accent); font-size: .78rem; }
 .chat-actions:empty { display: none; }
 .chat-actions { display: flex; flex-wrap: wrap; gap: 6px; }
 .chat-action {

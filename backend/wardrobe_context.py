@@ -37,7 +37,7 @@ def inventory_context(store, text: str) -> dict:
     keys = ('id', 'name', 'category', 'colors', 'warmth', 'occasions', 'seasons', 'brand')
     return {
         'source': 'SHADOW_SYSTEM_WARDROBE',
-        'meaning': 'Tủ đồ trong ứng dụng SHADOW, không phải tủ vật lý trước camera. Dữ liệu bên dưới lấy từ hệ thống.',
+        'meaning': 'Tủ đồ trong ứng dụng SKI, không phải tủ vật lý trước camera. Dữ liệu bên dưới lấy từ hệ thống.',
         'total_items': len(items), 'category_counts': dict(Counter(i.get('category', 'other') for i in items)),
         'items': [{k: item[k] for k in keys if k in item} for item in ranked],
         'items_are_excerpt': len(items) > 48,

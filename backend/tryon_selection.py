@@ -7,7 +7,7 @@ from providers import conversation_model
 from wardrobe_context import balanced_items, inventory_context
 
 GARMENT_CATEGORIES = {'top', 'bottom', 'outerwear', 'dress'}
-CLARIFY = 'Bạn muốn thử món nào hoặc kiểu áo, quần nào trong tủ đồ SHADOW? Bạn có thể nói tên, màu hoặc kiểu đồ.'
+CLARIFY = 'Bạn muốn thử món nào hoặc kiểu áo, quần nào trong tủ đồ SKI? Bạn có thể nói tên, màu hoặc kiểu đồ.'
 
 
 def merge_selection(items, previous_ids, changed_ids):
@@ -31,7 +31,7 @@ async def plan_tryon(provider, store, text, *, selected_ids=(), requested_ids=()
     by_id = {item['id']: item for item in items}
     previous = [value for value in selected_ids if value in by_id]
     if not items:
-        return {'status': 'needs_clarification', 'item_ids': [], 'message': 'Tủ đồ SHADOW chưa có ảnh trang phục để thử.'}
+        return {'status': 'needs_clarification', 'item_ids': [], 'message': 'Tủ đồ SKI chưa có ảnh trang phục để thử.'}
     if requested_ids:
         ids = merge_selection(items, previous, list(requested_ids))
         return {'status': 'ready' if ids else 'needs_clarification', 'item_ids': ids, 'message': '' if ids else CLARIFY}
@@ -46,7 +46,7 @@ async def plan_tryon(provider, store, text, *, selected_ids=(), requested_ids=()
     keys = ('id', 'name', 'category', 'colors', 'color_hex', 'colors_source', 'color_code', 'brand', 'subtype', 'warmth', 'gender')
     pool = [{key: by_id[value][key] for key in keys if key in by_id[value]} for value in pool_ids if value in by_id]
     system = (
-        'Bạn chọn trang phục THỰC trong tủ đồ SHADOW để ứng dụng tự mặc lên camera. Không nhắc tên nhà cung cấp hoặc model thử đồ trong message. '
+        'Bạn chọn trang phục THỰC trong tủ đồ SKI để ứng dụng tự mặc lên camera. Không nhắc tên nhà cung cấp hoặc model thử đồ trong message. '
         'Chỉ trả JSON {"action":"apply|clarify|browse|keep","item_ids":["ID thật"],"message":"câu ngắn tiếng Việt"}. '
         'Chỉ dùng ID từ wardrobe; không tự bịa. Yêu cầu mặc/thử/đổi đồ là lệnh THỰC THI, không yêu cầu bấm nút hoặc xác nhận lại. '
         'Nếu người dùng phủ định việc mặc thử, nói chưa mặc hoặc muốn chỉ xem, không apply. '

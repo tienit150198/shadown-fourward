@@ -1,6 +1,6 @@
 """Session manager: composes the workflow (state machine) and vision runtime mixins.
 
-Forked from GlassKit `session_manager.py` (MIT). SHADOW: Overshoot/OpenAI HTTP clients
+Forked from GlassKit `session_manager.py` (MIT). SKI: Overshoot/OpenAI HTTP clients
 and WebRTC session creation removed; takes an LLM provider and a skill store instead.
 """
 

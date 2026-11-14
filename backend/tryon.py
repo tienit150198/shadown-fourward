@@ -1,4 +1,4 @@
-"""Virtual try-on for "Trợ lý tủ đồ" (new in SHADOW).
+"""Virtual try-on for "Trợ lý tủ đồ" (new in SKI).
 
 Live (Decart, WebRTC in the browser):
     The backend keeps DECART_API_KEY and only mints short-lived *client tokens*, mirroring

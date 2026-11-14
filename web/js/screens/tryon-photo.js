@@ -227,8 +227,8 @@ export function mount(el) {
     try {
       const blob = await (await fetch(url)).blob();
       const file = new File([blob], fileName, { type: blob.type || 'image/jpeg' });
-      if (navigator.canShare?.({ files: [file] })) await navigator.share({ files: [file], title: 'Mặc thử với SHADOW' });
-      else await navigator.share({ title: 'Mặc thử với SHADOW', url: new URL(url, location.href).href });
+      if (navigator.canShare?.({ files: [file] })) await navigator.share({ files: [file], title: 'Mặc thử với SKI' });
+      else await navigator.share({ title: 'Mặc thử với SKI', url: new URL(url, location.href).href });
     } catch (err) {
       if (err?.name !== 'AbortError') toast('Không chia sẻ được — dùng “Lưu ảnh” nhé.');
     }

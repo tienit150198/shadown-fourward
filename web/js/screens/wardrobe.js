@@ -40,20 +40,20 @@ export function mount(el, { query = new URLSearchParams() } = {}) {
   const rulesCountEl = h('span', { class: 'wd-hub-count' }, '…');
   const tabs = h('div', { class: 'wd-tabs', role: 'tablist', 'aria-label': 'Loại đồ' });
   const grid = h('div', { class: 'wd-grid' });
-  const search = h('input', { type: 'search', class: 'input', placeholder: 'Tìm trong tủ đồ SHADOW: áo len, UNIQLO…', 'aria-label': 'Tìm trong tủ đồ SHADOW', onInput: event => { searchText = event.target.value; visibleLimit = 36; render(); } });
+  const search = h('input', { type: 'search', class: 'input', placeholder: 'Tìm trong tủ đồ SKI: áo len, UNIQLO…', 'aria-label': 'Tìm trong tủ đồ SKI', onInput: event => { searchText = event.target.value; visibleLimit = 36; render(); } });
   const gridSection = h('section', { class: 'wd-closet', id: 'wd-closet' },
     h('div', { class: 'section-head wd-section-head' }, h('h2', null, 'Tủ đồ của bạn'),
-      h('button', { class: 'btn btn-ghost btn-sm wd-add-inline', type: 'button', onClick: () => addItemFlow() }, icon('plus', 18), 'Thêm đồ')),
+      h('button', { class: 'btn btn-ghost btn-sm wd-add-inline', type: 'button', onClick: () => addItemFlow() }, icon('plus', 18), 'Thêm quần áo')),
     search, tabs, grid);
 
   el.append(
     h('header', { class: 'app-bar' },
       h('button', { class: 'icon-btn', type: 'button', 'aria-label': 'Quay lại', onClick: () => navigate(query.get('from') === 'conversation' ? '#/conversation' : '#/home') }, icon('back', 24)),
       h('div', { class: 'app-bar-title' }, 'Trợ lý tủ đồ'),
-      h('button', { class: 'icon-btn', type: 'button', 'aria-label': 'Thêm đồ', onClick: () => addItemFlow() }, icon('camera', 24))),
+      h('button', { class: 'icon-btn', type: 'button', 'aria-label': 'Thêm quần áo', onClick: () => addItemFlow() }, icon('camera', 24))),
     h('div', { class: 'wd-scroll' },
       h('section', { class: 'wd-hub' },
-        h('div', { class: 'wd-hub-kicker' }, h('span', { 'aria-hidden': 'true' }, '👗'), 'Kỹ năng làm sẵn của SHADOW'),
+        h('div', { class: 'wd-hub-kicker' }, h('span', { 'aria-hidden': 'true' }, '👗'), 'Kỹ năng làm sẵn của SKI'),
         h('h1', { class: 'wd-hub-title' }, 'Hôm nay mặc gì?', h('br'), h('span', { class: 'accent' }, 'Để trợ lý phối cho bạn.')),
         h('button', { class: 'wd-hub-main', type: 'button', onClick: () => navigate('#/stylist') },
           h('span', { class: 'wd-hub-main-icon', 'aria-hidden': 'true' }, icon('sparkle', 28)),
@@ -109,7 +109,7 @@ export function mount(el, { query = new URLSearchParams() } = {}) {
     const shown = list.filter(it => (tab === 'all' || it.category === tab) && words.every(word => fold(`${it.name} ${it.brand || ''} ${(it.seasons || []).join(' ')} ${(it.colors || []).join(' ')}`).includes(word)));
     if (!shown.length) {
       grid.replaceChildren(h('div', { class: 'wd-empty-tab' },
-        h('p', null, searchText ? 'Không có món nào khớp từ khóa trong tủ đồ SHADOW.' : `Chưa có ${categoryLabel(tab).toLowerCase()} nào.`),
+        h('p', null, searchText ? 'Không có món nào khớp từ khóa trong tủ đồ SKI.' : `Chưa có ${categoryLabel(tab).toLowerCase()} nào.`),
         h('button', { class: 'btn btn-ghost btn-sm', type: 'button', onClick: () => addItemFlow({ category: tab }) }, icon('plus', 18), `Thêm ${categoryLabel(tab).toLowerCase()}`)));
       return;
     }
@@ -184,7 +184,7 @@ export function mount(el, { query = new URLSearchParams() } = {}) {
 
   // ---------- add item ----------
   function addItemFlow(preset = {}) {
-    actionSheet('Thêm món đồ', [
+    actionSheet('Thêm quần áo', [
       { label: 'Chụp ảnh món đồ', icon: 'camera', onSelect: () => pickAndUpload({ capture: 'environment', ...preset }) },
       { label: 'Chọn ảnh có sẵn', icon: 'image', onSelect: () => pickAndUpload(preset) },
     ]);
@@ -201,7 +201,7 @@ export function mount(el, { query = new URLSearchParams() } = {}) {
       h('p', { class: 'wd-muted' }, 'Loại đồ, màu sắc, phong cách, độ ấm và dịp mặc.'));
     const controller = new AbortController();
     let cancelled = false;
-    const sheet = openSheet(body, { title: 'Thêm món đồ', onClose: () => { cancelled = true; controller.abort(); } });
+    const sheet = openSheet(body, { title: 'Thêm quần áo', onClose: () => { cancelled = true; controller.abort(); } });
     try {
       const item = await wardrobeApi.addItem(category && category !== 'all' ? { image, category } : { image }, { signal: controller.signal });
       if (cancelled || scope.disposed) return;

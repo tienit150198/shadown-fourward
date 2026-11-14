@@ -6,7 +6,7 @@ from typing import Any
 from recipe_catalog import RecipeCondition
 from session_types import ControlSession
 
-# SHADOW: Overshoot prompt matching, OpenAI tool-argument parsing and SDP helpers from
+# SKI: Overshoot prompt matching, OpenAI tool-argument parsing and SDP helpers from
 # GlassKit were removed together with the WebRTC runtimes.
 
 

@@ -1,7 +1,7 @@
-"""File-based skill storage for SHADOW (new — not part of GlassKit).
+"""File-based skill storage for SKI (new — not part of GlassKit).
 
 Layout (root = backend/skills):
-    <root>/<id>.json                    skill JSON (GlassKit Recipe + SHADOW fields)
+    <root>/<id>.json                    skill JSON (GlassKit Recipe + SKI fields)
     <root>/<id>/frames/*.jpg            media; step.reference_image is relative to <root>/<id>/
     <root>/_drafts/<draft_id>/frames/*  frames saved by the compiler before the teacher saves
 """

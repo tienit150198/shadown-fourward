@@ -79,7 +79,7 @@ async def test_openai_compatible_provider_request_and_retry():
     first = calls[0]
     assert first["url"] == "https://openrouter.ai/api/v1/chat/completions"
     assert first["headers"]["authorization"] == "Bearer sk-test"
-    assert first["headers"]["x-title"] == "SHADOW"
+    assert first["headers"]["x-title"] == "SKI"
     assert "http-referer" in first["headers"]
     assert first["body"]["response_format"] == {"type": "json_object"}
     assert first["body"]["messages"][0] == {"role": "system", "content": "sys"}

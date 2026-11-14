@@ -26,4 +26,4 @@ for (const [name, inputs] of Object.entries({
 await writeFile(path.join(output, 'app.js'), app.outputFiles[0].contents);
 await writeFile(path.join(output, 'styles.css'), css.code);
 await writeFile(path.join(output, 'manifest.json'), JSON.stringify(manifest));
-console.log(`SHADOW frontend: 1 script (${app.outputFiles[0].contents.length} bytes), 1 stylesheet (${Buffer.byteLength(css.code)} bytes).`);
+console.log(`SKI frontend: 1 script (${app.outputFiles[0].contents.length} bytes), 1 stylesheet (${Buffer.byteLength(css.code)} bytes).`);

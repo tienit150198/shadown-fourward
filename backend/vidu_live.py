@@ -62,7 +62,7 @@ def live_config() -> dict[str, Any]:
     }
     if not config["available"]:
         config["detail"] = (
-            "Máy chủ SHADOW chưa được cấu hình VIDU_API_KEY."
+            "Máy chủ SKI chưa được cấu hình VIDU_API_KEY."
             if not _api_key() else "VIDU_API_BASE_URL phải là địa chỉ Vidu đúng khu vực."
         )
     return config
@@ -123,7 +123,7 @@ async def create_live_session(reference_image: str, *, transport: httpx.AsyncBas
     api_key = _api_key()
     base_url = _base_url()
     if not api_key:
-        raise ViduLiveError("Máy chủ SHADOW chưa được cấu hình VIDU_API_KEY.", status=503, code="NO_VIDU_KEY")
+        raise ViduLiveError("Máy chủ SKI chưa được cấu hình VIDU_API_KEY.", status=503, code="NO_VIDU_KEY")
     if base_url not in BASE_URLS:
         raise ViduLiveError("VIDU_API_BASE_URL phải là địa chỉ Vidu đúng khu vực.", status=503, code="VIDU_INVALID_BASE_URL")
     try:
@@ -149,7 +149,7 @@ async def create_live_session(reference_image: str, *, transport: httpx.AsyncBas
     except httpx.TimeoutException:
         raise ViduLiveError("Vidu phản hồi quá lâu. Thử lại nhé.", status=504, code="VIDU_TIMEOUT") from None
     except httpx.RequestError:
-        raise ViduLiveError("Máy chủ SHADOW không kết nối được với Vidu.", status=502, code="VIDU_CONNECTION") from None
+        raise ViduLiveError("Máy chủ SKI không kết nối được với Vidu.", status=502, code="VIDU_CONNECTION") from None
 
     try:
         body = response.json()

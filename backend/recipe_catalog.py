@@ -56,7 +56,7 @@ class RecipeStep(BaseModel):
     progress_value: str | None = None
     complete_value: str | None = None
     complete_on: bool | None = None
-    # --- SHADOW extensions (optional, backward compatible with GlassKit recipes) ---
+    # --- SKI extensions (optional, backward compatible with GlassKit recipes) ---
     instruction: str | None = None
     tip: str | None = None
     warning: str | None = None
@@ -76,7 +76,7 @@ class Recipe(BaseModel):
     tasks: list[RecipeTask]
     detectors: dict[str, RecipeDetector]
     steps: list[RecipeStep]
-    # --- SHADOW extensions (optional) ---
+    # --- SKI extensions (optional) ---
     language: str = "vi"
     learned_from: str | None = None
     summary: str | None = None
@@ -87,10 +87,10 @@ class Recipe(BaseModel):
 
 
 class RecipeCatalog:
-    """SHADOW: thin wrapper over a skill store (see skill_store.SkillStore).
+    """SKI: thin wrapper over a skill store (see skill_store.SkillStore).
 
     GlassKit's file-glob catalog and inventory-based `best_match` were removed because
-    SHADOW users pick a skill explicitly.
+    SKI users pick a skill explicitly.
     """
 
     def __init__(self, store: Any) -> None:

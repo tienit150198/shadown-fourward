@@ -51,7 +51,7 @@ export async function requestViduSession(referenceImage, signal) {
     });
   } catch {
     if (signal?.aborted) throw signal.reason;
-    throw liveError('Không kết nối được máy chủ SHADOW. Kiểm tra mạng rồi thử lại.');
+    throw liveError('Không kết nối được máy chủ SKI. Kiểm tra mạng rồi thử lại.');
   }
   const data = await response.json().catch(() => null);
   if (!response.ok) {

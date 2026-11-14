@@ -189,7 +189,7 @@ export function mount(el, {query=new URLSearchParams()}={}) {
       ...(timeline?.length ? timelineNodes(timeline) : [h('p', { class: 'chat-bubble chat-assistant' }, answer),
         h('div', { class: 'chat-actions' }, (actions || []).map(actionLink))]),
     ]));
-  const text = h('input', { class: 'chat-input', 'aria-label': 'Câu hỏi', placeholder: 'Hỏi Shadow…', maxlength: 500 });
+  const text = h('input', { class: 'chat-input', 'aria-label': 'Câu hỏi', placeholder: 'Hỏi SKI…', maxlength: 500 });
   const mic = h('button', {
     type: 'button', class: 'chat-toggle', 'aria-label': 'Bật micro', 'aria-pressed': 'false', onClick: toggleMic,
   }, icon('mic', 20));
@@ -246,7 +246,7 @@ export function mount(el, {query=new URLSearchParams()}={}) {
   pane.append(audioUnlock);
   el.append(
     h('header', { class: 'chat-nav' },
-      h('a', { class: 'chat-brand', href: '#/conversation', 'aria-current': 'page' }, 'Shadow'),
+      h('a', { class: 'chat-brand', href: '#/conversation', 'aria-current': 'page' }, h('img', { class: 'chat-brand-logo', src: 'icons/icon-192.png?v=ski-1', alt: '', width: 34, height: 34 }), 'SKI'),
       h('nav', { 'aria-label': 'Tài nguyên đã lưu' }, locationButton,
         h('a', {href:'#/wardrobe?from=conversation'}, 'Tủ đồ'),
         h('a', {href:'#/home?from=conversation'}, 'Bài đã học'),
@@ -406,7 +406,7 @@ export function mount(el, {query=new URLSearchParams()}={}) {
     if (state.mode !== 'tryon') { originalView=false; stage.classList.remove('chat-show-original'); }
     taskCard.dataset.mode = state.mode;
     taskCard.dataset.status = state.status;
-    taskCard.replaceChildren(h('span', { class: 'chat-task-label' }, ({ chat: 'SHADOW', guiding: 'HƯỚNG DẪN', teaching: 'ĐANG GHI BÀI DẠY', compiling: 'ĐANG BIÊN SOẠN', tryon: state.status === 'loading' ? 'ĐANG THAY ĐỒ' : 'THỬ ĐỒ' })[state.mode]),
+    taskCard.replaceChildren(h('span', { class: 'chat-task-label' }, ({ chat: 'SKI', guiding: 'HƯỚNG DẪN', teaching: 'ĐANG GHI BÀI DẠY', compiling: 'ĐANG BIÊN SOẠN', tryon: state.status === 'loading' ? 'ĐANG THAY ĐỒ' : 'THỬ ĐỒ' })[state.mode]),
       h('strong', null, state.title), h('p', null, state.message));
     const showGarments = state.status !== 'live' || state.showGarments;
     if (state.mode === 'tryon' && ['selecting', 'live', 'error'].includes(state.status) && showGarments && state.items?.length) {
@@ -421,14 +421,14 @@ export function mount(el, {query=new URLSearchParams()}={}) {
       function fillGarments() {
         const words = fold(garmentQuery).split(/\s+/).filter(Boolean);
         const matches = state.items.filter(item => (!garmentCategory || item.category === garmentCategory) && words.every(word => fold(`${item.name} ${item.brand || ''} ${(item.colors || []).join(' ')} ${(item.seasons || []).join(' ')}`).includes(word)));
-        count.textContent = `${matches.length} món trong tủ đồ SHADOW`;
+        count.textContent = `${matches.length} món trong tủ đồ SKI`;
         grid.replaceChildren(...matches.slice(0, garmentLimit).map(item =>
           h('button', { type: 'button', class: 'chat-garment', 'aria-pressed': String((state.selected_ids || []).includes(item.id)), onClick: () => tasks.selectGarment(item.id) },
             h('img', { src: itemImageUrl(item), alt: '', loading: 'lazy' }), h('span', null, item.name || item.id))));
         more.hidden = matches.length <= garmentLimit;
       }
       taskCard.append(h('div', { class: 'chat-task-controls' },
-        h('input', { type: 'search', class: 'chat-task-title', placeholder: 'Tìm áo len, quần, UNIQLO…', 'aria-label': 'Tìm trong tủ đồ SHADOW', value: garmentQuery, onInput: event => { garmentQuery = event.target.value; garmentLimit = 24; fillGarments(); } }),
+        h('input', { type: 'search', class: 'chat-task-title', placeholder: 'Tìm áo len, quần, UNIQLO…', 'aria-label': 'Tìm trong tủ đồ SKI', value: garmentQuery, onInput: event => { garmentQuery = event.target.value; garmentLimit = 24; fillGarments(); } }),
         h('select', { 'aria-label': 'Loại trang phục', onChange: event => { garmentCategory = event.target.value; garmentLimit = 24; fillGarments(); } },
           [['', 'Tất cả'], ['top', 'Áo'], ['bottom', 'Quần'], ['outerwear', 'Áo khoác'], ['dress', 'Váy']].map(([value, label]) => h('option', { value, selected: value === garmentCategory }, label)))), count, grid, more);
       fillGarments();
@@ -571,9 +571,9 @@ export function mount(el, {query=new URLSearchParams()}={}) {
       liveMode.disabled = value === 'connecting' || !liveAvailable;
       status.textContent = detail || ({
         idle: 'Bấm micro để bắt đầu trò chuyện.', connecting: 'Đang mở micro và kết nối trò chuyện…',
-        listening: 'Đang nghe. Nói tự nhiên rồi ngừng một nhịp để Shadow trả lời.',
-        classifying: 'Đang phân tích yêu cầu…', thinking: 'Shadow đang chuẩn bị trả lời…',
-        speaking: 'Shadow đang nói. Bạn có thể nói chen để hỏi tiếp.',
+        listening: 'Đang nghe. Nói tự nhiên rồi ngừng một nhịp để SKI trả lời.',
+        classifying: 'Đang phân tích yêu cầu…', thinking: 'SKI đang chuẩn bị trả lời…',
+        speaking: 'SKI đang nói. Bạn có thể nói chen để hỏi tiếp.',
       })[value];
     },
     onError(error) {
@@ -695,7 +695,7 @@ export function mount(el, {query=new URLSearchParams()}={}) {
     try {
       await openCamera();
       status.textContent = live.status !== 'idle'
-        ? 'Camera đang mở. Shadow nhận hình ảnh trong lúc bạn trò chuyện Live.'
+        ? 'Camera đang mở. SKI nhận hình ảnh trong lúc bạn trò chuyện Live.'
         : 'Camera đang mở. Bạn có thể bật micro hoặc nhập câu hỏi.';
     }
     catch (error) { if (!disposed) status.textContent = error.userMessage || 'Chưa mở được camera.'; }
@@ -901,7 +901,7 @@ export function mount(el, {query=new URLSearchParams()}={}) {
     let turnOutfits = [];
     transcript.append(h('p', { class: 'chat-bubble chat-user' }, question));
     transcript.scrollTop = transcript.scrollHeight;
-    status.textContent = 'Shadow đang trả lời…';
+    status.textContent = 'SKI đang trả lời…';
     let answer = '';
     const turnActions = [];
     let unspoken = '';
@@ -1019,7 +1019,7 @@ export function mount(el, {query=new URLSearchParams()}={}) {
       status.textContent = ' ';
       await audio;
     } catch (error) {
-      if (!current.signal.aborted) status.textContent = error.userMessage || error.message || 'Chưa kết nối được với Shadow.';
+      if (!current.signal.aborted) status.textContent = error.userMessage || error.message || 'Chưa kết nối được với SKI.';
     } finally {
       for (const row of activities.values()) {
         if (row.dataset.state === 'running') {

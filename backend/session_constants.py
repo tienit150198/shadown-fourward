@@ -4,7 +4,7 @@ import os
 
 from typing import Literal
 
-# SHADOW: Overshoot / OpenAI Realtime constants, inventory-scan prompt and output schema
+# SKI: Overshoot / OpenAI Realtime constants, inventory-scan prompt and output schema
 # from GlassKit were removed (frames now arrive over the control WebSocket and speech is
 # sent to the phone as text for browser TTS).
 

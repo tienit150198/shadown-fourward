@@ -83,7 +83,7 @@ export function mount(el, { params }) {
   const refImg = h('img', { alt: 'Ảnh mẫu của người dạy' });
   const refThumb = h('button', { class: 'ref-thumb hidden', type: 'button', 'aria-label': 'Xem ảnh mẫu' }, refImg, h('span', { class: 'ref-tag' }, 'Mẫu'));
   const bubbleText = h('div', { class: 'bubble-text' });
-  const bubbleWho = h('div', { class: 'bubble-who' }, 'SHADOW');
+  const bubbleWho = h('div', { class: 'bubble-who' }, 'SKI');
   const bubble = h('div', { class: 'speech-bubble hidden', 'aria-live': 'polite' },
     h('div', { class: 'bubble-avatar', 'aria-hidden': 'true' }), h('div', { class: 'bubble-body' }, bubbleWho, bubbleText));
   const debugBar = h('div', { class: `debug-bar${settings.debug || capturing ? '' : ' hidden'}` },
@@ -110,8 +110,8 @@ export function mount(el, { params }) {
     h('div', { class: 'eval-actions' }, evalDoneBtn, evalNotBtn));
   const shutter = h('div', { class: 'shutter-flash' });
   if (capturing) el.classList.add('eval-on');
-  const micLabel = h('span', { class: 'mic-label' }, 'Giữ để hỏi Shadow');
-  const micBtn = h('button', { class: 'mic-btn', type: 'button', 'aria-label': 'Giữ để hỏi Shadow' }, icon('mic', 30));
+  const micLabel = h('span', { class: 'mic-label' }, 'Giữ để hỏi SKI');
+  const micBtn = h('button', { class: 'mic-btn', type: 'button', 'aria-label': 'Giữ để hỏi SKI' }, icon('mic', 30));
   const muteBtn = h('button', { class: 'icon-btn glass', type: 'button', 'aria-label': 'Bật/tắt giọng nói' }, icon('speaker', 22));
   const camError = h('div', { class: 'cam-error hidden' });
   const startTitle = h('h1', { class: 'start-title' }, 'Đang tải…');
@@ -121,7 +121,7 @@ export function mount(el, { params }) {
   el.classList.add('pre-start');
   const startOverlay = h('div', { class: 'start-overlay' },
     h('div', { class: 'start-card' },
-      h('div', { class: 'start-kicker' }, icon('eye', 16), 'SHADOW sẽ nhìn và hướng dẫn bạn'),
+      h('div', { class: 'start-kicker' }, icon('eye', 16), 'SKI sẽ nhìn và hướng dẫn bạn'),
       startTitle, startMeta,
       h('ul', { class: 'start-tips' },
         h('li', null, icon('camera', 18), 'Đặt điện thoại sao cho camera thấy rõ tay và đồ vật.'),
@@ -369,7 +369,7 @@ export function mount(el, { params }) {
   }
 
   // ---------- speech ----------
-  function showBubble(text, who = 'SHADOW', kind = '') {
+  function showBubble(text, who = 'SKI', kind = '') {
     bubbleWho.textContent = who;
     bubbleText.textContent = text;
     bubble.className = `speech-bubble${kind ? ` kind-${kind}` : ''}`;
@@ -404,7 +404,7 @@ export function mount(el, { params }) {
 
   function playLine(text, kind) {
     queuedSpeech = null;
-    showBubble(text, 'SHADOW', kind);
+    showBubble(text, 'SKI', kind);
     if (asking) return;
     const seq = ++speechSeq;
     speak(text).then(() => {
@@ -570,13 +570,13 @@ export function mount(el, { params }) {
     toast(settings.tts ? 'Đã bật giọng nói' : 'Đã tắt giọng nói', { kind: 'info', ms: 1400 });
   });
 
-  // ---------- "Hỏi Shadow" ----------
+  // ---------- "Hỏi SKI" ----------
   let holder = null;
   async function askQuestion(question) {
     const q = question.trim();
-    if (!q) { showBubble('Mình chưa nghe rõ, bạn giữ nút và nói lại nhé.', 'SHADOW'); return; }
+    if (!q) { showBubble('Mình chưa nghe rõ, bạn giữ nút và nói lại nhé.', 'SKI'); return; }
     showBubble(q, 'Bạn hỏi', 'user');
-    micLabel.textContent = 'Shadow đang nghĩ…';
+    micLabel.textContent = 'SKI đang nghĩ…';
     micBtn.classList.add('thinking');
     try {
       const res = await api.ask({
@@ -588,17 +588,17 @@ export function mount(el, { params }) {
       if (scope.disposed) return;
       const answer = String(res?.answer || '').trim() || 'Mình chưa có câu trả lời.';
       const offline = res?.source === 'fallback';
-      showBubble(answer, offline ? 'SHADOW · chưa kết nối AI' : 'SHADOW', 'answer');
+      showBubble(answer, offline ? 'SKI · chưa kết nối AI' : 'SKI', 'answer');
       if (offline) toast('AI chưa trả lời được — đây là hướng dẫn có sẵn của người dạy.', { kind: 'info', ms: 4000 });
       queuedSpeech = null;
       speechSeq += 1;
       speak(answer);
     } catch (err) {
-      if (!scope.disposed) errorToast(err, 'Shadow chưa trả lời được');
+      if (!scope.disposed) errorToast(err, 'SKI chưa trả lời được');
     } finally {
       if (!scope.disposed) {
         micBtn.classList.remove('thinking');
-        micLabel.textContent = 'Giữ để hỏi Shadow';
+        micLabel.textContent = 'Giữ để hỏi SKI';
       }
     }
   }
@@ -609,7 +609,7 @@ export function mount(el, { params }) {
     const form = h('form', { class: 'ask-form' }, input,
       h('button', { class: 'btn btn-primary', type: 'submit' }, 'Hỏi'));
     form.addEventListener('submit', (e) => { e.preventDefault(); const q = input.value; api2.close(); askQuestion(q); });
-    api2 = openSheet(form, { title: 'Hỏi Shadow' });
+    api2 = openSheet(form, { title: 'Hỏi SKI' });
     setTimeout(() => input.focus(), 300);
   }
 
@@ -634,7 +634,7 @@ export function mount(el, { params }) {
     const hd = holder;
     holder = null;
     micBtn.classList.remove('listening');
-    micLabel.textContent = 'Giữ để hỏi Shadow';
+    micLabel.textContent = 'Giữ để hỏi SKI';
     try {
       const text = await hd.stop();
       asking = false;

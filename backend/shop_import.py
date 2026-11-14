@@ -1,4 +1,4 @@
-"""Import a wardrobe item from a shop product link (new in SHADOW) — POST /api/wardrobe/import {url}.
+"""Import a wardrobe item from a shop product link (new in SKI) — POST /api/wardrobe/import {url}.
 
 Supported: Shopify-style product pages (https://<host>/products/<handle>, optionally under
 /collections/<c>/ and with ?variant=<id>): we fetch the public `<url>.json`, take the title, price, SKU and

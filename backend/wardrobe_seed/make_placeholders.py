@@ -1,6 +1,6 @@
 """Generate the flat placeholder garment images of the demo wardrobe (Pillow only).
 
-Run once: ../../.venv/bin/python make_placeholders.py  → images/demo-*.jpg (CC0, made for SHADOW).
+Run once: ../../.venv/bin/python make_placeholders.py  → images/demo-*.jpg (CC0, made for SKI).
 """
 
 from pathlib import Path

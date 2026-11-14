@@ -17,7 +17,7 @@ export function mount(el) {
   const corrections = stats.corrections || 0;
   const praise = corrections === 0
     ? 'Không cần sửa lần nào — xuất sắc!'
-    : `SHADOW đã nhắc bạn ${corrections} lần. Lần sau sẽ nhanh hơn!`;
+    : `SKI đã nhắc bạn ${corrections} lần. Lần sau sẽ nhanh hơn!`;
 
   const confetti = h('div', { class: 'confetti', 'aria-hidden': 'true' },
     Array.from({ length: 18 }, (_, i) => h('i', { style: `--i:${i};--x:${(i * 37) % 100}%` })));

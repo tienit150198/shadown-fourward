@@ -456,7 +456,7 @@ class SkillVerifier:
 
 
 REWRITE_SYSTEM_PROMPT = """\
-You fix ONE detector prompt of SHADOW, a real-time coach. During coaching a small vision model (the judge) sees ONE still frame from the learner's phone camera plus the teacher's reference frame, reads the detector criterion, and answers whether the current step is done (field `flag` true/false, or a `state` label). A false "done" skips the step; a false "not done" leaves the learner stuck.
+You fix ONE detector prompt of SKI, a real-time coach. During coaching a small vision model (the judge) sees ONE still frame from the learner's phone camera plus the teacher's reference frame, reads the detector criterion, and answers whether the current step is done (field `flag` true/false, or a `state` label). A false "done" skips the step; a false "not done" leaves the learner stuck.
 
 The current criterion was tested on frames from the teacher's own demonstration video where the truth is known, and the judge got some of them wrong. Write a better criterion so the judge answers ALL test frames correctly — and still generalises to a different person, table, lighting and camera angle.
 

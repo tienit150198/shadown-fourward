@@ -1,6 +1,6 @@
-"""LLM provider abstraction for SHADOW (new — not part of GlassKit).
+"""LLM provider abstraction for SKI (new — not part of GlassKit).
 
-All AI calls (per-frame vision judging, skill compilation, "Hỏi Shadow") go through
+All AI calls (per-frame vision judging, skill compilation, "Hỏi SKI") go through
 `LLMProvider.chat_json`, which talks to any OpenAI-compatible chat-completions API
 (OpenRouter by default). `MockProvider` lets the whole app run offline: callers check
 `provider.mode == "mock"` and implement their own deterministic fake behaviour.
@@ -314,7 +314,7 @@ class OpenAICompatibleProvider(LLMProvider):
             headers["HTTP-Referer"] = _env(
                 "OPENROUTER_REFERER", "https://github.com/shadow-hackathon/shadow"
             )
-            headers["X-Title"] = "SHADOW"
+            headers["X-Title"] = "SKI"
         self._client = httpx.AsyncClient(
             timeout=httpx.Timeout(timeout),
             headers=headers,
@@ -573,7 +573,7 @@ def resolve_mode() -> str:
 def build_provider_from_env() -> LLMProvider:
     mode = resolve_mode()
     if mode == "mock":
-        logger.info("SHADOW provider: mock (offline demo mode)")
+        logger.info("SKI provider: mock (offline demo mode)")
         return MockProvider()
     extra_body: dict[str, Any] = {}
     raw_extra = _env("LLM_EXTRA_BODY")
@@ -585,7 +585,7 @@ def build_provider_from_env() -> LLMProvider:
         except json.JSONDecodeError:
             logger.warning("LLM_EXTRA_BODY is not valid JSON; ignoring")
     base_url = llm_base_url()
-    logger.info("SHADOW provider: ai base_url=%s", base_url)
+    logger.info("SKI provider: ai base_url=%s", base_url)
     return OpenAICompatibleProvider(
         base_url=base_url,
         api_key=_env("LLM_API_KEY"),

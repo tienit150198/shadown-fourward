@@ -17,7 +17,7 @@ class StepRuntimeState:
     progress_flags: set[str] = field(default_factory=set)
     counter: int = 0
     previous_boolean_value: bool = False
-    # SHADOW additions
+    # SKI additions
     frames_evaluated: int = 0
     last_hint_text: str | None = None
     tip_spoken: bool = False
@@ -46,7 +46,7 @@ class ControlSession:
     phase: str = PHASE_WAITING
     speech_epoch: int = 0
     destroyed: bool = False
-    # Vision pipeline (SHADOW: frames over the control WS instead of Overshoot WebRTC)
+    # Vision pipeline (SKI: frames over the control WS instead of Overshoot WebRTC)
     vision_generation: int = 0
     pending_frame: dict[str, Any] | None = None
     vision_task: asyncio.Task[None] | None = None

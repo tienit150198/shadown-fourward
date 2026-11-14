@@ -77,7 +77,7 @@ export function mount(el) {
   const compiledBy = draft.compiledBy || draft.skill.compiled_by || null;
   const isFallback = !!draft.isNew && compiledBy === 'mock';
   const fallbackText = {
-    ai_failed: 'AI không phản hồi nên SHADOW tự chia bước theo lời nói / ghi chú (chưa có cách kiểm tra thông minh). Hãy xem kỹ từng bước, hoặc dạy lại khi có mạng.',
+    ai_failed: 'AI không phản hồi nên SKI tự chia bước theo lời nói / ghi chú (chưa có cách kiểm tra thông minh). Hãy xem kỹ từng bước, hoặc dạy lại khi có mạng.',
     mock_mode: 'Chế độ Demo: các bước được tách tự động từ lời nói / ghi chú, chưa dùng AI.',
   }[draft.fallbackReason] || 'Các bước được tách tự động từ lời nói / ghi chú, chưa dùng AI. Hãy xem kỹ từng bước.';
   let dirty = !!draft.isNew;

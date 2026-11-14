@@ -1,4 +1,4 @@
-"""Richer garment attributes for wardrobe items ("Trợ lý tủ đồ", new in SHADOW).
+"""Richer garment attributes for wardrobe items ("Trợ lý tủ đồ", new in SKI).
 
 Schema additions per item (all optional on input, filled by `fill_attrs`; machine-readable English codes):
 

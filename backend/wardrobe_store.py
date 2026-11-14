@@ -1,4 +1,4 @@
-"""File-based wardrobe storage for the built-in "Trợ lý tủ đồ" skill (new in SHADOW).
+"""File-based wardrobe storage for the built-in "Trợ lý tủ đồ" skill (new in SKI).
 
 Layout (root = backend/wardrobe, override with SHADOW_WARDROBE_DIR):
     <root>/items.json          list of wardrobe items

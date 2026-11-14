@@ -1,4 +1,4 @@
-// SHADOW web app — hash router. Each screen exports mount(el, ctx) → cleanup().
+// SKI web app — hash router. Each screen exports mount(el, ctx) → cleanup().
 import * as home from './js/screens/home.js';
 import * as conversation from './js/screens/conversation.js';
 import * as imageStudio from './js/screens/image-studio.js';

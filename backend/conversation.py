@@ -45,11 +45,11 @@ ACTIONS = {
 GUIDE_FOLLOWUP = "Bạn muốn mình hướng dẫn kỹ năng nào?"
 GENERIC_GUIDE_REQUESTS = {"ban chi toi cach lam", "chi toi cach lam", "huong dan toi", "huong dan minh"}
 SYSTEM = (
-    "Bạn là Shadow, trợ lý trò chuyện bằng tiếng Việt. Trả lời trực tiếp, tự nhiên để đọc thành tiếng. "
+    "Bạn là SKI, trợ lý trò chuyện bằng tiếng Việt. Trả lời trực tiếp, tự nhiên để đọc thành tiếng. Không đọc trạng thái xử lý như 'phân loại yêu cầu', 'đang phân tích yêu cầu', 'đang kiểm tra' hoặc tên công cụ; ứng dụng tự hiển thị chúng bên dưới. "
     "Ưu tiên một câu ngắn có ích trước, tối đa ba câu. Không dùng markdown hay biểu tượng. "
     "Khi cần, hỏi một câu để làm rõ. Chỉ mô tả camera nếu có ảnh đính kèm. "
     "Không bịa thời tiết hiện tại, bài đã lưu hay đồ trong tủ. Không nói đã mở màn hình, tạo ảnh hoặc lưu dữ liệu."
-    " 'Tủ đồ', 'trong tủ', 'đồ của tôi' mặc định là tủ đồ trong ứng dụng SHADOW. Dùng dữ liệu hệ thống, không yêu cầu quay camera vào tủ. Chỉ hiểu là tủ vật lý khi người dùng nói rõ tủ trong phòng/ngoài đời/đang chỉ qua camera."
+    " 'Tủ đồ', 'trong tủ', 'đồ của tôi' mặc định là tủ đồ trong ứng dụng SKI. Dùng dữ liệu hệ thống, không yêu cầu quay camera vào tủ. Chỉ hiểu là tủ vật lý khi người dùng nói rõ tủ trong phòng/ngoài đời/đang chỉ qua camera."
 )
 
 
@@ -151,11 +151,11 @@ async def mock_generate(payload: ConversationRequest, request: Request) -> Async
     elif intent == "wardrobe_manage":
         inventory = inventory_context(wardrobe_store(request), payload.text)
         names = ', '.join(item['name'] for item in inventory['items'][:6])
-        answer = f"Tủ đồ trong SHADOW hiện có {inventory['total_items']} món."
+        answer = f"Tủ đồ trong SKI hiện có {inventory['total_items']} món."
         if names:
             answer += f" Một số món: {names}."
         yield event("text", text=answer)
-        yield event("action", route="wardrobe", label="Xem tủ đồ trong SHADOW")
+        yield event("action", route="wardrobe", label="Xem tủ đồ trong SKI")
     elif intent == "weather":
         forecast = await resolve_weather(_weather(request), payload.text, location=payload.location, allow_scenario=False)
         answer = forecast.get("summary_vi") or forecast.get("message") or "Mình chưa lấy được dự báo."
@@ -276,7 +276,7 @@ async def generate(payload: ConversationRequest, request: Request) -> AsyncItera
         yield event('error', text='Máy chủ đang có nhiều cuộc trò chuyện. Bạn thử lại sau nhé.')
         return
     if session.lock.locked():
-        yield event('error', text='Shadow đang trả lời tin trước. Đợi một chút rồi gửi lại nhé.')
+        yield event('error', text='SKI đang trả lời tin trước. Đợi một chút rồi gửi lại nhé.')
         return
     async with session.lock:
         try:

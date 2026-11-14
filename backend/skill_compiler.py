@@ -1,4 +1,4 @@
-"""SHADOW Teach mode: transcript + keyframes -> Skill JSON (GlassKit Recipe + SHADOW fields).
+"""SKI Teach mode: transcript + keyframes -> Skill JSON (GlassKit Recipe + SKI fields).
 
 Pipeline
 --------
@@ -105,7 +105,7 @@ class CompileRequest(BaseModel):
 # --------------------------------------------------------------------------- system prompt
 
 SYSTEM_PROMPT = """\
-You are SHADOW's Skill Compiler. A teacher recorded themselves doing a hands-on task with a phone camera while explaining it out loud in Vietnamese. You receive their speech transcript (with timestamps) and keyframes from the video. Turn this one demonstration into a step-by-step SKILL that a real-time coach can run for a learner.
+You are SKI's Skill Compiler. A teacher recorded themselves doing a hands-on task with a phone camera while explaining it out loud in Vietnamese. You receive their speech transcript (with timestamps) and keyframes from the video. Turn this one demonstration into a step-by-step SKILL that a real-time coach can run for a learner.
 
 How the skill is used later (design for this!):
 - The learner points a phone camera at their own work. Every ~1.5 s ONE camera frame of the CURRENT step is sent to a fast vision model together with that step's `detector_prompt` (and the teacher's reference frame for the step). The vision model sees a single still image, no video, no history.

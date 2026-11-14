@@ -7,7 +7,7 @@ import { wardrobeApi } from './wardrobe-api.js';
 export class CameraTasks {
   constructor({ openCamera, getFrame, getStream, startTryon, render, notify = () => {}, guideFactory = options=>new LiveGuide(options), skillApi = api, arApi = wardrobeApi, now = () => Date.now() }) {
     Object.assign(this, { openCamera, getFrame, getStream, startTryon, render, notify, guideFactory, skillApi, arApi, now });
-    this.state = { mode: 'chat', status: 'ready', title: 'Camera tự hiểu nhu cầu', message: 'Nói điều bạn muốn làm. Shadow sẽ xử lý ngay tại đây.' };
+    this.state = { mode: 'chat', status: 'ready', title: 'Camera tự hiểu nhu cầu', message: 'Nói điều bạn muốn làm. SKI sẽ xử lý ngay tại đây.' };
     this.revision = 0;
     this.lessonRevision = 0;
   }
@@ -83,7 +83,7 @@ export class CameraTasks {
       const items = (await this.arApi.listItems()).filter(item => ['top', 'bottom', 'dress', 'outerwear'].includes(item.category));
       if (signal?.aborted || revision !== this.revision) return null;
       this.stopAr();
-      this.update({ mode: 'tryon', status: 'selecting', title: 'Thử đồ trực tiếp', message: plan && plan.status !== 'ready' ? plan.message : items.length ? 'Nói tên, màu hoặc kiểu áo và quần muốn thử. Shadow tự chọn đồ trong tủ và mở video mặc thử; bạn cũng có thể chọn ảnh.' : 'Tủ đồ chưa có ảnh trang phục để thử. Hãy thêm một món vào tủ đồ.', items, selected_ids: (this.state.selected_ids || []).filter(id => items.some(item => item.id === id)), lesson: null, saved_skill: null });
+      this.update({ mode: 'tryon', status: 'selecting', title: 'Thử đồ trực tiếp', message: plan && plan.status !== 'ready' ? plan.message : items.length ? 'Nói tên, màu hoặc kiểu áo và quần muốn thử. SKI tự chọn đồ trong tủ và mở video mặc thử; bạn cũng có thể chọn ảnh.' : 'Tủ đồ chưa có ảnh trang phục để thử. Hãy thêm một món vào tủ đồ.', items, selected_ids: (this.state.selected_ids || []).filter(id => items.some(item => item.id === id)), lesson: null, saved_skill: null });
       if (requestedIds.length && !requestedIds.every(id => items.some(item => item.id === id))) {
         this.update({ message: 'Một món trong bộ vừa chọn không còn trong tủ đồ. Bạn muốn thay bằng áo hoặc quần nào?' });
         return this.execution();
@@ -101,7 +101,7 @@ export class CameraTasks {
       const step = lesson?.name === this.state.lesson?.name ? this.state.step || 0 : 0;
       this.update({ mode: 'guiding', status: 'guiding', title: lesson?.name || result.label,
         lesson, step, saved_skill: null,
-        message: result.context?.lesson ? 'Đang hướng dẫn theo bài đã lưu. Bạn có thể hỏi tiếp bằng giọng nói.' : 'Shadow sẽ hướng dẫn từng bước và xem thao tác qua camera.' });
+        message: result.context?.lesson ? 'Đang hướng dẫn theo bài đã lưu. Bạn có thể hỏi tiếp bằng giọng nói.' : 'SKI sẽ hướng dẫn từng bước và xem thao tác qua camera.' });
     } else {
       this.update({ mode: 'chat', status: 'ready', title: result.label, message: 'Camera và trò chuyện vẫn ở cùng màn hình.', lesson: null, saved_skill: null });
     }
@@ -328,7 +328,7 @@ export class CameraTasks {
       await this.skillApi.saveSkill(draft.id,payload,{signal:combined});
       if (combined.aborted || revision!==this.revision || this.draft!==draft) return null;
       this.draft=null; this.lessonRevision++;
-      this.update({mode:'chat',status:'saved',title:skill.display_name || this.state.title,message:'Đã lưu bài học. Bạn có thể nhờ Shadow hướng dẫn ngay.',lesson:payload,saved_skill:{id:draft.id,name:(skill.display_name || this.state.title || '').slice(0,160),steps:skill.steps.length}});
+      this.update({mode:'chat',status:'saved',title:skill.display_name || this.state.title,message:'Đã lưu bài học. Bạn có thể nhờ SKI hướng dẫn ngay.',lesson:payload,saved_skill:{id:draft.id,name:(skill.display_name || this.state.title || '').slice(0,160),steps:skill.steps.length}});
       this.notify(this.execution());
     } catch(error) {
       if (combined.aborted || revision!==this.revision || this.draft!==draft) return null;
